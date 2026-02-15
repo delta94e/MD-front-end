@@ -1,0 +1,799 @@
+# Process & Thread — Browser Architecture Deep Dive
+
+> 📅 2026-02-11 · ⏱ 30 phút đọc
+>
+> Tài liệu chuyên sâu về Process, Thread, kiến trúc Chrome multi-process,
+> 5 threads trong Rendering Process, IPC, Deadlock, và Service Worker.
+> Độ khó: ⭐️⭐️⭐️⭐️ | Chủ đề: OS & Browser Internals
+
+---
+
+## Mục Lục
+
+0. [Khái niệm Process & Thread](#0-khái-niệm-process--thread)
+1. [So sánh Process vs Thread](#1-so-sánh-process-vs-thread)
+2. [Chrome Multi-Process Architecture](#2-chrome-multi-process-architecture)
+3. [5 Threads trong Rendering Process](#3-5-threads-trong-rendering-process)
+4. [Giao tiếp giữa các Process (IPC)](#4-giao-tiếp-giữa-các-process-ipc)
+5. [Zombie Process & Orphan Process](#5-zombie-process--orphan-process)
+6. [Deadlock — Nguyên nhân & Giải pháp](#6-deadlock--nguyên-nhân--giải-pháp)
+7. [Giao tiếp giữa các Tab trong Browser](#7-giao-tiếp-giữa-các-tab-trong-browser)
+8. [Service Worker](#8-service-worker)
+9. [Tóm Tắt & Câu Hỏi Phỏng Vấn](#9-tóm-tắt--câu-hỏi-phỏng-vấn)
+
+---
+
+## 0. Khái niệm Process & Thread
+
+> **🎯 Học xong phần này, bạn sẽ biết:**
+>
+> - Process và Thread là gì
+> - Virtual Memory là gì
+> - 4 đặc điểm quan hệ giữa Process & Thread
+
+### Định nghĩa
+
+```
+PROCESS & THREAD — BẢN CHẤT LÀ MÔ TẢ CPU TIME SLICES:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  PROCESS (Tiến trình)                                    │
+  │  → Mô tả THỜI GIAN CPU thực thi instructions           │
+  │    + load/save context                                   │
+  │  → Tương ứng 1 CHƯƠNG TRÌNH đang chạy                  │
+  │  → Đơn vị NHỎ NHẤT cấp phát tài nguyên                │
+  │                                                          │
+  │  Khi 1 program khởi chạy, OS tạo:                       │
+  │  ┌─────────────────────────────────────────────┐         │
+  │  │  Process = Runtime Environment              │         │
+  │  │  ┌─────────────────────────────────────────┐│         │
+  │  │  │ • Code (mã nguồn)                       ││         │
+  │  │  │ • Running Data (data đang chạy)         ││         │
+  │  │  │ • Main Thread (thread chính)            ││         │
+  │  │  └─────────────────────────────────────────┘│         │
+  │  └─────────────────────────────────────────────┘         │
+  ├──────────────────────────────────────────────────────────┤
+  │  THREAD (Luồng)                                          │
+  │  → Đơn vị NHỎ HƠN bên trong process                    │
+  │  → Mô tả thời gian thực thi 1 ĐOẠN instructions       │
+  │  → Đơn vị NHỎ NHẤT cho CPU scheduling                  │
+  │  → 1 process có thể có NHIỀU threads                    │
+  └──────────────────────────────────────────────────────────┘
+
+  💡 GHI NHỚ:
+  Process = đơn vị nhỏ nhất CẤP PHÁT TÀI NGUYÊN
+  Thread  = đơn vị nhỏ nhất LỊCH TRÌNH CPU
+```
+
+### Virtual Memory
+
+```
+VIRTUAL MEMORY — BỘ NHỚ ẢO:
+═══════════════════════════════════════════════════════════════
+
+  VẤN ĐỀ:
+  → Nhiều chương trình chạy → bộ nhớ vật lý KHÔNG ĐỦ
+  → User cần TÀI NGUYÊN VÔ HẠN nhưng phần cứng HỮU HẠN
+
+  GIẢI PHÁP:
+  → OS cấp cho mỗi process 1 KHÔNG GIAN ĐỊA CHỈ ẢO ĐỘC LẬP
+  → Cùng 1 bộ nhớ vật lý → ánh xạ tới ĐỊA CHỈ ẢO KHÁC NHAU
+  → Gián tiếp TĂNG bộ nhớ chương trình sử dụng được
+
+  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
+  │  Process A  │   │  Process B  │   │  Process C  │
+  │ Virtual Mem │   │ Virtual Mem │   │ Virtual Mem │
+  │ 0x0000─0xFFFF│   │ 0x0000─0xFFFF│   │ 0x0000─0xFFFF│
+  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘
+         │                 │                 │
+         └────────┬────────┴────────┬────────┘
+                  ▼                 ▼
+         ┌──────────────────────────────────┐
+         │    PHYSICAL MEMORY (RAM)          │
+         │    (bộ nhớ vật lý thực tế)       │
+         └──────────────────────────────────┘
+
+  → Từ góc độ OS: Virtual Memory = swap file
+  → Từ góc độ CPU: Virtual Memory = virtual address space
+```
+
+### 4 đặc điểm quan hệ Process & Thread
+
+```
+4 ĐẶC ĐIỂM QUAN HỆ PROCESS & THREAD:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  ① BẤT KỲ thread nào lỗi → TOÀN BỘ process CRASH     │
+  │                                                          │
+  │  ┌──────────────────────────────────────────┐            │
+  │  │  Process                                 │            │
+  │  │  Thread 1 ✅  Thread 2 ✅  Thread 3 ❌   │            │
+  │  │  → Thread 3 crash → TOÀN BỘ process 💥 │            │
+  │  └──────────────────────────────────────────┘            │
+  ├──────────────────────────────────────────────────────────┤
+  │  ② Threads CHIA SẺ DATA trong process                   │
+  │                                                          │
+  │  ┌──────────────────────────────────────────┐            │
+  │  │  Process                                 │            │
+  │  │  ┌─────┐ ┌─────┐ ┌─────┐               │            │
+  │  │  │ T1  │ │ T2  │ │ T3  │ ← tất cả     │            │
+  │  │  └──┬──┘ └──┬──┘ └──┬──┘   truy cập    │            │
+  │  │     └───────┼───────┘     CÙNG data     │            │
+  │  │             ▼                            │            │
+  │  │      [Shared Memory]                     │            │
+  │  └──────────────────────────────────────────┘            │
+  ├──────────────────────────────────────────────────────────┤
+  │  ③ Process đóng → OS THU HỒI TOÀN BỘ bộ nhớ           │
+  │                                                          │
+  │  → Thread gây memory leak?                               │
+  │  → KHÔNG SAO! Process exit → OS reclaim tất cả!        │
+  ├──────────────────────────────────────────────────────────┤
+  │  ④ DATA ISOLATION giữa các processes                    │
+  │                                                          │
+  │  Process A ──────╳────── Process B                       │
+  │  (không thể truy cập data của nhau)                     │
+  │                                                          │
+  │  → Process A crash? → Process B KHÔNG BỊ ẢNH HƯỞNG    │
+  │  → Muốn trao đổi data? → Cần IPC mechanism            │
+  │    (Inter-Process Communication)                         │
+  └──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 1. So sánh Process vs Thread
+
+```
+PROCESS vs THREAD — 5 KHÁC BIỆT:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────┬───────────────────┬───────────────────┐
+  │  Tiêu chí         │  Process           │  Thread            │
+  ├──────────────────┼───────────────────┼───────────────────┤
+  │ Bản chất          │ Independent app   │ Đơn vị trong      │
+  │                   │ (ứng dụng độc lập)│ process (KHÔNG    │
+  │                   │                   │ độc lập)           │
+  ├──────────────────┼───────────────────┼───────────────────┤
+  │ Tài nguyên        │ Đơn vị NHỎ NHẤT  │ Đơn vị NHỎ NHẤT  │
+  │                   │ CẤP PHÁT resource │ LỊCH TRÌNH CPU   │
+  ├──────────────────┼───────────────────┼───────────────────┤
+  │ Giao tiếp         │ Cần IPC           │ CHIA SẺ TRỰC TIẾP│
+  │                   │ (Inter-Process    │ resources trong   │
+  │                   │  Communication)   │ cùng process      │
+  ├──────────────────┼───────────────────┼───────────────────┤
+  │ Chuyển đổi        │ CHI PHÍ CAO       │ CHI PHÍ THẤP     │
+  │ (switching)       │ (save/restore     │ (chỉ save/restore│
+  │                   │ CPU env + states) │ ít registers)     │
+  │                   │                   │                   │
+  │                   │ Thread A→B cùng   │ Thread switching  │
+  │                   │ process: KHÔNG    │ KHÔNG gây process │
+  │                   │ process switch    │ switching         │
+  ├──────────────────┼───────────────────┼───────────────────┤
+  │ System overhead  │ Create/terminate  │ Create/terminate  │
+  │                   │ → phải cấp/thu   │ → overhead THẤP  │
+  │                   │ hồi memory, I/O  │ hơn nhiều         │
+  │                   │ → overhead CAO   │                   │
+  └──────────────────┴───────────────────┴───────────────────┘
+```
+
+---
+
+## 2. Chrome Multi-Process Architecture
+
+> **🎯 Chrome dùng tối thiểu 4 processes để mở 1 trang web**
+
+```
+CHROME MULTI-PROCESS ARCHITECTURE:
+═══════════════════════════════════════════════════════════════
+
+  ┌───────────────────────────────────────────────────────────┐
+  │                    CHROME BROWSER                         │
+  │                                                           │
+  │  ┌────────────────────────────────────────────────────┐   │
+  │  │           Browser Main Process (1)                 │   │
+  │  │  → Hiển thị UI, user interaction                   │   │
+  │  │  → Quản lý subprocess                              │   │
+  │  │  → Storage + các chức năng khác                    │   │
+  │  └────────────────────────────────────────────────────┘   │
+  │                                                           │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐   │
+  │  │  GPU     │  │ Network  │  │  Plugin Processes    │   │
+  │  │ Process  │  │ Process  │  │  (multiple)          │   │
+  │  │  (1)     │  │  (1)     │  │                      │   │
+  │  │          │  │          │  │  → Chạy plugins      │   │
+  │  │ → 3D CSS │  │ → Load   │  │  → Cách ly: crash   │   │
+  │  │ → UI GPU │  │   network│  │    plugin ≠ crash    │   │
+  │  │   render │  │   resources  │    browser          │   │
+  │  └──────────┘  └──────────┘  └──────────────────────┘   │
+  │                                                           │
+  │  ┌──────────────────────────────────────────────────────┐ │
+  │  │        Rendering Processes (multiple)                │ │
+  │  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐       │ │
+  │  │  │ Tab 1  │ │ Tab 2  │ │ Tab 3  │ │ Tab N  │       │ │
+  │  │  │        │ │        │ │        │ │        │       │ │
+  │  │  │ Blink  │ │ Blink  │ │ Blink  │ │ Blink  │       │ │
+  │  │  │ V8     │ │ V8     │ │ V8     │ │ V8     │       │ │
+  │  │  │🔒sandbox│ │🔒sandbox│ │🔒sandbox│ │🔒sandbox│       │ │
+  │  │  └────────┘ └────────┘ └────────┘ └────────┘       │ │
+  │  │  → HTML/CSS/JS → webpage user tương tác            │ │
+  │  │  → Mỗi tab = 1 rendering process (mặc định)       │ │
+  │  │  → Chạy trong SANDBOX MODE (bảo mật)               │ │
+  │  └──────────────────────────────────────────────────────┘ │
+  └───────────────────────────────────────────────────────────┘
+
+  MỞ 1 WEBPAGE = TỐI THIỂU 4 PROCESSES:
+  ┌─────────────────────────────────────────────────────────┐
+  │ ① Network Process    (load resources)                   │
+  │ ② Browser Process    (UI, quản lý)                      │
+  │ ③ GPU Process        (rendering)                        │
+  │ ④ Rendering Process  (HTML/CSS/JS)                      │
+  │ ⑤ Plugin Process     (nếu có plugin)                    │
+  └─────────────────────────────────────────────────────────┘
+```
+
+### Ưu nhược điểm Multi-Process
+
+```
+MULTI-PROCESS — ƯU NHƯỢC ĐIỂM:
+═══════════════════════════════════════════════════════════════
+
+  ✅ ƯU ĐIỂM:
+  → Stability: 1 tab crash ≠ browser crash
+  → Smoothness: từng tab xử lý độc lập
+  → Security: rendering process chạy trong SANDBOX
+
+  ❌ NHƯỢC ĐIỂM:
+  → TIÊU TỐN TÀI NGUYÊN nhiều hơn
+    (mỗi process chứa copy của JS runtime, infra chung)
+    → Browser dùng NHIỀU MEMORY hơn
+  → KIẾN TRÚC PHỨC TẠP hơn
+    → High coupling giữa modules
+    → Poor scalability
+    → Khó thích ứng với yêu cầu mới
+```
+
+---
+
+## 3. 5 Threads trong Rendering Process
+
+> **🎯 Rendering Process có 5 loại threads**
+
+```
+5 THREADS TRONG RENDERING PROCESS:
+═══════════════════════════════════════════════════════════════
+
+  ┌───────────────────────────────────────────────────────────┐
+  │              RENDERING PROCESS (Kernel)                    │
+  │                                                           │
+  │  ┌─────────────────────────────────────────────────────┐  │
+  │  │  ① GUI RENDERING THREAD                             │  │
+  │  │  → Parse HTML → DOM Tree                            │  │
+  │  │  → Parse CSS → CSSOM Tree                           │  │
+  │  │  → Build Render Tree → Paint                        │  │
+  │  │  → Chạy khi cần REPAINT hoặc REFLOW                │  │
+  │  │                                                     │  │
+  │  │  ⚠️ MUTUALLY EXCLUSIVE với JS Engine Thread!        │  │
+  │  │  → JS đang chạy → GUI bị SUSPEND                   │  │
+  │  │  → GUI updates → xếp vào QUEUE                     │  │
+  │  │  → JS idle → GUI thực thi từ queue                  │  │
+  │  └─────────────────────────────────────────────────────┘  │
+  │                          ╳ (mutual exclusion!)            │
+  │  ┌─────────────────────────────────────────────────────┐  │
+  │  │  ② JS ENGINE THREAD (JS Kernel)                     │  │
+  │  │  → Parse + thực thi JavaScript                      │  │
+  │  │  → CHỜ task trong task queue → xử lý               │  │
+  │  │  → Mỗi tab chỉ có 1 JS engine thread               │  │
+  │  │                                                     │  │
+  │  │  ⚠️ JS chạy QUÁ LÂU → page rendering BỊ BLOCK     │  │
+  │  │  → Page lag, loading chậm!                          │  │
+  │  └─────────────────────────────────────────────────────┘  │
+  │                                                           │
+  │  ┌─────────────────────────────────────────────────────┐  │
+  │  │  ③ EVENT TRIGGER THREAD                             │  │
+  │  │  → Thuộc BROWSER, không phải JS engine              │  │
+  │  │  → Điều khiển EVENT LOOP                            │  │
+  │  │  → Khi JS thực thi setTimeout, click, AJAX...       │  │
+  │  │    → thêm task vào event trigger thread             │  │
+  │  │  → Event đủ điều kiện → thêm vào WAITING QUEUE     │  │
+  │  │  → Chờ JS engine idle → thực thi                    │  │
+  │  │                                                     │  │
+  │  │  ⚠️ JS single-threaded → events phải CHỜ           │  │
+  │  └─────────────────────────────────────────────────────┘  │
+  │                                                           │
+  │  ┌─────────────────────────────────────────────────────┐  │
+  │  │  ④ TIMER TRIGGER THREAD                             │  │
+  │  │  → Thread cho setInterval + setTimeout              │  │
+  │  │  → KHÔNG do JS engine đếm (JS single-threaded,     │  │
+  │  │    nếu bị block → đếm SAI)                         │  │
+  │  │  → Thread riêng đếm → timer hết → thêm vào        │  │
+  │  │    event queue → CHỜ JS engine idle                 │  │
+  │  │                                                     │  │
+  │  │  ⚠️ Timer task CÓ THỂ KHÔNG thực thi ĐÚNG GIỜ     │  │
+  │  │  → Timer chỉ thêm task vào queue ở thời điểm set  │  │
+  │  │  → Thực thi khi JS engine IDLE                      │  │
+  │  │                                                     │  │
+  │  │  📌 W3C: timer interval TỐI THIỂU 4ms              │  │
+  │  │  → Dưới 4ms → mặc định = 4ms                       │  │
+  │  └─────────────────────────────────────────────────────┘  │
+  │                                                           │
+  │  ┌─────────────────────────────────────────────────────┐  │
+  │  │  ⑤ ASYNC HTTP REQUEST THREAD                        │  │
+  │  │  → XMLHttpRequest tạo connection                    │  │
+  │  │  → Mở THREAD MỚI trong browser cho request         │  │
+  │  │  → State change detected?                           │  │
+  │  │    → Có callback? → tạo state change event         │  │
+  │  │    → Đưa callback vào EVENT QUEUE                   │  │
+  │  │    → Chờ JS engine idle → thực thi                  │  │
+  │  └─────────────────────────────────────────────────────┘  │
+  └───────────────────────────────────────────────────────────┘
+```
+
+### GUI vs JS Engine — Mutual Exclusion
+
+```
+GUI vs JS ENGINE — TẠI SAO MUTUALLY EXCLUSIVE?
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────────────────────────────────────────────┐
+  │                                                          │
+  │  JS có thể THAY ĐỔI DOM (document.getElementById...)   │
+  │  GUI dựa vào DOM để RENDER                               │
+  │                                                          │
+  │  NẾU chạy đồng thời:                                     │
+  │  JS sửa DOM + GUI render DOM → CONFLICT! 💥             │
+  │                                                          │
+  │  → Giải pháp: MUTUAL EXCLUSION                           │
+  │  → JS chạy → GUI PAUSE                                  │
+  │  → JS xong → GUI RESUME từ queue                        │
+  │                                                          │
+  │  Timeline:                                                │
+  │  ─── JS ████████████ ─── GUI ▓▓▓▓ ─── JS ████ ──→     │
+  │      (GUI suspended)   (JS idle)    (GUI suspended)     │
+  │                                                          │
+  └──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 4. Giao tiếp giữa các Process (IPC)
+
+> **🎯 6 phương thức Inter-Process Communication**
+
+```
+6 PHƯƠNG THỨC IPC:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  ① PIPELINE (Ống dẫn)                                    │
+  │  ─────────────────────                                   │
+  │  → Buffer trong kernel do OS cấp phát                   │
+  │  → Process 1 GHI data → Process 2 ĐỌC data            │
+  │                                                          │
+  │  Process 1 ──write──► [  Buffer  ] ──read──► Process 2  │
+  │                                                          │
+  │  Đặc điểm:                                               │
+  │  → Chỉ truyền 1 CHIỀU (one-way)                        │
+  │  → Chỉ processes CÓ QUAN HỆ HUYẾT THỐNG               │
+  │  → Phụ thuộc file system                                │
+  │  → Vòng đời theo process                                │
+  │  → Byte stream-oriented                                  │
+  │  → Cung cấp cơ chế ĐỒNG BỘ                             │
+  ├──────────────────────────────────────────────────────────┤
+  │  ② MESSAGE QUEUE (Hàng đợi tin nhắn)                     │
+  │  ─────────────────────────────────────                   │
+  │  → Danh sách messages                                    │
+  │  → Process gửi + nhận data blocks                       │
+  │  → Mỗi block có TYPE → nhận theo type                   │
+  │  → Tránh vấn đề đồng bộ/blocking của pipeline          │
+  │                                                          │
+  │  ❌ Giới hạn MAX LENGTH mỗi data block                   │
+  │  ❌ IPC thường xuyên → copy data nhiều → TỐN THỜI GIAN │
+  ├──────────────────────────────────────────────────────────┤
+  │  ③ SEMAPHORE (Cờ hiệu)                                  │
+  │  ──────────────────────                                  │
+  │  → BỘ ĐẾM → mutual exclusion + đồng bộ giữa processes │
+  │  → Giải quyết CẠNH TRANH shared memory                 │
+  │                                                          │
+  │  VD: Semaphore = 1                                       │
+  │  Process A truy cập Memory 1 → Semaphore = 0           │
+  │  Process B muốn truy cập Memory 1                       │
+  │  → Thấy Semaphore = 0 → BỊ CHẶN!                      │
+  │  Process A xong → Semaphore = 1 → B được phép          │
+  ├──────────────────────────────────────────────────────────┤
+  │  ④ SIGNAL (Tín hiệu)                                    │
+  │  ──────────────────────                                  │
+  │  → Phương pháp IPC CỔ ĐIỂN nhất (Unix)                 │
+  │  → OS thông báo process: sự kiện đã xảy ra            │
+  │  → Cơ chế nguyên thủy cho giao tiếp + đồng bộ         │
+  ├──────────────────────────────────────────────────────────┤
+  │  ⑤ SHARED MEMORY (Bộ nhớ chia sẻ)                       │
+  │  ──────────────────────────────────                      │
+  │  → Map 1 đoạn memory cho NHIỀU processes truy cập      │
+  │  → IPC NHANH NHẤT (fastest)!                             │
+  │  → Thường kết hợp với SEMAPHORE để đồng bộ             │
+  │                                                          │
+  │  ┌───────┐                          ┌───────┐            │
+  │  │Proc A │──────► [Shared] ◄────────│Proc B │            │
+  │  └───────┘        [Memory]          └───────┘            │
+  ├──────────────────────────────────────────────────────────┤
+  │  ⑥ SOCKET                                                │
+  │  ──────────                                              │
+  │  → IPC giữa processes trên CÁC MÁY KHÁC NHAU           │
+  │  → Giao tiếp QUA MẠNG                                   │
+  │  → VD: Browser gửi HTTP request → Server trả response  │
+  │                                                          │
+  │  Machine A ──────► Network ──────► Machine B             │
+  │  Process X                         Process Y             │
+  └──────────────────────────────────────────────────────────┘
+
+  SO SÁNH NHANH:
+  ┌────────────────┬──────────┬──────────┬──────────────────┐
+  │ Phương thức     │ Tốc độ   │ Phạm vi   │ Đặc điểm        │
+  ├────────────────┼──────────┼──────────┼──────────────────┤
+  │ Pipeline       │ Trung bình│ Local    │ 1 chiều, huyết   │
+  │ Message Queue  │ Trung bình│ Local    │ Có type, giới hạn│
+  │ Semaphore      │ Nhanh    │ Local    │ Bộ đếm, đồng bộ │
+  │ Signal         │ Nhanh    │ Local    │ Nguyên thủy      │
+  │ Shared Memory  │ NHANH NHẤT│ Local    │ Cần semaphore    │
+  │ Socket         │ Phụ thuộc│ REMOTE   │ Qua mạng         │
+  │                │ network  │          │                  │
+  └────────────────┴──────────┴──────────┴──────────────────┘
+```
+
+---
+
+## 5. Zombie Process & Orphan Process
+
+```
+ZOMBIE & ORPHAN PROCESS:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  ORPHAN PROCESS (Tiến trình mồ côi)                     │
+  │  ───────────────────────────────────                     │
+  │  → Parent process THOÁT                                  │
+  │  → Nhưng child process(es) VẪN ĐANG chạy              │
+  │  → Child trở thành ORPHAN                               │
+  │  → init process (PID 1) NHẬN NUÔI                      │
+  │  → init xử lý thu hồi status                           │
+  │                                                          │
+  │  Parent (exit)     init (PID 1)                          │
+  │  ┌──────┐          ┌──────┐                              │
+  │  │ 💀   │          │      │                              │
+  │  └──┬───┘     ──►  │  👆  │ ← nhận nuôi                 │
+  │     │              └──┬───┘                              │
+  │     ▼                 ▼                                  │
+  │  ┌──────┐          ┌──────┐                              │
+  │  │Child │          │Child │ (orphan → adopted)          │
+  │  │(chạy)│          │(chạy)│                              │
+  │  └──────┘          └──────┘                              │
+  ├──────────────────────────────────────────────────────────┤
+  │  ZOMBIE PROCESS (Tiến trình zombie)                      │
+  │  ──────────────────────────────────                      │
+  │  → Child process KẾT THÚC trước parent                 │
+  │  → Parent KHÔNG giải phóng resources của child          │
+  │  → Process descriptor VẪN TỒN TẠI trong system         │
+  │  → Process "sống" nhưng THỰC TẾ đã chết → ZOMBIE      │
+  │                                                          │
+  │  Parent (vẫn chạy)                                       │
+  │  ┌──────┐                                                │
+  │  │      │ ← không gọi wait() / waitpid()               │
+  │  └──┬───┘                                                │
+  │     │                                                    │
+  │     ▼                                                    │
+  │  ┌──────┐                                                │
+  │  │ 🧟  │ ← child đã exit nhưng descriptor còn          │
+  │  │Zombie│    chiếm system resources!                     │
+  │  └──────┘                                                │
+  │                                                          │
+  │  ⚠️ Quá nhiều zombies → SYSTEM RESOURCE LEAK!           │
+  └──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. Deadlock — Nguyên nhân & Giải pháp
+
+> **🎯 Deadlock: nhiều processes tranh chấp tài nguyên → bế tắc**
+
+### Khái niệm
+
+```
+DEADLOCK — BẾ TẮC:
+═══════════════════════════════════════════════════════════════
+
+  ĐỊNH NGHĨA:
+  → Nhiều processes TRANH CHẤP tài nguyên
+  → Không ai nhường → BẾ TẮC
+  → Không can thiệp → KHÔNG THỂ tiếp tục
+
+  2 LOẠI TÀI NGUYÊN:
+  ┌──────────────────────────────────────────────────────────┐
+  │ Preemptible (Chiếm trước được):                          │
+  │ → CPU, main memory                                       │
+  │ → Process nắm giữ → HỆ THỐNG CÓ THỂ lấy lại          │
+  ├──────────────────────────────────────────────────────────┤
+  │ Non-preemptible (Không chiếm trước được):                │
+  │ → Tape drives, printers                                  │
+  │ → Chỉ RELEASED khi process TỰ giải phóng              │
+  │ → GÂY RA DEADLOCK!                                       │
+  └──────────────────────────────────────────────────────────┘
+
+  VÍ DỤ DEADLOCK:
+  ┌──────────────────────────────────────────────────────────┐
+  │                                                          │
+  │  Process P1            Process P2                        │
+  │  ┌──────┐              ┌──────┐                          │
+  │  │ Giữ  │              │ Giữ  │                          │
+  │  │  R1  │──── muốn ───►│  R2  │                          │
+  │  │      │◄── muốn ─────│      │                          │
+  │  └──────┘              └──────┘                          │
+  │                                                          │
+  │  P1 giữ R1, muốn R2 → nhưng R2 do P2 giữ → CHẶN      │
+  │  P2 giữ R2, muốn R1 → nhưng R1 do P1 giữ → CHẶN      │
+  │  → DEADLOCK! 💀                                          │
+  │                                                          │
+  └──────────────────────────────────────────────────────────┘
+```
+
+### 4 điều kiện cần cho Deadlock
+
+```
+4 ĐIỀU KIỆN CẦN CHO DEADLOCK:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  ① MUTUAL EXCLUSION (Loại trừ lẫn nhau)                 │
+  │  → Resource chỉ được DÙNG bởi 1 process tại 1 thời điểm│
+  ├──────────────────────────────────────────────────────────┤
+  │  ② HOLD AND WAIT (Giữ và chờ)                            │
+  │  → Process bị block khi request resource                │
+  │  → nhưng VẪN GIỮ resources đã có                       │
+  ├──────────────────────────────────────────────────────────┤
+  │  ③ NO PREEMPTION (Không chiếm trước)                     │
+  │  → Resources đã cấp KHÔNG THỂ bị lấy lại              │
+  │  → Chỉ process sở hữu mới giải phóng được             │
+  ├──────────────────────────────────────────────────────────┤
+  │  ④ CIRCULAR WAIT (Chờ vòng)                              │
+  │  → Tồn tại CHUỖI VÒNG processes                        │
+  │  → P1→R2→P2→R1→P1 (circular chain)                     │
+  └──────────────────────────────────────────────────────────┘
+
+  THIẾU BẤT KỲ 1 điều kiện → KHÔNG có deadlock!
+```
+
+### 4 phương pháp phòng chống
+
+```
+PHÒNG CHỐNG DEADLOCK — PHÁ VỠ 4 ĐIỀU KIỆN:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  ① CẤP PHÁT TẤT CẢ 1 LẦN (Phá Hold and Wait)         │
+  │  → Cấp TẤT CẢ resources cùng lúc                       │
+  │  → Không còn request thêm → không hold + wait          │
+  ├──────────────────────────────────────────────────────────┤
+  │  ② KHÔNG CẤP PHÁT NẾU THIẾU (Phá Hold and Wait)       │
+  │  → Nếu BẤT KỲ resource nào không cấp được             │
+  │  → → KHÔNG CẤP các resources khác cho process này     │
+  ├──────────────────────────────────────────────────────────┤
+  │  ③ PREEMPTIBLE RESOURCES (Phá No Preemption)             │
+  │  → Process có một số resources nhưng KHÔNG lấy được    │
+  │    resources khác → GIẢI PHÓNG tất cả đã có            │
+  │  → Lấy lại sau khi resources available                  │
+  ├──────────────────────────────────────────────────────────┤
+  │  ④ CẤP PHÁT THEO THỨ TỰ (Phá Circular Wait)           │
+  │  → Đánh SỐ mỗi loại resource                           │
+  │  → Request theo thứ tự TĂNG DẦN                         │
+  │  → Release theo thứ tự NGƯỢC LẠI                        │
+  │  → Không thể tạo circular chain!                        │
+  └──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. Giao tiếp giữa các Tab trong Browser
+
+> **🎯 4 cách giao tiếp giữa các tabs — dựa trên Mediator Pattern**
+
+```
+TAB COMMUNICATION — MEDIATOR PATTERN:
+═══════════════════════════════════════════════════════════════
+
+  Tab A ──╲                                  ╱── Tab C
+           ╲── ► [  MEDIATOR  ] ◄────────────╱
+  Tab B ──╱     (trung gian)                ╲── Tab D
+
+  → Tabs KHÔNG THỂ giao tiếp trực tiếp
+  → Cần MEDIATOR (trung gian) để chuyển tiếp messages
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  ① WEBSOCKET                                             │
+  │  → Server = mediator                                     │
+  │  → Tab gửi data → SERVER → push tới các tabs khác      │
+  │  → Server hỗ trợ PUSH functionality                     │
+  │  → Full-duplex, real-time                                │
+  ├──────────────────────────────────────────────────────────┤
+  │  ② SHARED WORKER                                         │
+  │  → 1 thread DÙNG CHUNG cho suốt lifecycle page         │
+  │  → Nhiều pages dùng CÙNG 1 thread                      │
+  │  → Shared thread = mediator                              │
+  │  → Tabs trao đổi data qua shared thread                 │
+  ├──────────────────────────────────────────────────────────┤
+  │  ③ LOCALSTORAGE                                          │
+  │  → Tab A: localStorage.setItem('msg', data)             │
+  │  → Tab B: window.addEventListener('storage', fn)        │
+  │  → localStorage = mediator                               │
+  │  → Listen STORAGE EVENT khi tab khác modify             │
+  ├──────────────────────────────────────────────────────────┤
+  │  ④ POSTMESSAGE                                           │
+  │  → Nếu có REFERENCE tới tab đích                        │
+  │  → targetWindow.postMessage(data, origin)               │
+  │  → Direct communication (không cần mediator)            │
+  │  → Thường dùng với window.open() hoặc iframe           │
+  └──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 8. Service Worker
+
+> **🎯 Service Worker — Independent thread cho caching**
+
+```
+SERVICE WORKER:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────────────────────────────────────────────┐
+  │                                                          │
+  │  ĐỊNH NGHĨA:                                             │
+  │  → Thread ĐỘC LẬP chạy SAU browser                    │
+  │  → Thường dùng để CACHING                               │
+  │  → BẮT BUỘC dùng HTTPS (vì intercept requests)        │
+  │                                                          │
+  └──────────────────────────────────────────────────────────┘
+
+  3 BƯỚC IMPLEMENT CACHING:
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  BƯỚC 1: REGISTER Service Worker                         │
+  │  ───────────────────────────────                         │
+  │  // index.js                                              │
+  │  if (navigator.serviceWorker) {                           │
+  │    navigator.serviceWorker                                │
+  │      .register('sw.js')                                   │
+  │      .then(() => console.log('SW registered ✅'))        │
+  │      .catch(() => console.log('SW failed ❌'))           │
+  │  }                                                        │
+  ├──────────────────────────────────────────────────────────┤
+  │  BƯỚC 2: INSTALL — Cache required files                  │
+  │  ─────────────────────────────────────                   │
+  │  // sw.js                                                 │
+  │  self.addEventListener('install', e => {                  │
+  │    e.waitUntil(                                           │
+  │      caches.open('my-cache').then(cache => {              │
+  │        return cache.addAll([                               │
+  │          './index.html',                                   │
+  │          './index.js'                                      │
+  │        ])                                                  │
+  │      })                                                    │
+  │    )                                                       │
+  │  })                                                        │
+  ├──────────────────────────────────────────────────────────┤
+  │  BƯỚC 3: FETCH — Intercept requests                      │
+  │  ──────────────────────────────────                      │
+  │  // sw.js                                                 │
+  │  self.addEventListener('fetch', e => {                    │
+  │    e.respondWith(                                          │
+  │      caches.match(e.request).then(response => {           │
+  │        if (response) {                                     │
+  │          return response  // ✅ Cache hit!                │
+  │        }                                                   │
+  │        return fetch(e.request)  // ❌ Cache miss → fetch │
+  │      })                                                    │
+  │    )                                                       │
+  │  })                                                        │
+  └──────────────────────────────────────────────────────────┘
+
+  FLOW:
+  ┌──────┐      ┌─────────────────┐      ┌──────┐
+  │      │ req  │  Service Worker  │ miss │      │
+  │ Page │─────►│  ┌───────────┐  │─────►│Server│
+  │      │      │  │   Cache   │  │      │      │
+  │      │◄─────│  │  hit? ✅  │  │◄─────│      │
+  │      │cached│  └───────────┘  │ data │      │
+  └──────┘      └─────────────────┘      └──────┘
+```
+
+---
+
+## 9. Tóm Tắt & Câu Hỏi Phỏng Vấn
+
+### Quick Reference
+
+```
+PROCESS & THREAD — QUICK REFERENCE:
+═══════════════════════════════════════════════════════════════
+
+  PROCESS:
+    → Đơn vị nhỏ nhất CẤP PHÁT TÀI NGUYÊN
+    → Chương trình đang chạy + runtime environment
+    → DATA ISOLATION giữa các processes
+    → IPC: Pipeline, MsgQueue, Semaphore, Signal,
+           SharedMemory, Socket
+
+  THREAD:
+    → Đơn vị nhỏ nhất LỊCH TRÌNH CPU
+    → Nằm trong process, CHIA SẺ data
+    → Thread crash → PROCESS crash
+
+  CHROME: 5 processes (browser, GPU, network,
+          rendering×N, plugin×N)
+  → Mở 1 page = tối thiểu 4 processes
+
+  RENDERING PROCESS: 5 threads
+    GUI ⟷ JS Engine (mutual exclusion!)
+    Event Trigger, Timer Trigger, Async HTTP
+
+  DEADLOCK: 4 điều kiện (mutual exclusion, hold+wait,
+            no preemption, circular wait)
+  → Phá bất kỳ 1 → không có deadlock
+
+  SERVICE WORKER: thread độc lập, HTTPS bắt buộc
+  → 3 bước: register → install (cache) → fetch (intercept)
+```
+
+### Câu Hỏi Phỏng Vấn Thường Gặp
+
+**1. Process và Thread khác nhau thế nào?**
+
+> Process là đơn vị nhỏ nhất cấp phát tài nguyên, có thể xem như ứng dụng độc lập. Thread là đơn vị nhỏ nhất lịch trình CPU, nằm trong process. Threads chia sẻ data trong cùng process, processes cần IPC. Process switching chi phí CAO (save/restore CPU env), thread switching chi phí THẤP (chỉ vài registers).
+
+**2. Chrome có bao nhiêu processes? Mở 1 page cần mấy?**
+
+> Chrome có 5 loại: Browser (UI + quản lý), GPU (3D/render), Network (load resources), Rendering (HTML/CSS/JS, mỗi tab 1 process, sandbox), Plugin. Mở 1 page = tối thiểu 4 processes (browser + GPU + network + rendering), thêm plugin process nếu có plugin.
+
+**3. Rendering Process có mấy threads? GUI vs JS Engine?**
+
+> 5 threads: GUI Rendering, JS Engine, Event Trigger, Timer Trigger, Async HTTP. GUI và JS Engine **mutually exclusive**: JS chạy → GUI suspend (vì JS thay đổi DOM, chạy đồng thời gây conflict). JS chạy quá lâu → page bị block/lag.
+
+**4. Timer setTimeout có chính xác không?**
+
+> KHÔNG chính xác. Timer Trigger Thread đếm riêng, khi hết thời gian → thêm task vào event queue. Nhưng task chỉ thực thi khi JS engine IDLE. Nếu JS đang busy → task chờ. W3C quy định interval tối thiểu 4ms.
+
+**5. Deadlock là gì? 4 điều kiện cần?**
+
+> Deadlock = nhiều processes tranh chấp tài nguyên → bế tắc. 4 điều kiện: ① Mutual Exclusion (resource chỉ 1 process dùng), ② Hold and Wait (giữ resources + chờ thêm), ③ No Preemption (không lấy lại resources), ④ Circular Wait (vòng chờ). Phá bất kỳ 1 điều kiện → phòng deadlock.
+
+**6. Các tabs browser giao tiếp thế nào?**
+
+> 4 cách (Mediator Pattern): ① WebSocket (server = mediator, push messages), ② SharedWorker (shared thread giữa pages), ③ localStorage (listen 'storage' event khi tab khác modify), ④ postMessage (cần reference tới target tab/window).
+
+**7. Service Worker là gì? Tại sao cần HTTPS?**
+
+> Service Worker là thread độc lập chạy sau browser, thường dùng caching. Cần HTTPS vì SW intercept/modify requests → nếu HTTP → attacker có thể inject malicious SW. 3 bước: register SW → install (cache files) → fetch (intercept requests, trả cache nếu có, fallback server).
+
+**8. Zombie vs Orphan Process?**
+
+> **Orphan**: parent exit nhưng child vẫn chạy → init (PID 1) nhận nuôi. **Zombie**: child exit trước parent, parent không giải phóng resources → process descriptor vẫn tồn tại → lãng phí. Nhiều zombies → system resource leak.
+
+---
+
+## Checklist Học Tập
+
+- [ ] Phân biệt Process vs Thread (5 tiêu chí)
+- [ ] Hiểu Virtual Memory và process isolation
+- [ ] Biết 5 loại processes trong Chrome + tối thiểu 4 khi mở page
+- [ ] Biết 5 threads trong Rendering Process
+- [ ] Giải thích GUI vs JS Engine mutual exclusion
+- [ ] Biết 6 phương thức IPC (Pipeline → Socket)
+- [ ] Hiểu Deadlock: 4 điều kiện + 4 cách phòng chống
+- [ ] Biết 4 cách giao tiếp giữa tabs
+- [ ] Hiểu Service Worker: 3 bước + tại sao cần HTTPS
+- [ ] Phân biệt Zombie vs Orphan Process
+
+---
+
+_Cập nhật lần cuối: Tháng 2, 2026_
