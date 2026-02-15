@@ -1,1047 +1,1828 @@
-# React Fiber Architecture — Deep Dive
+# React Fiber — Deep Dive: Hiểu Hoàn Toàn Từ Số 0
 
-> 📅 2026-02-13 · ⏱ 25 phút đọc
->
-> Fiber hoạt động như thế nào? Giải quyết vấn đề gì?
-> Stack Reconciler → Fiber Reconciler, Scheduler, Lanes, Time Slicing,
-> Concurrent Mode, Suspense, Automatic Batching
-> Độ khó: ⭐️⭐️⭐️⭐️⭐️ | Ultimate React Core Interview
+> **Tài liệu học tập chuyên sâu — Hoàn toàn bằng Tiếng Việt**
+> Tự viết tay mọi thứ, không phụ thuộc thư viện — Giải thích cực kỳ chi tiết kèm sơ đồ
 
 ---
 
 ## Mục Lục
 
-| #   | Phần                                   |
-| --- | -------------------------------------- |
-| 1   | Vấn đề của Stack Reconciler (React 15) |
-| 2   | Fiber là gì? Ý tưởng cốt lõi           |
-| 3   | Fiber Node — Cấu trúc dữ liệu          |
-| 4   | Fiber Tree — Double Buffering          |
-| 5   | Work Loop — Interruptible Rendering    |
-| 6   | Scheduler — Hệ thống ưu tiên           |
-| 7   | Lanes — Mô hình ưu tiên thế hệ mới     |
-| 8   | Render Phase vs Commit Phase           |
-| 9   | Concurrent Features (React 18)         |
-| 10  | Time Slicing — Chia nhỏ công việc      |
-| 11  | Suspense — Chờ async data              |
-| 12  | Tổng kết & Checklist phỏng vấn         |
-
----
-
-## §1. Vấn đề của Stack Reconciler (React 15)
-
 ```
-REACT 15 — STACK RECONCILER:
-═══════════════════════════════════════════════════════════════
-
-  React 15 dùng ĐỆ QUY để đối chiếu (reconcile) VDOM:
-
-  function reconcile(element, container) {
-      // Tạo/cập nhật DOM
-      updateDOM(element, container);
-      // ĐỆ QUY xử lý children:
-      element.children.forEach(child =>
-          reconcile(child, getChildContainer(child))  ← ĐỆ QUY!
-      );
-  }
-
-  VẤN ĐỀ: Đệ quy = Stack-based = KHÔNG THỂ DỪNG!
-  → Call stack quản lý → phải chạy hết mới return!
-  → Không có cách "pause" giữa chừng!
-```
-
-```
-TẠI SAO STACK RECONCILER LÀ VẤN ĐỀ:
-═══════════════════════════════════════════════════════════════
-
-  60fps = 16.67ms / frame
-
-  ┌──────── 1 Frame (16.67ms) ────────┐
-  │ Input → JS → Layout → Paint       │
-  └────────────────────────────────────┘
-
-  NẾU reconcile mất 100ms (tree lớn):
-
-  ┌──── Frame 1 ────┐┌──── Frame 2 ────┐┌──── Frame 3 ────┐
-  │ JS (reconcile)...│.....................│.............done│
-  │ ❌ KHÔNG Paint!  │ ❌ KHÔNG Paint!   │ Paint rồi mới│
-  └─────────────────┘└──────────────────┘└────────────────┘
-  → 6 frames bị bỏ lỡ → UI ĐỨNG 100ms! 💀
-
-  BIỂU HIỆN:
-  → Animation giật (dropped frames)
-  → Input lag (gõ chữ chậm phản hồi)
-  → Scroll không mượt
-  → Hover effects trễ
-
-  VÍ DỤ THỰC TẾ:
-  → Bảng 10,000 rows re-render → UI đứng 200ms!
-  → Autocomplete dropdown → gõ chữ bị delay!
-  → Chart update → animation bị giật!
-```
-
-```
-THỬ NGHIỆM — BLOCKING MAIN THREAD:
-═══════════════════════════════════════════════════════════════
-
-  // Giả lập Stack Reconciler blocking:
-  function heavyUpdate() {
-      // Render 10,000 items → reconcile ĐỆ QUY:
-      for (let i = 0; i < 10000; i++) {
-          createElement('div', { key: i }, `Item ${i}`);
-          updateDOM(...); // Mỗi node: 0.01ms × 10,000 = 100ms!
-      }
-  }
-
-  // Trong 100ms này:
-  // ❌ User click → KHÔNG phản hồi!
-  // ❌ Animation → KHÔNG chạy!
-  // ❌ Input → KHÔNG hiển thị ký tự đã gõ!
-  // → Main thread bị KHÓA hoàn toàn!
-
-  GIẢI PHÁP: CHIA NHỎ CÔNG VIỆC + CHO PHÉP XEN KẼ!
-  → Đó chính là FIBER! 🚀
+§1.  Tại sao cần Fiber? — Vấn đề của Stack Reconciler
+§2.  Fiber là gì? — Mục tiêu & Ý tưởng cốt lõi
+§3.  Kiến trúc React Runtime — 3 tầng Instance
+§4.  Fiber Node — Cấu trúc dữ liệu chi tiết
+§5.  Fiber Tree — Cây liên kết đơn (Singly Linked List Tree)
+§6.  workInProgress Tree — Double Buffering
+§7.  Fiber Reconciler — 2 Phase: Render + Commit
+§8.  Phase 1: Render/Reconciliation — Interruptible!
+§9.  Phase 2: Commit — Uninterruptible!
+§10. Work Loop — Vòng lặp công việc
+§11. requestIdleCallback — Lịch trình hợp tác
+§12. Priority Strategy — 6 mức độ ưu tiên
+§13. Effect List — Thu thập kết quả
+§14. Lifecycle Hooks trong Fiber
+§15. Tự viết tay Mini Fiber Scheduler
+§16. So sánh: Stack Reconciler vs Fiber Reconciler
+§17. Best Practices & Phỏng vấn Q&A
 ```
 
 ---
 
-## §2. Fiber là gì? Ý tưởng cốt lõi
+## §1. Tại Sao Cần Fiber? — Vấn Đề Của Stack Reconciler
 
 ```
-FIBER — 3 NGHĨA:
+═══════════════════════════════════════════════════════════════
+  STACK RECONCILER = ĐỆ QUY TỪ TRÊN XUỐNG, KHÔNG DỪNG ĐƯỢC!
 ═══════════════════════════════════════════════════════════════
 
-  ① KIẾN TRÚC (Architecture):
-     React Fiber = Reconciler MỚI thay Stack Reconciler
-     → Incremental rendering: chia nhỏ render thành units
-     → Có thể pause, abort, resume, reuse work
 
-  ② ĐƠN VỊ CÔNG VIỆC (Unit of Work):
-     Mỗi Fiber node = 1 đơn vị công việc nhỏ nhất
-     → Xử lý 1 Fiber = 1 unit of work
-     → Xong 1 unit → kiểm tra: còn thời gian? Tiếp tục : Yield!
-
-  ③ CẤU TRÚC DỮ LIỆU (Data Structure):
-     Fiber node = JS object chứa thông tin component
-     → type, props, state, DOM ref, effect tags...
-     → Liên kết thành linked list (không phải tree!)
-```
-
-```
-STACK vs FIBER — SO SÁNH TRỰC QUAN:
-═══════════════════════════════════════════════════════════════
-
-  STACK RECONCILER (React 15):
+  VẤN ĐỀ GỐC: JAVASCRIPT CHẠY TRÊN MAIN THREAD!
   ┌────────────────────────────────────────────────────────┐
-  │ reconcile(A)                                           │
-  │   reconcile(B)                                         │
-  │     reconcile(D)                                       │
-  │       reconcile(G) ← KHÔNG THỂ DỪNG!                  │
-  │     reconcile(E)                                       │
-  │   reconcile(C)                                         │
-  │     reconcile(F)                                       │
-  │ DONE! (mới trả quyền cho browser)                     │
+  │                                                        │
+  │  Browser Main Thread phải xử lý TẤT CẢ:             │
+  │                                                        │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │          MAIN THREAD (1 thread duy nhất!)    │      │
+  │  │                                               │      │
+  │  │  ┌───────────┐  ┌───────────┐  ┌──────────┐ │      │
+  │  │  │ JavaScript│  │   Style   │  │  Layout  │ │      │
+  │  │  │ Execution │  │Calculation│  │          │ │      │
+  │  │  └───────────┘  └───────────┘  └──────────┘ │      │
+  │  │  ┌───────────┐  ┌───────────┐  ┌──────────┐ │      │
+  │  │  │  Paint    │  │ Animation │  │  User    │ │      │
+  │  │  │           │  │  Frames   │  │  Input   │ │      │
+  │  │  └───────────┘  └───────────┘  └──────────┘ │      │
+  │  │                                               │      │
+  │  │  → TẤT CẢ chia sẻ 1 thread!                │      │
+  │  │  → JS chạy = CÁC VIỆC KHÁC PHẢI ĐỢI!     │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  │  60fps = 16.67ms mỗi frame:                           │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  1 frame = 16.67ms                            │      │
+  │  │  ┌─────┬──────┬──────┬──────┬───────┐        │      │
+  │  │  │Input│Style │Layout│Paint │Compose│        │      │
+  │  │  │ 2ms │ 2ms  │ 3ms  │ 3ms │ 2ms   │        │      │
+  │  │  └─────┴──────┴──────┴──────┴───────┘        │      │
+  │  │  → Còn ~5ms cho JS!                          │      │
+  │  │  → Nếu JS chạy > 16.67ms → MẤT FRAME!     │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
   └────────────────────────────────────────────────────────┘
-  → 1 lần chạy dài, block toàn bộ!
 
-  FIBER RECONCILER (React 16+):
-  ┌── Frame 1 ──┐ ┌── Frame 2 ──┐ ┌── Frame 3 ──┐
-  │ Fiber A      │ │ Fiber D      │ │ Fiber E      │
-  │ Fiber B      │ │ Fiber G      │ │ Fiber C      │
-  │ (yield!)     │ │ (yield!)     │ │ Fiber F      │
-  │ Paint ✅     │ │ Input ✅     │ │ Commit! ✅   │
-  └──────────────┘ └──────────────┘ └──────────────┘
-  → Chia nhỏ, xen kẽ paint + input! Mượt!
-```
 
-```
-FIBER GIẢI QUYẾT 4 VẤN ĐỀ:
-═══════════════════════════════════════════════════════════════
+  STACK RECONCILER — ĐỆ QUY KHÔNG DỪNG ĐƯỢC:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  React 15 (Stack Reconciler) — setState() → diff:    │
+  │                                                        │
+  │  function reconcile(parentDom, vdom) {                 │
+  │    // ĐỆ QUY! Gọi chính nó!                         │
+  │    if (vdom.children) {                                │
+  │      vdom.children.forEach(child => {                  │
+  │        reconcile(parentDom, child); // ← ĐỆ QUY!    │
+  │      });                                               │
+  │    }                                                   │
+  │  }                                                     │
+  │                                                        │
+  │  VẤN ĐỀ:                                               │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │                                               │      │
+  │  │  Cây component có 10,000 nodes:               │      │
+  │  │                                               │      │
+  │  │  reconcile(App)                               │      │
+  │  │    └→ reconcile(Header)                       │      │
+  │  │         └→ reconcile(Logo)                    │      │
+  │  │         └→ reconcile(Nav)                     │      │
+  │  │              └→ reconcile(NavItem) x 20       │      │
+  │  │    └→ reconcile(Main)                         │      │
+  │  │         └→ reconcile(ProductList)             │      │
+  │  │              └→ reconcile(Product) x 1000     │      │
+  │  │                   └→ reconcile(Button)        │      │
+  │  │                   └→ reconcile(Image)         │      │
+  │  │                   └→ ...                      │      │
+  │  │    └→ reconcile(Footer)                       │      │
+  │  │                                               │      │
+  │  │  → 10,000 lần gọi ĐỆ QUY!                  │      │
+  │  │  → Mất 200ms+ liên tục!                      │      │
+  │  │  → Main thread BỊ CHIẾM 200ms!              │      │
+  │  │  → KHÔNG THỂ DỪNG giữa chừng!               │      │
+  │  │  → = MẤT 12+ FRAMES! (200/16.67)            │      │
+  │  │  → Animation GIẬT! Input KHÔNG phản hồi!    │      │
+  │  │                                               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  │  CALL STACK (hệ thống):                                │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  ┌─────────────────────────────────┐          │      │
+  │  │  │ reconcile(App)          ← đáy  │          │      │
+  │  │  │ reconcile(Main)                  │          │      │
+  │  │  │ reconcile(ProductList)           │          │      │
+  │  │  │ reconcile(Product[0])            │          │      │
+  │  │  │ reconcile(Button)       ← đỉnh │          │      │
+  │  │  └─────────────────────────────────┘          │      │
+  │  │                                               │      │
+  │  │  → Context lưu trong CALL STACK!             │      │
+  │  │  → Stack = hệ thống quản lý!                │      │
+  │  │  → KHÔNG THỂ tạm dừng + tiếp tục!          │      │
+  │  │  → Pop ra = MẤT context!                     │      │
+  │  │  → Phải chạy HẾT hoặc KHÔNG GÌ CẢ!        │      │
+  │  │                                               │      │
+  │  │  💡 Đây là lý do gọi là "STACK" Reconciler!│      │
+  │  │  → Dùng system stack để lưu trạng thái!     │      │
+  │  │  → Stack = không dừng được!                  │      │
+  │  │                                               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-  ① INTERRUPTIBLE: Có thể dừng render giữa chừng
-     → User input được xử lý NGAY, không phải đợi!
 
-  ② PRIORITIZABLE: Phân loại ưu tiên công việc
-     → Animation > Data fetch > Off-screen update
-
-  ③ REUSABLE: Tái sử dụng kết quả đã tính toán
-     → Không cần tính lại từ đầu khi resume!
-
-  ④ ABORTABLE: Hủy bỏ công việc không cần thiết
-     → User navigate đi → abort render cũ!
-```
-
----
-
-## §3. Fiber Node — Cấu trúc dữ liệu
-
-```javascript
-// FIBER NODE — Mỗi React element → 1 Fiber:
-const fiber = {
-  // ═══ IDENTITY ═══
-  tag: 0, // FunctionComponent=0, ClassComponent=1, HostComponent=5...
-  type: "div", // Element type (string | Function | Class)
-  key: "unique-key", // Key cho reconciliation
-
-  // ═══ TREE STRUCTURE (Linked List!) ═══
-  child: Fiber | null, // → Con ĐẦU TIÊN
-  sibling: Fiber | null, // → Anh em TIẾP THEO
-  return: Fiber | null, // → Cha (parent)
-  index: 0, // Vị trí trong siblings
-
-  // ═══ STATE & PROPS ═══
-  pendingProps: {}, // Props MỚI (chờ xử lý)
-  memoizedProps: {}, // Props ĐÃ XỬ LÝ (lần render trước)
-  memoizedState: {}, // State ĐÃ XỬ LÝ
-  updateQueue: Queue, // Queue các updates (setState calls)
-
-  // ═══ OUTPUT ═══
-  stateNode: HTMLElement | ComponentInstance | null,
-  // → DOM node thật (nếu host component)
-  // → Component instance (nếu class component)
-  // → null (nếu function component)
-
-  // ═══ EFFECTS ═══
-  flags: 0, // Effect flags (bitfield): Placement, Update, Deletion...
-  subtreeFlags: 0, // Effects trong subtree (bubble up!)
-  deletions: [], // Children cần xóa
-
-  // ═══ ALTERNATE (Double Buffering) ═══
-  alternate: Fiber | null, // → Fiber cũ / Fiber đang build
-  // current.alternate = workInProgress
-  // workInProgress.alternate = current
-
-  // ═══ SCHEDULING ═══
-  lanes: 0, // Priority lanes (bitfield)
-  childLanes: 0, // Lanes của children
-};
-```
-
-```
-TẠI SAO LINKED LIST THAY VÌ TREE:
-═══════════════════════════════════════════════════════════════
-
-  TREE (đệ quy):
-  → Duyệt bằng call stack → KHÔNG THỂ DỪNG!
-  → Phải dùng recursion → stack frame bị lock
-
-  LINKED LIST (3 pointers):
-  → child: đi xuống con đầu tiên
-  → sibling: đi ngang anh em
-  → return: đi lên cha
-
-  → Duyệt bằng VÒNG LẶP (while loop)!
-  → Có thể DỪNG ở bất kỳ node nào!
-  → Lưu "con trỏ" hiện tại → TIẾP TỤC sau!
-
-  VÍ DỤ:
-       A
-      / \
-     B   C
-    / \
-   D   E
-
-  child/sibling/return:
-  A.child = B
-  B.sibling = C
-  B.child = D
-  D.sibling = E
-  D.return = B
-  E.return = B
-  B.return = A
-  C.return = A
-
-  Thứ tự duyệt: A → B → D → E → C (DFS qua while loop!)
-  Có thể DỪNG ở D! → Xử lý user input → TIẾP TỤC từ D → E → C
+  TIMELINE — STACK RECONCILER GÂY GIẬT:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Frame 1    Frame 2    Frame 3    ...    Frame 13      │
+  │  16.67ms    16.67ms    16.67ms           16.67ms       │
+  │  ┌────┐    ┌────┐    ┌────┐           ┌────┐          │
+  │  │    │    │    │    │    │           │    │          │
+  │  │    │    │    │    │    │           │    │          │
+  │  │    │    │    │    │    │           │    │          │
+  │  └────┘    └────┘    └────┘           └────┘          │
+  │                                                        │
+  │  │◀──── JS reconcile CHIẾM 200ms! ────────────▶│     │
+  │  │████████████████████████████████████████████████│     │
+  │  │                                                │     │
+  │  │ KHÔNG render frame nào! = MẤT 12 frames!    │     │
+  │  │ Animation ĐỨNG! User input KHÔNG phản hồi!  │     │
+  │  │ → "JANK!" (giật lag)                          │     │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## §4. Fiber Tree — Double Buffering
+## §2. Fiber Là Gì? — Mục Tiêu & Ý Tưởng Cốt Lõi
 
 ```
-DOUBLE BUFFERING — 2 CÂY FIBER:
+═══════════════════════════════════════════════════════════════
+  FIBER = TÁI CẤU TRÚC HOÀN TOÀN RECONCILER!
 ═══════════════════════════════════════════════════════════════
 
-  React luôn giữ 2 Fiber tree:
 
-  ┌──────────────────┐         ┌──────────────────┐
-  │   CURRENT TREE   │←─alt─→ │ WORK-IN-PROGRESS │
-  │ (đang hiển thị)  │         │  TREE (đang build)│
-  └──────────────────┘         └──────────────────┘
+  ĐỊNH NGHĨA:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  "Fiber" có 2 nghĩa:                                  │
+  │                                                        │
+  │  ① React Fiber (viết HOA):                            │
+  │     = Toàn bộ dự án tái cấu trúc core algorithm      │
+  │     = Fiber Reconciler thay thế Stack Reconciler       │
+  │     = 2 năm phát triển!                               │
+  │                                                        │
+  │  ② fiber (viết thường):                               │
+  │     = 1 node trong Fiber Tree                          │
+  │     = 1 đơn vị công việc (unit of work)               │
+  │     = 1 JavaScript object chứa thông tin component    │
+  │                                                        │
+  │  💡 "Fiber" = "sợi" (nhỏ hơn "thread"!)             │
+  │  → Thread (luồng) → Fiber (sợi)                      │
+  │  → Ý nghĩa: chia nhỏ công việc thành từng "sợi"!   │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-  ① Render phase: Build WIP tree từ current + new props/state
-     → Mỗi current Fiber có .alternate → WIP Fiber tương ứng
-     → REUSE Fiber nodes khi có thể (không tạo mới!)
 
-  ② Commit phase: WIP tree → trở thành current tree
-     → Swap pointer: fiberRoot.current = wipTree
-     → Current cũ → trở thành WIP cho lần sau!
+  5 MỤC TIÊU CỦA FIBER:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Chia nhỏ CÔNG VIỆC thành chunks NHỎ,             │
+  │     có thể NGẮT GIỮA CHỪNG!                          │
+  │     → Stack: đệ quy liên tục, không dừng!            │
+  │     → Fiber: vòng lặp, xử lý 1 fiber/lần, dừng OK! │
+  │                                                        │
+  │  ② Điều chỉnh ĐỘ ƯU TIÊN, làm lại hoặc TÁI SỬ  │
+  │     DỤNG kết quả đã hoàn thành!                      │
+  │     → Keyboard input = ưu tiên CAO!                  │
+  │     → Network request = ưu tiên THẤP!                │
+  │     → Có thể HỦY và LÀM LẠI!                       │
+  │                                                        │
+  │  ③ Chuyển đổi linh hoạt giữa PARENT và CHILD        │
+  │     (yield back and forth)!                            │
+  │     → Hỗ trợ layout refresh trong khi React chạy!   │
+  │     → Cooperative scheduling!                          │
+  │                                                        │
+  │  ④ render() trả về NHIỀU elements!                    │
+  │     → React 15: render() CHỈ trả 1 element!          │
+  │     → React 16+: trả arrays, fragments!               │
+  │                                                        │
+  │  ⑤ Hỗ trợ Error Boundaries TỐT HƠN!                │
+  │     → componentDidCatch()!                             │
+  │     → Lỗi 1 component KHÔNG crash toàn app!          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-  KỸ THUẬT NÀY GỌI LÀ "DOUBLE BUFFERING":
-  → Giống game rendering: 2 frame buffers, swap khi ready
-  → User KHÔNG BAO GIỜ thấy tree đang xây dựng dở!
-  → DOM cập nhật ATOMIC — tất cả hoặc không gì cả!
-```
 
-```javascript
-// DOUBLE BUFFERING — Cách hoạt động:
-
-// Lần render 1:
-// current:  A → B → C
-// WIP:      A' → B' → C'  (building...)
-// → A.alternate = A', A'.alternate = A
-
-// Commit: fiberRoot.current = WIP tree
-// current:  A' → B' → C'  (hiển thị!)
-// old:      A → B → C     (sẽ thành WIP lần sau)
-
-// Lần render 2:
-// current:  A' → B' → C'
-// WIP:      A'' → B'' → C''  (building, reuse A → A'')
-// → A' object được reuse thành A''!
-// → Giảm GC pressure (không tạo object mới!)
-
-// createWorkInProgress (simplified):
-function createWorkInProgress(current, pendingProps) {
-  let workInProgress = current.alternate;
-
-  if (workInProgress === null) {
-    // Lần đầu: tạo mới
-    workInProgress = createFiber(current.tag, pendingProps, current.key);
-    workInProgress.stateNode = current.stateNode;
-    workInProgress.alternate = current;
-    current.alternate = workInProgress;
-  } else {
-    // Lần sau: REUSE! Chỉ update props
-    workInProgress.pendingProps = pendingProps;
-    workInProgress.flags = 0; // Reset effects
-    workInProgress.subtreeFlags = 0;
-    workInProgress.deletions = null;
-  }
-
-  // Copy từ current:
-  workInProgress.child = current.child;
-  workInProgress.memoizedProps = current.memoizedProps;
-  workInProgress.memoizedState = current.memoizedState;
-  workInProgress.updateQueue = current.updateQueue;
-  workInProgress.lanes = current.lanes;
-  workInProgress.childLanes = current.childLanes;
-
-  return workInProgress;
-}
+  Ý TƯỞNG CỐT LÕI — ĐỆ QUY → VÒNG LẶP:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ═══ STACK RECONCILER (ĐỆ QUY) ═══                    │
+  │                                                        │
+  │  function reconcile(node) {                            │
+  │    // Xử lý node hiện tại                             │
+  │    updateNode(node);                                   │
+  │    // ĐỆ QUY xuống children — KHÔNG DỪNG ĐƯỢC!      │
+  │    node.children.forEach(child => reconcile(child));   │
+  │  }                                                     │
+  │  // → Dùng SYSTEM STACK lưu context!                  │
+  │  // → Pop stack = mất context! Không resume được!    │
+  │                                                        │
+  │                                                        │
+  │  ═══ FIBER RECONCILER (VÒNG LẶP) ═══                  │
+  │                                                        │
+  │  let nextUnitOfWork = rootFiber;                       │
+  │                                                        │
+  │  function workLoop(deadline) {                         │
+  │    while (nextUnitOfWork && deadline.timeRemaining()   │
+  │           > 0) {                                       │
+  │      // Xử lý 1 fiber, trả về fiber tiếp theo!      │
+  │      nextUnitOfWork =                                  │
+  │        performUnitOfWork(nextUnitOfWork);              │
+  │    }                                                   │
+  │    // HẾT THỜI GIAN → dừng! Lần sau tiếp tục!     │
+  │    if (nextUnitOfWork) {                               │
+  │      requestIdleCallback(workLoop); // ← lên lịch!  │
+  │    }                                                   │
+  │  }                                                     │
+  │  // → Dùng FIBER OBJECT lưu context!                  │
+  │  // → Dừng bất cứ lúc nào! Resume = đọc fiber!      │
+  │  // → Đây là sự khác biệt CỐT LÕI!                │
+  │                                                        │
+  │                                                        │
+  │  💡 FIBER = "Virtual Stack Frame"!                     │
+  │  → Thay vì dùng system stack (không kiểm soát),      │
+  │    Fiber tự quản lý "stack" bằng linked list!         │
+  │  → Mỗi fiber = 1 "stack frame" được lưu trữ!        │
+  │  → Có thể dừng, lưu, tiếp tục BẤT CỨ LÚC NÀO!   │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## §5. Work Loop — Interruptible Rendering
-
-```javascript
-// WORK LOOP — Vòng lặp xử lý Fiber (simplified React source):
-
-// ═══ SYNCHRONOUS (không thể dừng — urgent updates) ═══
-function workLoopSync() {
-  while (workInProgress !== null) {
-    performUnitOfWork(workInProgress);
-    // KHÔNG kiểm tra thời gian! Chạy hết!
-  }
-}
-
-// ═══ CONCURRENT (có thể dừng — non-urgent updates) ═══
-function workLoopConcurrent() {
-  while (workInProgress !== null && !shouldYield()) {
-    performUnitOfWork(workInProgress);
-    //                    ↑
-    //    Scheduler kiểm tra: còn thời gian không?
-    //    true → DỪNG! Trả quyền cho browser!
-  }
-}
-
-// shouldYield():
-// → Kiểm tra elapsed time từ khi bắt đầu time slice
-// → Mỗi time slice ≈ 5ms (React Scheduler)
-// → Hết 5ms → yield → browser paint/input → tiếp tục
-```
+## §3. Kiến Trúc React Runtime — 3 Tầng Instance
 
 ```
-PERFORM UNIT OF WORK — XỬ LÝ 1 FIBER:
+═══════════════════════════════════════════════════════════════
+  REACT RUNTIME = 3 TẦNG!
 ═══════════════════════════════════════════════════════════════
 
-  function performUnitOfWork(unitOfWork) {
-      // ① BEGIN WORK: Xử lý fiber (diff, reconcile)
-      const next = beginWork(unitOfWork);
 
-      // ② Nếu có child → đi xuống:
-      if (next !== null) {
-          workInProgress = next;       // → child
-          return;
-      }
+  3 TẦNG CỦA REACT:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  TẦNG 1: ELEMENTS                            │      │
+  │  │  → MÔ TẢ UI trông như thế nào!              │      │
+  │  │  → { type, props, children }                  │      │
+  │  │  → IMMUTABLE! Tạo mới mỗi lần render!       │      │
+  │  │  → React.createElement('div', {id: 'app'})   │      │
+  │  │  → = JSX biên dịch ra!                       │      │
+  │  │                                               │      │
+  │  │  const element = {                            │      │
+  │  │    type: 'div',                               │      │
+  │  │    props: { className: 'app' },               │      │
+  │  │    children: [...]                            │      │
+  │  │  };                                           │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                     │                                   │
+  │                     │ Tạo Instances từ Elements!       │
+  │                     ▼                                   │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  TẦNG 2: INSTANCES (fiber nodes)             │      │
+  │  │  → QUẢN LÝ STATE + LIFECYCLE!               │      │
+  │  │  → Duy trì quan hệ giữa components!        │      │
+  │  │  → MUTABLE! Cập nhật khi state thay đổi!   │      │
+  │  │  → Fiber tree = tầng này!                    │      │
+  │  │                                               │      │
+  │  │  React 15: vDOM tree (plain objects)          │      │
+  │  │  React 16+: Fiber tree (fiber nodes!)         │      │
+  │  │  → THÊM thông tin scheduling!                │      │
+  │  │  → THÊM priority, effect list!               │      │
+  │  │  → THÊM linked list pointers!                │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                     │                                   │
+  │                     │ Áp dụng thay đổi lên DOM!      │
+  │                     ▼                                   │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  TẦNG 3: DOM (Real DOM)                      │      │
+  │  │  → DOM THẬT trên trình duyệt!               │      │
+  │  │  → Chỉ CẬP NHẬT khi commit!                 │      │
+  │  │  → document.createElement('div')              │      │
+  │  │  → Thao tác DOM = TỐN KÉM!                 │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  │                                                        │
+  │  REACT 16+ THÊM 2 TẦNG TẠM THỜI:                    │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │                                               │      │
+  │  │  DOM (Real DOM nodes)                         │      │
+  │  │  ─────────────────────────────                │      │
+  │  │  effect list ← TẠM! Lưu kết quả diff!     │      │
+  │  │  - - - - - - - - - - - - - - - -              │      │
+  │  │  workInProgress ← TẠM! Snapshot tiến trình! │      │
+  │  │  - - - - - - - - - - - - - - - -              │      │
+  │  │  fiber tree ← CHÍNH! vDOM + scheduling info! │      │
+  │  │  ─────────────────────────────                │      │
+  │  │  Elements (type, props)                       │      │
+  │  │                                               │      │
+  │  │  → effect list: lưu side effects (DOM changes)│      │
+  │  │  → workInProgress: cây đang xây dựng        │      │
+  │  │  → Chỉ tồn tại TRONG KHI update!            │      │
+  │  │  → Sau commit → workInProgress thành fiber!  │      │
+  │  │                                               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-      // ③ Không có child → COMPLETE + tìm sibling:
-      completeUnitOfWork(unitOfWork);
-  }
 
-  function completeUnitOfWork(unitOfWork) {
-      let completedWork = unitOfWork;
-      while (completedWork !== null) {
-
-          // ① COMPLETE WORK: Tạo DOM, collect effects
-          completeWork(completedWork);
-
-          // ② Có sibling? → đi ngang:
-          if (completedWork.sibling !== null) {
-              workInProgress = completedWork.sibling;
-              return; // → beginWork trên sibling
-          }
-
-          // ③ Không sibling? → đi lên parent:
-          completedWork = completedWork.return;
-          workInProgress = completedWork;
-      }
-  }
-
-  TRAVERSAL: beginWork đi XUỐNG (DFS)
-             completeWork đi LÊN (bubble up effects)
-
-       A ─── beginWork(A) → child B
-      / \
-     B   C ─ beginWork(B) → child D
-    / \
-   D   E ── beginWork(D) → no child → completeWork(D)
-             → sibling E → beginWork(E) → completeWork(E)
-             → no sibling → completeWork(B)
-             → sibling C → beginWork(C) → completeWork(C)
-             → no sibling → completeWork(A)
-             → DONE!
+  2 PHẦN CỦA REACT IMPLEMENTATION:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ┌──────────────────┐    ┌──────────────────────┐      │
+  │  │  RECONCILER       │    │  RENDERER             │      │
+  │  │  (Bộ điều hòa)  │    │  (Bộ render)         │      │
+  │  │                   │    │                       │      │
+  │  │  Xác định KHÁC   │    │  Áp dụng thay đổi   │      │
+  │  │  BIỆT giữa 2     │    │  lên PLATFORM!       │      │
+  │  │  phiên bản UI!   │    │                       │      │
+  │  │                   │    │  • React DOM (web)    │      │
+  │  │  • Stack (cũ)    │    │  • React Native (app) │      │
+  │  │  • Fiber (mới!)  │    │  • React ART (canvas) │      │
+  │  │                   │    │  • ReactHardware      │      │
+  │  │  → PLATFORM-     │    │  • React-pdf          │      │
+  │  │    AGNOSTIC!      │    │  • React VR           │      │
+  │  │  → Không phụ    │    │  → PLUGIN-based!      │      │
+  │  │    thuộc DOM!    │    │  → Thay đổi renderer │      │
+  │  │                   │    │    = chạy platform   │      │
+  │  │                   │    │    khác!              │      │
+  │  └──────────────────┘    └──────────────────────┘      │
+  │                                                        │
+  │  💡 Fiber tái cấu trúc RECONCILER!                    │
+  │  → Renderer KHÔNG thay đổi!                          │
+  │  → "Bộ não" mới, "tay chân" giữ nguyên!            │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## §6. Scheduler — Hệ thống ưu tiên
+## §4. Fiber Node — Cấu Trúc Dữ Liệu Chi Tiết
 
 ```
-REACT SCHEDULER — QUẢN LÝ ƯU TIÊN:
+═══════════════════════════════════════════════════════════════
+  MỖI FIBER = 1 JAVASCRIPT OBJECT VỚI NHIỀU TRƯỜNG!
 ═══════════════════════════════════════════════════════════════
 
-  React KHÔNG dùng requestIdleCallback (không ổn định!)
-  → Tự xây dựng Scheduler riêng!
 
-  5 MỨC ĐỘ ƯU TIÊN (React 16-17):
-  ┌────┬──────────────────────┬──────────┬────────────────────┐
-  │ #  │ Priority             │ Timeout  │ Ví dụ              │
-  ├────┼──────────────────────┼──────────┼────────────────────┤
-  │ 1  │ Immediate            │ -1ms     │ Đồng bộ! (sync)    │
-  │ 2  │ UserBlocking         │ 250ms    │ Click, input, hover │
-  │ 3  │ Normal               │ 5000ms   │ Network response    │
-  │ 4  │ Low                  │ 10000ms  │ Analytics           │
-  │ 5  │ Idle                 │ maxInt   │ Off-screen, prefetch│
-  └────┴──────────────────────┴──────────┴────────────────────┘
+  CẤU TRÚC CỦA 1 FIBER NODE:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  // Mỗi fiber node chứa các trường sau:               │
+  │  {                                                     │
+  │    // ═══ NHẬN DẠNG ═══                                │
+  │    tag,              // Loại fiber (Function, Class,   │
+  │                      // HostComponent, HostText...)    │
+  │    key,              // Key cho reconciliation          │
+  │    type,             // Component function/class,      │
+  │                      // hoặc tag name ('div', 'span') │
+  │    elementType,      // Giữ nguyên type gốc           │
+  │                                                        │
+  │    // ═══ QUAN HỆ (Linked List!) ═══                  │
+  │    return,           // ← PARENT fiber!               │
+  │    child,            // ← FIRST child fiber!          │
+  │    sibling,          // ← Anh/chị em TIẾP THEO!     │
+  │    index,            // Vị trí trong children          │
+  │                                                        │
+  │    // ═══ TRẠNG THÁI ═══                               │
+  │    stateNode,        // Instance thật:                  │
+  │                      // - Class component: this        │
+  │                      // - DOM element: DOM node        │
+  │                      // - Function component: null     │
+  │    pendingProps,      // Props MỚI (chưa xử lý)      │
+  │    memoizedProps,     // Props ĐÃ xử lý             │
+  │    memoizedState,     // State ĐÃ xử lý             │
+  │    updateQueue,       // Hàng đợi state updates       │
+  │                                                        │
+  │    // ═══ EFFECTS (Side Effects) ═══                   │
+  │    effectTag,         // Loại effect (Placement,       │
+  │                      // Update, Deletion...)           │
+  │    firstEffect,       // → Đầu effect list           │
+  │    lastEffect,        // → Cuối effect list           │
+  │    nextEffect,        // → Effect tiếp theo           │
+  │                                                        │
+  │    // ═══ SCHEDULING ═══                               │
+  │    expirationTime,    // Thời hạn ưu tiên            │
+  │    alternate,         // → fiber trong CÂY KHÁC      │
+  │                      // (current ↔ workInProgress)   │
+  │  }                                                     │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-  Timeout = Thời gian tối đa chờ trước khi PHẢI thực thi (starvation prevention)
-```
 
-```javascript
-// SCHEDULER — Cách hoạt động (simplified):
-
-// ① Task Queue — Min-Heap theo expirationTime:
-const taskQueue = new MinHeap(); // Sorted by expirationTime!
-
-function scheduleCallback(priorityLevel, callback) {
-  const currentTime = getCurrentTime();
-  const startTime = currentTime;
-
-  // Tính timeout từ priority:
-  let timeout;
-  switch (priorityLevel) {
-    case ImmediatePriority:
-      timeout = -1;
-      break;
-    case UserBlockingPriority:
-      timeout = 250;
-      break;
-    case NormalPriority:
-      timeout = 5000;
-      break;
-    case LowPriority:
-      timeout = 10000;
-      break;
-    case IdlePriority:
-      timeout = 1073741823;
-      break; // maxInt
-  }
-
-  const expirationTime = startTime + timeout;
-  const newTask = {
-    callback,
-    priorityLevel,
-    expirationTime,
-    startTime,
-  };
-
-  taskQueue.push(newTask); // Push vào min-heap!
-  requestHostCallback(flushWork); // Lên lịch chạy!
-}
-
-// ② Flush Work — Chạy tasks theo priority:
-function flushWork(initialTime) {
-  let currentTime = initialTime;
-
-  // Lấy task ưu tiên cao nhất:
-  let currentTask = taskQueue.peek();
-
-  while (currentTask !== null) {
-    // Task chưa hết hạn + hết time slice → yield!
-    if (currentTask.expirationTime > currentTime && shouldYield()) {
-      break; // ← DỪNG! Trả quyền cho browser!
-    }
-
-    // Thực thi task:
-    const callback = currentTask.callback;
-    const continuationCallback = callback();
-
-    if (typeof continuationCallback === "function") {
-      // Task chưa xong → giữ trong queue (tiếp tục sau):
-      currentTask.callback = continuationCallback;
-    } else {
-      // Task xong → xóa khỏi queue:
-      taskQueue.pop();
-    }
-
-    currentTask = taskQueue.peek();
-  }
-
-  // Còn tasks? → lên lịch tiếp!
-  return taskQueue.length > 0;
-}
-
-// ③ Time Slicing — 5ms per slice:
-function shouldYield() {
-  const elapsed = getCurrentTime() - startTime;
-  return elapsed >= 5; // 5ms! Yield lại cho browser!
-}
-
-// ④ requestHostCallback — Dùng MessageChannel (không phải rIC!):
-const channel = new MessageChannel();
-const port = channel.port2;
-channel.port1.onmessage = () => {
-  // Macro task → chạy sau browser paint/input!
-  performWorkUntilDeadline();
-};
-function requestHostCallback(callback) {
-  scheduledHostCallback = callback;
-  port.postMessage(null); // Trigger macro task!
-}
-```
-
-```
-TẠI SAO MessageChannel THAY VÌ requestIdleCallback / setTimeout:
-═══════════════════════════════════════════════════════════════
-
-  requestIdleCallback:
-  → Browser support kém (Safari KHÔNG hỗ trợ!)
-  → Không đảm bảo gọi mỗi frame
-  → Hành vi khác nhau giữa browsers
-
-  setTimeout(fn, 0):
-  → Minimum delay 4ms (browser clamp!)
-  → Quá chậm cho 5ms time slices
-  → Nested setTimeout delay tích lũy!
-
-  MessageChannel:
-  → Macro task → chạy SAU micro tasks, TRƯỚC setTimeout
-  → KHÔNG bị 4ms clamp!
-  → Consistent across browsers! ✅
-  → React Scheduler dùng MessageChannel.port.postMessage()
+  GIẢI THÍCH CÁC TRƯỜNG QUAN TRỌNG:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① return (KHÔNG phải parent!):                       │
+  │  → Tên "return" vì: sau khi xử lý XONG, fiber sẽ   │
+  │    "RETURN" kết quả (effect list) cho node này!       │
+  │  → Tương đương parent pointer!                        │
+  │  → Nhưng mang ý nghĩa "nộp kết quả về đâu!"      │
+  │                                                        │
+  │  ② child + sibling (Linked List!):                    │
+  │  → KHÔNG phải children array!                          │
+  │  → Child = CON ĐẦU TIÊN!                             │
+  │  → Sibling = ANH EM TIẾP THEO!                       │
+  │  → = Singly Linked List!                               │
+  │                                                        │
+  │  ③ alternate (CỰC KỲ QUAN TRỌNG!):                  │
+  │  → Mỗi fiber có 1 "bản sao" ở cây khác!             │
+  │  → current fiber ↔ workInProgress fiber               │
+  │  → current.alternate = workInProgress                  │
+  │  → workInProgress.alternate = current                  │
+  │  → = DOUBLE BUFFERING!                                 │
+  │                                                        │
+  │  ④ effectTag (bitwise flags!):                        │
+  │  → Dùng BIT OPERATIONS cho hiệu suất!                │
+  │  → Placement = 0b0000010 (thêm mới!)                 │
+  │  → Update    = 0b0000100 (cập nhật!)                  │
+  │  → Deletion  = 0b0001000 (xóa!)                       │
+  │  → Có thể COMBINE: Placement | Update                 │
+  │                                                        │
+  │  ⑤ stateNode:                                         │
+  │  → Class Component: instance (this!)                   │
+  │  → Host Component ('div'): DOM node thật!             │
+  │  → Function Component: null (không có instance!)      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## §7. Lanes — Mô hình ưu tiên thế hệ mới
+## §5. Fiber Tree — Cây Liên Kết Đơn (Singly Linked List Tree)
 
 ```
-LANES (React 18) — THAY THẾ ExpirationTime:
+═══════════════════════════════════════════════════════════════
+  FIBER TREE = CÂY DÙNG LINKED LIST, KHÔNG PHẢI ARRAY!
 ═══════════════════════════════════════════════════════════════
 
-  TẠI SAO THAY ĐỔI:
-  ExpirationTime = 1 NUMBER → chỉ sắp xếp LINEAR
-  → Không biểu diễn được: "task A và B CÙNG priority"
-  → Không GROUP được 1 batch updates!
 
-  LANES = BITMASK → biểu diễn SET of priorities!
-  → Mỗi bit = 1 lane (làn đường)
-  → Bitwise OR: gộp lanes | GroupA = Lane1 | Lane2
-  → Bitwise AND: kiểm tra lanes & HighPriority
-  → SIÊU NHANH (bitwise operations!)
+  SO SÁNH VDOM TREE vs FIBER TREE:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ═══ vDOM Tree (React 15) ═══                          │
+  │  → Mỗi node có MẢNG children!                        │
+  │                                                        │
+  │  {                                                     │
+  │    type: 'div',                                        │
+  │    children: [    ← MẢNG! Duyệt bằng ĐỆ QUY!       │
+  │      { type: 'h1', children: [...] },                  │
+  │      { type: 'p', children: [...] },                   │
+  │      { type: 'ul', children: [...] }                   │
+  │    ]                                                   │
+  │  }                                                     │
+  │                                                        │
+  │                                                        │
+  │  ═══ Fiber Tree (React 16+) ═══                        │
+  │  → Mỗi node có child, sibling, return!                │
+  │                                                        │
+  │  {                                                     │
+  │    type: 'div',                                        │
+  │    child: fiberH1,     ← CON ĐẦU TIÊN!              │
+  │    sibling: null,      ← KHÔNG có anh em!            │
+  │    return: parentFiber ← TRẢ VỀ cho ai!             │
+  │  }                                                     │
+  │  // fiberH1.sibling = fiberP                           │
+  │  // fiberP.sibling = fiberUL                           │
+  │  // → LINKED LIST!                                     │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-  31 LANES (31-bit integer):
-  ┌─────────────────────────────────────────────────────────┐
-  │ Bit 0:   SyncLane           │ Urgent! (click, input)   │
-  │ Bit 1-2: InputContinuous    │ Drag, scroll             │
-  │ Bit 3-4: DefaultLanes       │ setState, fetch          │
-  │ Bit 5-16: TransitionLanes   │ useTransition, startTrans│
-  │ Bit 17-26: RetryLanes       │ Suspense retry           │
-  │ Bit 27-30: IdleLanes        │ Off-screen, prefetch     │
-  │ Bit 31: OffscreenLane       │ Hidden content           │
-  └─────────────────────────────────────────────────────────┘
-```
 
-```javascript
-// LANES — Bitwise operations:
-
-const NoLanes = 0b0000000000000000000000000000000;
-const SyncLane = 0b0000000000000000000000000000001; // Bit 0
-const InputLane = 0b0000000000000000000000000000100; // Bit 2
-const DefaultLane = 0b0000000000000000000000000010000; // Bit 4
-const TransLane1 = 0b0000000000000000000000001000000; // Bit 6
-
-// Gộp lanes:
-const pendingLanes = SyncLane | DefaultLane;
-// = 0b0000000000000000000000000010001
-
-// Kiểm tra lane:
-const hasSyncWork = (pendingLanes & SyncLane) !== NoLanes;
-// true! → Có sync work cần xử lý!
-
-// Lấy lane ưu tiên cao nhất:
-function getHighestPriorityLane(lanes) {
-  return lanes & -lanes; // Lấy bit thấp nhất (rightmost)!
-  // pendingLanes & -pendingLanes = SyncLane ✅
-}
-
-// React quyết định render lane nào:
-function getNextLanes(root) {
-  const pendingLanes = root.pendingLanes;
-  if (pendingLanes === NoLanes) return NoLanes;
-
-  // Ưu tiên: Sync > Input > Default > Transition > Idle
-  if (pendingLanes & SyncLane) return SyncLane;
-  if (pendingLanes & InputContinuousLanes) return InputContinuousLanes;
-  if (pendingLanes & DefaultLanes) return DefaultLanes;
-  // ... tiếp tục theo thứ tự ưu tiên
-
-  return pendingLanes; // Fallback: tất cả
-}
-```
-
-```
-LANES vs EXPIRATION TIME:
-═══════════════════════════════════════════════════════════════
-
-  ┌──────────────────┬──────────────────┬─────────────────┐
-  │ Feature          │ ExpirationTime   │ Lanes ⭐         │
-  ├──────────────────┼──────────────────┼─────────────────┤
-  │ Kiểu dữ liệu    │ Number (1 value) │ Bitmask (31 bit)│
-  │ Batch updates    │ ❌ Khó          │ ✅ OR bitwise   │
-  │ Priority groups  │ ❌ Linear only  │ ✅ Arbitrary    │
-  │ Check priority   │ O(n) compare    │ O(1) bitwise &  │
-  │ Multiple tasks   │ ❌ 1 at a time  │ ✅ Concurrent!  │
-  │ Entangle         │ ❌ Không        │ ✅ Bind lanes   │
-  └──────────────────┴──────────────────┴─────────────────┘
+  SƠ ĐỒ FIBER TREE LIÊN KẾT:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  JSX:                                                   │
+  │  <App>                                                  │
+  │    <Header>                                             │
+  │      <Logo />                                           │
+  │      <Nav />                                            │
+  │    </Header>                                            │
+  │    <Main>                                               │
+  │      <Content />                                        │
+  │      <Sidebar />                                        │
+  │    </Main>                                              │
+  │    <Footer />                                           │
+  │  </App>                                                 │
+  │                                                        │
+  │                                                        │
+  │  FIBER TREE (Linked List!):                             │
+  │                                                        │
+  │          ┌─────────┐                                    │
+  │          │   App   │                                    │
+  │          │         │                                    │
+  │          └────┬────┘                                    │
+  │               │ child                                   │
+  │               ▼                                         │
+  │          ┌─────────┐  sibling  ┌─────────┐  sibling    │
+  │          │ Header  │──────────▶│  Main   │──────────▶  │
+  │          │         │           │         │             │
+  │          └────┬────┘           └────┬────┘             │
+  │               │ child               │ child    ┌──────┐│
+  │               ▼                     ▼          │Footer││
+  │          ┌─────────┐          ┌─────────┐     └──────┘│
+  │          │  Logo   │ sibling  │ Content │ sibling      │
+  │          │         │────────▶│         │────────▶     │
+  │          └─────────┘          └─────────┘              │
+  │               │                     │     ┌─────────┐  │
+  │               ▼                     ▼     │ Sidebar │  │
+  │          ┌─────────┐                      └─────────┘  │
+  │          │   Nav   │                                    │
+  │          └─────────┘                                    │
+  │                                                        │
+  │                                                        │
+  │  MỖI MŨI TÊN là 1 POINTER:                            │
+  │  ─── child ───▶  : con đầu tiên                      │
+  │  ── sibling ──▶  : anh em tiếp theo                   │
+  │  ── return ───▶  : trả kết quả về (PARENT)           │
+  │  (return ngược chiều child/sibling, không vẽ!)        │
+  │                                                        │
+  │  VÍ DỤ:                                                │
+  │  App.child = Header                                    │
+  │  Header.sibling = Main                                 │
+  │  Main.sibling = Footer                                 │
+  │  Header.child = Logo                                   │
+  │  Logo.sibling = Nav                                    │
+  │  Main.child = Content                                  │
+  │  Content.sibling = Sidebar                             │
+  │  Logo.return = Header                                  │
+  │  Header.return = App                                   │
+  │                                                        │
+  │                                                        │
+  │  THỨ TỰ DUYỆT (DFS bằng VÒNG LẶP!):                │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  1. App        (bắt đầu!)                   │      │
+  │  │  2. Header     (child của App!)              │      │
+  │  │  3. Logo       (child của Header!)           │      │
+  │  │  4. Nav        (sibling của Logo!)           │      │
+  │  │  5. Main       (return Header → sibling!)   │      │
+  │  │  6. Content    (child của Main!)             │      │
+  │  │  7. Sidebar    (sibling của Content!)        │      │
+  │  │  8. Footer     (return Main → sibling!)     │      │
+  │  │  9. → return App → XONG!                   │      │
+  │  │                                               │      │
+  │  │  THUẬT TOÁN:                                  │      │
+  │  │  ① CÓ child? → đi xuống child!             │      │
+  │  │  ② KHÔNG child? CÓ sibling? → qua sibling! │      │
+  │  │  ③ KHÔNG cả hai? → return LÊN, tìm sibling│      │
+  │  │  ④ Return đến root? → XONG!                │      │
+  │  │                                               │      │
+  │  │  💡 DFS (Depth-First Search) bằng VÒNG LẶP!│      │
+  │  │  → KHÔNG ĐỆ QUY!                            │      │
+  │  │  → Dừng bất cứ lúc nào!                    │      │
+  │  │  → nextUnitOfWork = fiber tiếp theo!         │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## §8. Render Phase vs Commit Phase
+## §6. workInProgress Tree — Double Buffering
 
 ```
-2 PHASES CỦA FIBER RECONCILER:
+═══════════════════════════════════════════════════════════════
+  DOUBLE BUFFERING = 2 CÂY LUÂN PHIÊN NHAU!
 ═══════════════════════════════════════════════════════════════
 
-  ┌─── RENDER PHASE ────────────────────────────────────────┐
-  │ CÓ THỂ DỪNG / HỦY / RESTART!                          │
-  │                                                          │
-  │ ① beginWork (top-down):                                  │
-  │    → Duyệt từ root xuống leaves                          │
-  │    → Diff: so sánh current vs new element                │
-  │    → Tạo/update child Fibers                             │
-  │    → Gán flags: Placement | Update | Deletion            │
-  │    → KHÔNG CHẠM DOM!                                     │
-  │                                                          │
-  │ ② completeWork (bottom-up):                              │
-  │    → Tạo DOM nodes (chưa gắn vào document!)              │
-  │    → Collect effects: bubble subtreeFlags lên cha         │
-  │    → Build effect list                                    │
-  │                                                          │
-  │ LIFECYCLE chạy trong render phase:                       │
-  │ → constructor, getDerivedStateFromProps, shouldComponentUpdate│
-  │ → render                                                  │
-  │ ⚠️ CÓ THỂ GỌI NHIỀU LẦN! (do interruptible!)          │
-  │ → KHÔNG side effects ở đây!                              │
-  └──────────────────────────────────────────────────────────┘
 
-  ┌─── COMMIT PHASE ────────────────────────────────────────┐
-  │ KHÔNG THỂ DỪNG! (synchronous, atomic!)                  │
-  │                                                          │
-  │ 3 SUB-PHASES:                                            │
-  │                                                          │
-  │ ① Before Mutation (đọc DOM!):                            │
-  │    → getSnapshotBeforeUpdate                              │
-  │    → Đọc layout info TRƯỚC khi DOM thay đổi              │
-  │                                                          │
-  │ ② Mutation (thay đổi DOM!):                              │
-  │    → Placement → DOM.appendChild / insertBefore           │
-  │    → Update → updateProperties (className, style...)      │
-  │    → Deletion → removeChild + cleanup refs                │
-  │    → Text update → textContent = newText                  │
-  │                                                          │
-  │ ③ Layout (đọc DOM mới!):                                 │
-  │    → fiberRoot.current = finishedWork (SWAP!)             │
-  │    → componentDidMount / componentDidUpdate               │
-  │    → useLayoutEffect callbacks                            │
-  │    → Refs update                                          │
-  │                                                          │
-  │ ④ Passive Effects (async — SAU paint!):                  │
-  │    → useEffect cleanup (previous)                         │
-  │    → useEffect callbacks (current)                        │
-  │    → Chạy trong MACRO TASK tiếp theo!                     │
-  └──────────────────────────────────────────────────────────┘
-```
+  NGUYÊN LÝ DOUBLE BUFFERING:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  React duy trì 2 fiber trees:                          │
+  │                                                        │
+  │  ① current tree:                                      │
+  │     → Cây fiber ĐANG hiển thị trên màn hình!        │
+  │     → = trạng thái UI hiện tại!                      │
+  │     → KHÔNG được sửa trực tiếp!                      │
+  │                                                        │
+  │  ② workInProgress tree (WIP):                         │
+  │     → Cây fiber ĐANG được xây dựng!                  │
+  │     → = trạng thái UI TIẾP THEO!                     │
+  │     → Xây dựng trong phase render!                   │
+  │     → Có thể BỊ HỦY + xây lại!                     │
+  │                                                        │
+  │                                                        │
+  │  QUÁ TRÌNH:                                             │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │                                               │      │
+  │  │  setState() → Bắt đầu update!               │      │
+  │  │                                               │      │
+  │  │  ┌─────────────┐     ┌─────────────┐          │      │
+  │  │  │   current   │ alt │    WIP      │          │      │
+  │  │  │   tree      │◄───▶│    tree     │          │      │
+  │  │  │             │     │ (đang xây!) │          │      │
+  │  │  │  ┌───┐      │     │  ┌───┐      │          │      │
+  │  │  │  │ A │      │     │  │ A'│      │          │      │
+  │  │  │  ├───┤      │     │  ├───┤      │          │      │
+  │  │  │  │ B │ C │  │     │  │B' │ C'│  │          │      │
+  │  │  │  └───┘   │  │     │  └───┘   │  │          │      │
+  │  │  │          │  │     │          │  │          │      │
+  │  │  └─────────────┘     └─────────────┘          │      │
+  │  │                                               │      │
+  │  │  A.alternate = A'                             │      │
+  │  │  A'.alternate = A                             │      │
+  │  │  (Tương tự cho B↔B', C↔C')                  │      │
+  │  │                                               │      │
+  │  │  Sau commit:                                  │      │
+  │  │  → WIP tree THÀNH current tree!              │      │
+  │  │  → current CŨ thành "dự trữ" cho lần sau!  │      │
+  │  │  → Chỉ đổi POINTER! Không tạo mới!         │      │
+  │  │                                               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  │                                                        │
+  │  CODE TẠO workInProgress fiber:                        │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │                                               │      │
+  │  │  function createWorkInProgress(current) {     │      │
+  │  │    // ① Kiểm tra alternate (bản sao cũ!)   │      │
+  │  │    let workInProgress = current.alternate;    │      │
+  │  │                                               │      │
+  │  │    if (workInProgress === null) {             │      │
+  │  │      // ② Lần đầu: TẠO MỚI!               │      │
+  │  │      workInProgress = createFiber(            │      │
+  │  │        current.tag,                           │      │
+  │  │        current.pendingProps,                   │      │
+  │  │        current.key                            │      │
+  │  │      );                                       │      │
+  │  │      // ③ Liên kết 2 chiều!                 │      │
+  │  │      workInProgress.alternate = current;      │      │
+  │  │      current.alternate = workInProgress;      │      │
+  │  │    } else {                                   │      │
+  │  │      // ④ CÓ alternate → TÁI SỬ DỤNG!    │      │
+  │  │      workInProgress.pendingProps =            │      │
+  │  │        current.pendingProps;                   │      │
+  │  │      // ⑤ Reset effects!                    │      │
+  │  │      workInProgress.effectTag = NoEffect;     │      │
+  │  │      workInProgress.firstEffect = null;       │      │
+  │  │      workInProgress.lastEffect = null;        │      │
+  │  │      workInProgress.nextEffect = null;        │      │
+  │  │    }                                          │      │
+  │  │                                               │      │
+  │  │    return workInProgress;                     │      │
+  │  │  }                                            │      │
+  │  │                                               │      │
+  │  │  💡 TÁI SỬ DỤNG fiber cũ:                   │      │
+  │  │  → Tiết kiệm MEMORY ALLOCATION!              │      │
+  │  │  → Giảm GARBAGE COLLECTION!                  │      │
+  │  │  → fiber cũ thành "vỏ" cho fiber mới!       │      │
+  │  │                                               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-```javascript
-// BEGIN WORK — Xử lý Fiber theo type (simplified):
-function beginWork(current, workInProgress, renderLanes) {
-  // Optimization: nếu props KHÔNG đổi → bỏ qua!
-  if (current !== null) {
-    const oldProps = current.memoizedProps;
-    const newProps = workInProgress.pendingProps;
-    if (oldProps === newProps && !hasContextChanged()) {
-      return bailoutOnAlreadyFinishedWork(workInProgress);
-      // ← SKIP toàn bộ subtree! ⚡
-    }
-  }
 
-  // Xử lý theo component type:
-  switch (workInProgress.tag) {
-    case FunctionComponent:
-      return updateFunctionComponent(current, workInProgress, renderLanes);
-    // → Gọi function(props) → reconcile children
-
-    case ClassComponent:
-      return updateClassComponent(current, workInProgress, renderLanes);
-    // → Gọi instance.render() → reconcile children
-
-    case HostComponent: // div, span, p...
-      return updateHostComponent(current, workInProgress);
-    // → Reconcile children trực tiếp
-
-    case HostText: // Text node
-      return null; // Leaf node — no children
-
-    case SuspenseComponent:
-      return updateSuspenseComponent(current, workInProgress, renderLanes);
-  }
-}
-
-// COMPLETE WORK — Tạo DOM + collect effects (simplified):
-function completeWork(current, workInProgress) {
-  switch (workInProgress.tag) {
-    case HostComponent: {
-      const type = workInProgress.type; // 'div'
-
-      if (current !== null && workInProgress.stateNode != null) {
-        // UPDATE: diff props → prepare update payload
-        const updatePayload = diffProperties(
-          current.memoizedProps,
-          workInProgress.pendingProps,
-        );
-        workInProgress.updateQueue = updatePayload;
-        if (updatePayload) {
-          workInProgress.flags |= Update;
-        }
-      } else {
-        // MOUNT: tạo DOM node (chưa gắn vào document!)
-        const instance = document.createElement(type);
-        appendAllChildren(instance, workInProgress);
-        workInProgress.stateNode = instance;
-      }
-
-      // Bubble effects lên parent:
-      bubbleProperties(workInProgress);
-      return null;
-    }
-  }
-}
+  SƠ ĐỒ DOUBLE BUFFERING TIMELINE:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Lần 1 (Initial Render):                               │
+  │  ┌──────────┐                                          │
+  │  │ current  │ (xây dựng lần đầu!)                    │
+  │  │  A─B─C  │                                          │
+  │  └──────────┘                                          │
+  │                                                        │
+  │  Lần 2 (Update: B thay đổi!):                        │
+  │  ┌──────────┐     ┌──────────┐                         │
+  │  │ current  │ alt │   WIP    │                         │
+  │  │  A─B─C  │◄───▶│ A'─B'─C'│  B' = B mới!           │
+  │  └──────────┘     └──────────┘                         │
+  │        │               │                                │
+  │        │    commit!    │                                │
+  │        ▼               ▼                                │
+  │  ┌──────────┐     ┌──────────┐                         │
+  │  │   cũ    │ alt │ current  │ ← WIP THÀNH current!  │
+  │  │ (dự trữ)│◄───▶│ A'─B'─C'│                         │
+  │  └──────────┘     └──────────┘                         │
+  │                                                        │
+  │  Lần 3 (Update: C thay đổi!):                        │
+  │  ┌──────────┐     ┌──────────┐                         │
+  │  │ current  │ alt │   WIP    │                         │
+  │  │ A'─B'─C'│◄───▶│A''─B''─C''│ C'' = C mới!         │
+  │  └──────────┘     └──────────┘                         │
+  │  (current cũ = WIP's ← TÁI SỬ DỤNG fiber objects!) │
+  │                                                        │
+  │  💡 2 cây LUÂN PHIÊN nhau, KHÔNG tạo mới!           │
+  │  → Giống như double buffer trong game rendering!       │
+  │  → Back buffer (WIP) → Front buffer (current)!       │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## §9. Concurrent Features (React 18)
+## §7. Fiber Reconciler — 2 Phase: Render + Commit
 
 ```
-CONCURRENT MODE — React 18 FEATURES:
+═══════════════════════════════════════════════════════════════
+  FIBER RECONCILER CHIA THÀNH 2 GIAI ĐOẠN TÁCH BIỆT!
 ═══════════════════════════════════════════════════════════════
 
-  React 18 = Concurrent React! Tất cả features dựa trên Fiber!
 
-  ① Automatic Batching — Gộp updates TỰ ĐỘNG
-  ② useTransition — Đánh dấu update KHÔNG urgent
-  ③ useDeferredValue — Deferring giá trị
-  ④ Suspense — Chờ async data
-  ⑤ Streaming SSR — Server-side rendering từng phần
-```
+  2 PHASES:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Phase 1: RENDER / RECONCILIATION                      │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  → CÓ THỂ NGẮT! (Interruptible!)            │      │
+  │  │  → Xây dựng workInProgress tree!             │      │
+  │  │  → Diff: tìm sự khác biệt!                 │      │
+  │  │  → Thu thập effect list!                     │      │
+  │  │  → KHÔNG THAY ĐỔI DOM!                     │      │
+  │  │  → Chỉ TÍNH TOÁN!                           │      │
+  │  │                                               │      │
+  │  │  Lifecycle gọi trong phase này:               │      │
+  │  │  • constructor()                              │      │
+  │  │  • getDerivedStateFromProps()                  │      │
+  │  │  • shouldComponentUpdate()                    │      │
+  │  │  • render()                                   │      │
+  │  │                                               │      │
+  │  │  ⚠ CÓ THỂ GỌI NHIỀU LẦN!                  │      │
+  │  │  → Nếu bị ngắt → gọi lại!                  │      │
+  │  │  → KHÔNG được có side effects!               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                     │                                   │
+  │                     │ Hoàn tất → pendingCommit!       │
+  │                     ▼                                   │
+  │  Phase 2: COMMIT                                       │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  → KHÔNG THỂ NGẮT! (Uninterruptible!)       │      │
+  │  │  → Thực thi effect list!                     │      │
+  │  │  → THAY ĐỔI DOM thật!                      │      │
+  │  │  → Gọi lifecycle functions!                  │      │
+  │  │  → ĐỒNG BỘ, chạy 1 LƯỢT!                  │      │
+  │  │                                               │      │
+  │  │  Lifecycle gọi trong phase này:               │      │
+  │  │  • componentDidMount()                        │      │
+  │  │  • componentDidUpdate()                       │      │
+  │  │  • componentWillUnmount()                     │      │
+  │  │                                               │      │
+  │  │  ✅ CHỈ GỌI 1 LẦN!                         │      │
+  │  │  → Không bị ngắt!                            │      │
+  │  │  → An toàn cho side effects!                 │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-```javascript
-// ① AUTOMATIC BATCHING (React 18):
-// React 17: chỉ batch trong event handlers
-// React 18: batch EVERYWHERE! (setTimeout, Promises, native events!)
 
-function handleClick() {
-  setCount((c) => c + 1); // React 17: 1 re-render
-  setFlag((f) => !f); // React 17: 1 re-render → TOTAL: 2! 💀
-} // React 18: 1 re-render → TOTAL: 1! ✅
-
-setTimeout(() => {
-  setCount((c) => c + 1);
-  setFlag((f) => !f);
-  // React 17: 2 re-renders (không batch trong setTimeout!) 💀
-  // React 18: 1 re-render (automatic batching!) ✅
-}, 1000);
-
-// Opt-out: flushSync (buộc đồng bộ):
-import { flushSync } from "react-dom";
-flushSync(() => {
-  setCount((c) => c + 1);
-}); // Re-render NGAY!
-flushSync(() => {
-  setFlag((f) => !f);
-}); // Re-render NGAY!
-
-// ② useTransition — "Đây là update KHÔNG URGENT":
-function SearchResults() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [isPending, startTransition] = useTransition();
-
-  function handleChange(e) {
-    // ① Urgent: update input NGAY (user thấy ký tự đã gõ):
-    setQuery(e.target.value);
-
-    // ② Non-urgent: update results CÓ THỂ CHỜ:
-    startTransition(() => {
-      setResults(filterData(e.target.value)); // ← Interruptible!
-    });
-  }
-
-  return (
-    <div>
-      <input value={query} onChange={handleChange} />
-      {isPending ? <Spinner /> : <ResultList results={results} />}
-    </div>
-  );
-}
-// → User gõ → input phản hồi NGAY → results update SAU!
-// → Gõ tiếp → ABORT results cũ → tính results MỚI!
-// → KHÔNG BAO GIỜ block input! ✅
-
-// ③ useDeferredValue — Defer giá trị:
-function SearchResults({ query }) {
-  const deferredQuery = useDeferredValue(query);
-  // deferredQuery = query cũ (trong lúc chờ)
-  // → Khi browser rảnh → deferredQuery = query mới
-
-  const results = useMemo(() => filterData(deferredQuery), [deferredQuery]);
-
-  return (
-    <div style={{ opacity: query !== deferredQuery ? 0.5 : 1 }}>
-      <ResultList results={results} />
-    </div>
-  );
-}
-```
-
-```
-useTransition vs useDeferredValue:
-═══════════════════════════════════════════════════════════════
-
-  useTransition:
-  → BỌC setState call → "update này không urgent"
-  → Có isPending flag → hiện loading UI
-  → Kiểm soát tại NƠI GỌI setState
-
-  useDeferredValue:
-  → BỌC value → "value này có thể dùng bản cũ trong lúc chờ"
-  → Không kiểm soát setState
-  → Kiểm soát tại NƠI DÙNG value
-  → Hữu ích khi không kiểm soát setState (props từ parent!)
+  TẠI SAO CHIA 2 PHASE?
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Phase Render (diff) = TÍNH TOÁN thuần túy!        │
+  │     → So sánh 2 cây, tìm khác biệt!                 │
+  │     → Tính toán = CÓ THỂ CHIA NHỎ!                  │
+  │     → Tính nửa → dừng → tính tiếp = OK!           │
+  │     → KHÔNG ảnh hưởng UI (chưa đụng DOM!)          │
+  │                                                        │
+  │  ② Phase Commit (patch) = THAY ĐỔI DOM!             │
+  │     → Thêm/xóa/sửa DOM nodes!                       │
+  │     → KHÔNG CHIA nhỏ vì:                             │
+  │     → Nếu dừng giữa chừng:                          │
+  │       → DOM half-updated = UI INCONSISTENT!           │
+  │       → User thấy UI "nửa cũ nửa mới"!             │
+  │       → State không khớp DOM!                         │
+  │     → PHẢI chạy 1 lượt!                              │
+  │     → May mắn: DOM operations NHANH hơn diff!       │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## §10. Time Slicing — Chia nhỏ công việc
+## §8. Phase 1: Render/Reconciliation — Interruptible!
 
 ```
-TIME SLICING — Render theo lát cắt thời gian:
+═══════════════════════════════════════════════════════════════
+  PHASE RENDER = XÂY DỰNG workInProgress TREE TỪNG NODE!
 ═══════════════════════════════════════════════════════════════
 
-  KHÔNG Time Slicing (Sync):
-  ┌────────────────────────────────────────────┐
-  │ Render (50ms) ██████████████████████████████│ Block!
-  │                               Input ↑ Ignored!
-  └────────────────────────────────────────────┘
 
-  CÓ Time Slicing (Concurrent):
-  ┌─── 5ms ──┐ ┌─── 5ms ──┐ ┌─── 5ms ──┐ ┌─── 5ms ──┐
-  │ Render █  │ │ Render █  │ │ Input! ✅ │ │ Render █  │
-  │ yield! → │→│ yield! → │→│ Handle  → │→│ yield! → │...
-  └──────────┘ └──────────┘ └──────────┘ └──────────┘
-  → 5ms slices + yielding = 60fps maintained! ✅
-```
+  QUY TRÌNH XỬ LÝ MỖI FIBER (Unit of Work):
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  performUnitOfWork(fiber):                             │
+  │                                                        │
+  │  ① Kiểm tra: node có CẦN UPDATE không?              │
+  │     → So sánh pendingProps vs memoizedProps!          │
+  │     → Kiểm tra state changes!                         │
+  │     → Kiểm tra context changes!                       │
+  │     ┌───────────────────────────────────┐              │
+  │     │ KHÔNG cần update?                  │              │
+  │     │ → Clone children fibers!           │              │
+  │     │ → Nhảy đến bước ⑥!              │              │
+  │     └───────────────────────────────────┘              │
+  │                                                        │
+  │  ② Cập nhật state hiện tại:                           │
+  │     → Process updateQueue!                             │
+  │     → Merge pendingProps vào memoizedProps!            │
+  │     → Update context!                                  │
+  │                                                        │
+  │  ③ Kiểm tra shouldComponentUpdate():                  │
+  │     → Trả false? → Nhảy bước ⑥!                    │
+  │     → Trả true? → Tiếp tục!                         │
+  │                                                        │
+  │  ④ Gọi render() → nhận children MỚI:                │
+  │     → Tạo fiber cho mỗi child element!               │
+  │     → TÁI SỬ DỤNG fiber cũ nếu có (key matching!)  │
+  │     → Đánh dấu: Placement (thêm), Deletion (xóa)   │
+  │     → Update (cập nhật)!                              │
+  │                                                        │
+  │  ⑤ Có child fiber?                                    │
+  │     ┌───────────────────────────────────┐              │
+  │     │ CÓ child:                          │              │
+  │     │ → return child; (xử lý child tiếp!)│             │
+  │     └───────────────────────────────────┘              │
+  │                                                        │
+  │  ⑥ KHÔNG có child → completeUnitOfWork:              │
+  │     → Merge effect list LÊN return (parent)!          │
+  │     → Có sibling? → return sibling!                   │
+  │     → Không? → return lên parent, tìm sibling!       │
+  │     → Return đến root? → PHASE 1 XONG!              │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-```javascript
-// TIME SLICING THỰC TẾ — Demo:
-// Render 10,000 items — KHÔNG block UI:
 
-function HeavyList() {
-  const [items] = useState(() =>
-    Array.from({ length: 10000 }, (_, i) => ({ id: i, name: `Item ${i}` })),
-  );
-
-  // ❌ KHÔNG time slicing: block toàn bộ!
-  // return items.map(item => <ExpensiveItem key={item.id} {...item} />);
-
-  // ✅ VỚI useTransition: React tự time-slice!
-  const [isPending, startTransition] = useTransition();
-  const [visibleItems, setVisibleItems] = useState([]);
-
-  useEffect(() => {
-    startTransition(() => {
-      setVisibleItems(items); // ← Interruptible render!
-    });
-  }, [items]);
-
-  return (
-    <div>
-      {isPending && <div>Loading...</div>}
-      {visibleItems.map((item) => (
-        <ExpensiveItem key={item.id} {...item} />
-      ))}
-    </div>
-  );
-}
+  SƠ ĐỒ DUYỆT FIBER TREE TRONG PHASE RENDER:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │           App                                           │
+  │          / | \                                          │
+  │      Header Main Footer                                │
+  │       / \    |                                          │
+  │    Logo  Nav Content                                    │
+  │                                                        │
+  │  beginWork (đi XUỐNG):          completeWork (đi LÊN):│
+  │                                                        │
+  │  ① beginWork(App)                                     │
+  │  ② beginWork(Header)                                  │
+  │  ③ beginWork(Logo)                                    │
+  │     → Không có child!                                 │
+  │     → completeWork(Logo) ← merge effects LÊN!       │
+  │  ④ beginWork(Nav)           ← sibling của Logo!      │
+  │     → completeWork(Nav)                               │
+  │     → completeWork(Header)  ← return, xong children! │
+  │  ⑤ beginWork(Main)          ← sibling của Header!    │
+  │  ⑥ beginWork(Content)                                │
+  │     → completeWork(Content)                           │
+  │     → completeWork(Main)                              │
+  │  ⑦ beginWork(Footer)        ← sibling của Main!      │
+  │     → completeWork(Footer)                            │
+  │     → completeWork(App)    ← ROOT! PHASE 1 XONG!    │
+  │                                                        │
+  │                                                        │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  beginWork = "BẮT ĐẦU" xử lý fiber!       │      │
+  │  │  → Kiểm tra updates!                        │      │
+  │  │  → Gọi render()!                            │      │
+  │  │  → Tạo child fibers!                        │      │
+  │  │  → Return CHILD (đi xuống tiếp!)            │      │
+  │  │                                               │      │
+  │  │  completeWork = "HOÀN TẤT" fiber!            │      │
+  │  │  → Fiber ĐÃ XỬ LÝ XONG!                   │      │
+  │  │  → Tạo/cập nhật DOM element (nhưng CHƯA      │      │
+  │  │    gắn vào DOM thật!)                        │      │
+  │  │  → Merge effect list LÊN parent!             │      │
+  │  │  → Return sibling hoặc parent!               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## §11. Suspense — Chờ async data
-
-```javascript
-// SUSPENSE — Khai báo "loading state" declaratively:
-
-// ① Lazy loading components:
-const HeavyChart = React.lazy(() => import("./HeavyChart"));
-
-function Dashboard() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <HeavyChart /> {/* Chưa load → Spinner → Load xong → Chart */}
-    </Suspense>
-  );
-}
-
-// ② Data fetching (React 18+ with Suspense-compatible library):
-// Libraries: Relay, SWR (experimental), React Query (experimental)
-
-function UserProfile({ id }) {
-  // Giả sử useSuspenseQuery throw Promise khi loading:
-  const user = useSuspenseQuery(`/api/users/${id}`);
-  // → Loading? → throw Promise → Suspense bắt → fallback!
-  // → Done? → render bình thường!
-  return <h1>{user.name}</h1>;
-}
-
-function App() {
-  return (
-    <Suspense fallback={<Skeleton />}>
-      <UserProfile id={1} />
-    </Suspense>
-  );
-}
-```
+## §9. Phase 2: Commit — Uninterruptible!
 
 ```
-SUSPENSE — NGUYÊN LÝ BÊN DƯỚI:
+═══════════════════════════════════════════════════════════════
+  COMMIT = THỰC THI EFFECT LIST, ÁP DỤNG LÊN DOM!
 ═══════════════════════════════════════════════════════════════
 
-  ① Component throw PROMISE khi data chưa sẵn sàng
-  ② React BẮT Promise trong render phase
-  ③ Suspense boundary hiển thị FALLBACK
-  ④ Promise resolve → React RE-RENDER component
-  ⑤ Lần này data sẵn sàng → render bình thường!
 
-  FIBER HANDLING:
-  → Khi catch Promise → đánh dấu Fiber = SuspenseComponent
-  → Set flags = DidCapture
-  → Render fallback subtree thay vì primary subtree
-  → Khi Promise resolve → schedule re-render trên Retry Lane
-  → Re-render: primary subtree render thành công!
+  QUÁ TRÌNH COMMIT:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Phase Render XONG → root.firstEffect chứa TẤT CẢ  │
+  │  side effects cần thực thi!                           │
+  │                                                        │
+  │  Effect List (linked list!):                            │
+  │  ┌──────┐  next  ┌──────┐  next  ┌──────┐             │
+  │  │Logo  │───────▶│Nav   │───────▶│Footer│             │
+  │  │UPDATE│        │PLACE │        │DELETE│             │
+  │  └──────┘        └──────┘        └──────┘             │
+  │                                                        │
+  │                                                        │
+  │  Commit DUYỆT effect list, thực thi 3 LOẠI:          │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │                                               │      │
+  │  │  ① Placement (effectTag = 0b0000010):        │      │
+  │  │     → DOM node MỚI! Chèn vào DOM tree!      │      │
+  │  │     → parentDOM.appendChild(newDOM)           │      │
+  │  │     → Gọi componentDidMount()!               │      │
+  │  │                                               │      │
+  │  │  ② Update (effectTag = 0b0000100):           │      │
+  │  │     → DOM node ĐÃ CÓ! Cập nhật attributes! │      │
+  │  │     → domNode.className = newClassName        │      │
+  │  │     → domNode.style = newStyle                │      │
+  │  │     → Gọi componentDidUpdate()!              │      │
+  │  │                                               │      │
+  │  │  ③ Deletion (effectTag = 0b0001000):         │      │
+  │  │     → XÓA DOM node!                          │      │
+  │  │     → parentDOM.removeChild(domNode)          │      │
+  │  │     → Gọi componentWillUnmount()!            │      │
+  │  │                                               │      │
+  │  │  + Cập nhật refs!                             │      │
+  │  │  + Cập nhật internal state!                  │      │
+  │  │                                               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  │  SAU KHI COMMIT XONG:                                   │
+  │  → workInProgress tree THÀNH current tree!             │
+  │  → current pointer đổi sang WIP!                      │
+  │  → UI cập nhật!                                       │
+  │  → Phase 2 HOÀN TẤT!                                 │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 
-  ┌─────────────────────────────────────┐
-  │ <Suspense fallback={<Loading/>}>    │
-  │   ┌─────────────────┐              │
-  │   │ PRIMARY:        │ ← throw Promise!
-  │   │ <UserProfile/>  │              │
-  │   └────────┬────────┘              │
-  │            │ switch!               │
-  │   ┌────────▼────────┐              │
-  │   │ FALLBACK:       │ ← hiển thị! │
-  │   │ <Loading/>      │              │
-  │   └────────┬────────┘              │
-  │            │ Promise resolve!      │
-  │   ┌────────▼────────┐              │
-  │   │ PRIMARY:        │ ← hiển thị! │
-  │   │ <UserProfile/>  │              │
-  │   └─────────────────┘              │
-  └─────────────────────────────────────┘
+
+  SƠ ĐỒ TỔNG THỂ 2 PHASES:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  setState()                                             │
+  │     │                                                   │
+  │     ▼                                                   │
+  │  ╔═══════════════════════════════════════╗              │
+  │  ║  PHASE 1: RENDER (Interruptible!)     ║              │
+  │  ║                                       ║              │
+  │  ║  ┌────────────┐    ┌────────────┐     ║              │
+  │  ║  │  current   │    │    WIP     │     ║              │
+  │  ║  │   tree     │───▶│   tree     │     ║              │
+  │  ║  │(không đổi!)│    │(đang xây!)│     ║              │
+  │  ║  └────────────┘    └─────┬──────┘     ║              │
+  │  ║                          │             ║              │
+  │  ║  Có thể PAUSE/RESUME!  │             ║              │
+  │  ║  requestIdleCallback!   │             ║              │
+  │  ╚═════════════════════════╪═════════════╝              │
+  │                            │                            │
+  │                            │ Effect List                │
+  │                            ▼                            │
+  │  ╔═══════════════════════════════════════╗              │
+  │  ║  PHASE 2: COMMIT (Uninterruptible!)   ║              │
+  │  ║                                       ║              │
+  │  ║  Effect List → DOM Updates!          ║              │
+  │  ║  → Placement (appendChild)           ║              │
+  │  ║  → Update (setAttribute)            ║              │
+  │  ║  → Deletion (removeChild)           ║              │
+  │  ║  → Lifecycle calls!                  ║              │
+  │  ║                                       ║              │
+  │  ║  ĐỒNG BỘ! Chạy 1 LƯỢT!            ║              │
+  │  ╚═══════════════════════════════════════╝              │
+  │                            │                            │
+  │                            ▼                            │
+  │                     UI CẬP NHẬT! ⚡                    │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## §12. Tổng kết & Checklist phỏng vấn
+## §10. Work Loop — Vòng Lặp Công Việc
 
 ```
-MIND MAP — REACT FIBER:
+═══════════════════════════════════════════════════════════════
+  WORK LOOP = TRÁI TIM CỦA FIBER SCHEDULER!
 ═══════════════════════════════════════════════════════════════
 
-  React Fiber
-  ├── Problem: Stack Reconciler blocking (đệ quy, không dừng được)
-  ├── Solution: Linked list + while loop → interruptible!
-  ├── Fiber Node: type, child/sibling/return, alternate, flags, lanes
-  ├── Double Buffering: current ↔ WIP, swap on commit, reuse nodes
-  ├── Work Loop: performUnitOfWork → beginWork (down) + completeWork (up)
-  │   ├── Sync: workLoopSync (no yield)
-  │   └── Concurrent: workLoopConcurrent (shouldYield @ 5ms)
-  ├── Scheduler: 5 priorities, min-heap, MessageChannel, 5ms slices
-  ├── Lanes: 31-bit bitmask, bitwise ops O(1), replace expirationTime
-  ├── 2 Phases: Render (interruptible) → Commit (3 sub-phases, atomic)
-  ├── Concurrent Features: auto batching, useTransition, useDeferredValue
-  ├── Time Slicing: 5ms chunks, yield to browser, 60fps maintained
-  └── Suspense: throw Promise → fallback → resolve → render primary
+
+  CODE WORK LOOP (TỰ VIẾT TAY ĐỂ HIỂU):
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  // ═══ WORK LOOP — TỰ VIẾT TAY! ═══                 │
+  │  // Dựa trên nguyên lý React Fiber Scheduler          │
+  │                                                        │
+  │  let nextUnitOfWork = null;    // Fiber tiếp theo!    │
+  │  let wipRoot = null;           // WIP root!            │
+  │  let currentRoot = null;       // Current root!        │
+  │  let deletions = [];           // Nodes cần xóa!     │
+  │                                                        │
+  │  // ① WORK LOOP — chạy trong idle time!               │
+  │  function workLoop(deadline) {                         │
+  │    let shouldYield = false;                            │
+  │                                                        │
+  │    // ② Còn việc + còn thời gian → làm tiếp!       │
+  │    while (nextUnitOfWork && !shouldYield) {            │
+  │      nextUnitOfWork =                                  │
+  │        performUnitOfWork(nextUnitOfWork);              │
+  │                                                        │
+  │      // ③ Kiểm tra: còn time không?                  │
+  │      shouldYield =                                     │
+  │        deadline.timeRemaining() < 1; // < 1ms → dừng!│
+  │    }                                                   │
+  │                                                        │
+  │    // ④ Hết việc + có WIP root → COMMIT!             │
+  │    if (!nextUnitOfWork && wipRoot) {                   │
+  │      commitRoot();  // Phase 2!                        │
+  │    }                                                   │
+  │                                                        │
+  │    // ⑤ Còn việc? Lên lịch tiếp!                    │
+  │    requestIdleCallback(workLoop);                      │
+  │  }                                                     │
+  │                                                        │
+  │  // ⑥ BẮT ĐẦU! Lên lịch work loop!                 │
+  │  requestIdleCallback(workLoop);                        │
+  │                                                        │
+  │                                                        │
+  │  // ⑦ XỬ LÝ 1 FIBER!                                │
+  │  function performUnitOfWork(fiber) {                   │
+  │    // A. beginWork: xử lý fiber hiện tại!            │
+  │    //    → Gọi render(), tạo child fibers!           │
+  │    beginWork(fiber);                                   │
+  │                                                        │
+  │    // B. Có child? → return child!                    │
+  │    if (fiber.child) {                                  │
+  │      return fiber.child;                               │
+  │    }                                                   │
+  │                                                        │
+  │    // C. Không child → completeWork + tìm tiếp!     │
+  │    let nextFiber = fiber;                              │
+  │    while (nextFiber) {                                 │
+  │      // Hoàn tất fiber này!                          │
+  │      completeWork(nextFiber);                          │
+  │                                                        │
+  │      // Có sibling? → return sibling!                 │
+  │      if (nextFiber.sibling) {                          │
+  │        return nextFiber.sibling;                       │
+  │      }                                                 │
+  │                                                        │
+  │      // Return lên parent!                             │
+  │      nextFiber = nextFiber.return;                     │
+  │    }                                                   │
+  │                                                        │
+  │    // D. Return đến null (root) → XONG PHASE 1!     │
+  │    return null;                                        │
+  │  }                                                     │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  SƠ ĐỒ WORK LOOP TIMELINE:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Frame 1 (16.67ms):                                    │
+  │  ┌──────────┬───┬──────────────────────────┐           │
+  │  │ Browser  │   │ Idle time (5ms)          │           │
+  │  │ work     │   │ ┌────┬────┬────┐         │           │
+  │  │ (12ms)   │   │ │ A  │ B  │ C  │ yield! │           │
+  │  └──────────┘   │ └────┴────┴────┘         │           │
+  │                  └──────────────────────────┘           │
+  │                    3 fibers processed!                   │
+  │                                                        │
+  │  Frame 2 (16.67ms):                                    │
+  │  ┌──────────┬───┬──────────────────────────┐           │
+  │  │ Browser  │   │ Idle time (8ms)          │           │
+  │  │ work     │   │ ┌────┬────┬────┬────┐    │           │
+  │  │ (9ms)    │   │ │ D  │ E  │ F  │ G  │   │           │
+  │  └──────────┘   │ └────┴────┴────┴────┘    │           │
+  │                  └──────────────────────────┘           │
+  │                    4 fibers processed!                   │
+  │                                                        │
+  │  Frame 3 (16.67ms):                                    │
+  │  ┌──────────┬───┬──────────────────────────┐           │
+  │  │ Browser  │   │ Idle time (6ms)          │           │
+  │  │ work     │   │ ┌────┬────┬──────────┐   │           │
+  │  │ (11ms)   │   │ │ H  │done│ COMMIT!  │   │           │
+  │  └──────────┘   │ └────┴────┴──────────┘   │           │
+  │                  └──────────────────────────┘           │
+  │                    Phase 1 done → Commit!               │
+  │                                                        │
+  │  💡 KHÔNG MẤT FRAME NÀO!                              │
+  │  → Mỗi frame xử lý vài fibers!                       │
+  │  → Yield khi hết time → browser render animation!    │
+  │  → Smooth 60fps!                                       │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
 ```
-
-### Checklist
-
-- [ ] **Stack Reconciler vấn đề**: đệ quy (call stack) → không thể dừng → block main thread → UI giật khi tree lớn
-- [ ] **Fiber 3 nghĩa**: architecture (reconciler mới), unit of work (1 Fiber = 1 task), data structure (JS object)
-- [ ] **Fiber giải quyết 4 vấn đề**: interruptible, prioritizable, reusable, abortable
-- [ ] **Fiber linked list**: child / sibling / return (3 pointers), duyệt bằng while loop thay vì recursion
-- [ ] **Double buffering**: current tree ↔ WIP tree, swap khi commit, reuse Fiber nodes (giảm GC)
-- [ ] **Work loop sync vs concurrent**: sync = while(wip), concurrent = while(wip && !shouldYield())
-- [ ] **performUnitOfWork**: beginWork (đi xuống, diff) → completeWork (đi lên, tạo DOM, collect effects)
-- [ ] **Scheduler**: 5 mức ưu tiên (Immediate → Idle), min-heap theo expirationTime, 5ms time slices
-- [ ] **MessageChannel**: thay requestIdleCallback (Safari!) và setTimeout (4ms clamp!), macro task reliable
-- [ ] **Lanes (React 18)**: 31-bit bitmask, bitwise OR gộp, AND kiểm tra, getHighestPriorityLane = lanes & -lanes
-- [ ] **Lanes vs ExpirationTime**: lanes hỗ trợ batch (OR), grouping, concurrent rendering, O(1) check
-- [ ] **Render phase**: beginWork + completeWork, interruptible, KHÔNG CHẠM DOM, có thể gọi nhiều lần!
-- [ ] **Commit phase**: 3 sub-phases (before mutation → mutation → layout), synchronous, atomic, KHÔNG interruptible
-- [ ] **Passive effects**: useEffect chạy sau paint (macro task), useLayoutEffect chạy trước paint (trong layout sub-phase)
-- [ ] **Automatic batching (18)**: batch EVERYWHERE (setTimeout, Promise, native events), opt-out = flushSync
-- [ ] **useTransition**: đánh dấu setState không urgent, isPending flag, interruptible render, abort khi gõ tiếp
-- [ ] **useDeferredValue**: defer VALUE (dùng bản cũ trong lúc chờ), hữu ích khi không control setState (props)
-- [ ] **Time slicing**: 5ms chunks → yield → browser paint/input → resume, duy trì 60fps
-- [ ] **Suspense**: throw Promise → Suspense catch → fallback → resolve → re-render primary
 
 ---
 
-_Nguồn: React Fiber Architecture Deep Dive_
-_Tham khảo: React Source (github.com/facebook/react), Andrew Clark "React Fiber Architecture"_
-_Cập nhật lần cuối: Tháng 2, 2026_
+## §11. requestIdleCallback — Lịch Trình Hợp Tác
+
+```
+═══════════════════════════════════════════════════════════════
+  requestIdleCallback = "GỌI TÔI KHI RẢNH NHÉ!"
+═══════════════════════════════════════════════════════════════
+
+
+  CÁCH HOẠT ĐỘNG:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  window.requestIdleCallback(callback, { timeout })     │
+  │                                                        │
+  │  → Đăng ký callback chạy trong IDLE TIME!            │
+  │  → Browser gọi callback khi RẢNH!                    │
+  │  → callback nhận idleDeadline object:                 │
+  │    → timeRemaining(): còn bao nhiêu ms?              │
+  │    → didTimeout: có timeout chưa?                    │
+  │                                                        │
+  │  1 FRAME (16.67ms):                                    │
+  │  ┌────────────────────────────────────────────┐        │
+  │  │ Input │ Style │ Layout │ Paint │   IDLE   │        │
+  │  │  2ms  │  2ms  │  3ms   │  3ms  │ ← RẢ̉NH! │        │
+  │  └────────────────────────────────────────────┘        │
+  │  │◀──── Browser work (10ms) ────▶│◀ 6.67ms ▶│        │
+  │                                    ↑                    │
+  │                                    │                    │
+  │                           requestIdleCallback           │
+  │                           chạy ở ĐÂY!                │
+  │                                                        │
+  │  💡 Thường có 10-50ms idle time!                      │
+  │  → Đủ để xử lý vài fiber nodes!                     │
+  │  → Hết time → yield → frame tiếp!                  │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  VÍ DỤ TỰ VIẾT TAY:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  // ① Đăng ký idle callback!                          │
+  │  const handle = requestIdleCallback(                   │
+  │    (idleDeadline) => {                                 │
+  │      // ② Kiểm tra: có timeout không?                │
+  │      console.log(                                      │
+  │        `Timeout? ${idleDeadline.didTimeout}`            │
+  │      ); // false                                       │
+  │                                                        │
+  │      // ③ Kiểm tra: còn bao nhiêu time?             │
+  │      console.log(                                      │
+  │        `Còn ${idleDeadline.timeRemaining()}ms`         │
+  │      ); // ~49ms                                       │
+  │                                                        │
+  │      // ④ Làm việc (xử lý fibers!)                  │
+  │      processNextFiber();                               │
+  │                                                        │
+  │      // ⑤ Kiểm tra lại!                              │
+  │      console.log(                                      │
+  │        `Còn ${idleDeadline.timeRemaining()}ms`         │
+  │      ); // ~38ms                                       │
+  │    },                                                  │
+  │    { timeout: 1000 } // Tối đa đợi 1 giây!          │
+  │  );                                                    │
+  │                                                        │
+  │  // ⑥ Hủy nếu cần!                                  │
+  │  cancelIdleCallback(handle);                           │
+  │                                                        │
+  │                                                        │
+  │  ⚠ LƯU Ý QUAN TRỌNG:                                │
+  │  → React KHÔNG dùng requestIdleCallback trực tiếp!  │
+  │  → React TỰ VIẾT scheduler riêng!                    │
+  │  → Vì requestIdleCallback:                            │
+  │    → Browser support chưa đầy đủ!                   │
+  │    → Chỉ ~20fps (gọi 1 lần/frame!)                 │
+  │    → Không đủ mịn cho React!                        │
+  │  → React dùng MessageChannel + requestAnimationFrame  │
+  │    để tự scheduler!                                   │
+  │  → NHƯNG NGUYÊN LÝ GIỐNG HỆT!                      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  COOPERATIVE SCHEDULING:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  COOPERATIVE = "HỢP TÁC"!                             │
+  │                                                        │
+  │  → Task TỰ NGUYỆN trả quyền cho main thread!        │
+  │  → KHÔNG bị OS cưỡng chế!                           │
+  │  → Giống như: "Tôi làm xong phần mình,              │
+  │    giờ anh làm đi!" (nhường nhau!)                   │
+  │                                                        │
+  │  3 CHIẾN LƯỢC SCHEDULING:                              │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │ ① Preemptive (Ưu tiên trước):              │      │
+  │  │    → OS cưỡng chế dừng task!                │      │
+  │  │    → Task KHÔNG kiểm soát được!             │      │
+  │  │                                               │      │
+  │  │ ② Cooperative (Hợp tác): ← FIBER DÙNG CÁI NÀY!│  │
+  │  │    → Task TỰ NGUYỆN dừng!                   │      │
+  │  │    → Task kiểm tra time rồi yield!           │      │
+  │  │    → Firefox cũng dùng cho real DOM!         │      │
+  │  │                                               │      │
+  │  │ ③ FIFO (First In First Out):                 │      │
+  │  │    → Hàng đợi đơn giản!                    │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §12. Priority Strategy — 6 Mức Độ Ưu Tiên
+
+```
+═══════════════════════════════════════════════════════════════
+  FIBER CÓ 6 MỨC ĐỘ ƯU TIÊN!
+═══════════════════════════════════════════════════════════════
+
+
+  6 PRIORITY LEVELS:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ┌──────┬──────────────┬───────────────────────────┐   │
+  │  │ Prio │ Tên          │ Mô tả                    │   │
+  │  ├──────┼──────────────┼───────────────────────────┤   │
+  │  │  1   │ Synchronous  │ Giống Stack reconciler!   │   │
+  │  │      │              │ Chạy ĐỒNG BỘ, block!    │   │
+  │  │      │              │ Dùng cho INITIAL RENDER!  │   │
+  │  ├──────┼──────────────┼───────────────────────────┤   │
+  │  │  2   │ Task         │ Trước tick tiếp theo!    │   │
+  │  │      │              │ Xử lý NGAY SAU event!   │   │
+  │  ├──────┼──────────────┼───────────────────────────┤   │
+  │  │  3   │ Animation    │ Trước frame tiếp theo!   │   │
+  │  │      │              │ requestAnimationFrame!    │   │
+  │  │      │              │ Animation MƯỢT!          │   │
+  │  ├──────┼──────────────┼───────────────────────────┤   │
+  │  │  4   │ High         │ Keyboard input!           │   │
+  │  │      │              │ Cần phản hồi NGAY!      │   │
+  │  │      │              │ ~100ms deadline!           │   │
+  │  ├──────┼──────────────┼───────────────────────────┤   │
+  │  │  5   │ Low          │ Network request!          │   │
+  │  │      │              │ Chậm 100-200ms OK!       │   │
+  │  │      │              │ Hiển thị comments...     │   │
+  │  ├──────┼──────────────┼───────────────────────────┤   │
+  │  │  6   │ Offscreen    │ Element KHÔNG thấy!      │   │
+  │  │      │              │ Render khi scroll tới!   │   │
+  │  │      │              │ Ưu tiên THẤP NHẤT!     │   │
+  │  └──────┴──────────────┴───────────────────────────┘   │
+  │                                                        │
+  │                                                        │
+  │  SƠ ĐỒ ƯU TIÊN:                                       │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │                                               │      │
+  │  │  Synchronous ████████████████████ (CAO NHẤT!) │      │
+  │  │  Task        ████████████████                  │      │
+  │  │  Animation   ████████████████                  │      │
+  │  │  High        ████████████                      │      │
+  │  │  Low         ████████                          │      │
+  │  │  Offscreen   ████              (THẤP NHẤT!)   │      │
+  │  │                                               │      │
+  │  │  💡 High-priority task CÓ THỂ CHEN NGANG!   │      │
+  │  │  → User đang gõ keyboard (High priority!)   │      │
+  │  │  → React đang render comments (Low!)         │      │
+  │  │  → NGỪNG comments! ƯU TIÊN keyboard!       │      │
+  │  │  → Xong keyboard → tiếp tục comments!       │      │
+  │  │                                               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  │                                                        │
+  │  2 VẤN ĐỀ CỦA PRIORITY:                               │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │                                               │      │
+  │  │  ❌ ① Lifecycle gọi NHIỀU LẦN:              │      │
+  │  │                                               │      │
+  │  │  VÍ DỤ:                                      │      │
+  │  │  Low priority (A) bắt đầu:                  │      │
+  │  │  → componentWillUpdate() gọi!               │      │
+  │  │  → ...đang render...                         │      │
+  │  │  → High priority (B) CHEN NGANG!            │      │
+  │  │  → A bị HỦY! componentWillUpdate đã gọi!  │      │
+  │  │  → B chạy xong!                              │      │
+  │  │  → A BẮT ĐẦU LẠI!                         │      │
+  │  │  → componentWillUpdate() gọi LẦN 2!        │      │
+  │  │  → componentDidUpdate() gọi 1 LẦN (commit!)│      │
+  │  │                                               │      │
+  │  │  💡 Đây là lý do React DEPRECATED:          │      │
+  │  │  → componentWillMount                        │      │
+  │  │  → componentWillReceiveProps                  │      │
+  │  │  → componentWillUpdate                        │      │
+  │  │  → Vì chúng có thể gọi NHIỀU LẦN!        │      │
+  │  │                                               │      │
+  │  │                                               │      │
+  │  │  ❌ ② Starvation (đói!):                    │      │
+  │  │  → Quá nhiều high-priority tasks!            │      │
+  │  │  → Low-priority KHÔNG BAO GIỜ chạy!        │      │
+  │  │  → Giải pháp: expiration time!               │      │
+  │  │    → Đợi quá lâu → TỰ NÂNG priority!      │      │
+  │  │                                               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §13. Effect List — Thu Thập Kết Quả
+
+```
+═══════════════════════════════════════════════════════════════
+  EFFECT LIST = DANH SÁCH SIDE EFFECTS CẦN THỰC THI!
+═══════════════════════════════════════════════════════════════
+
+
+  CÁCH THU THẬP:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Mỗi fiber có:                                         │
+  │  → effectTag: loại effect (Placement/Update/Deletion) │
+  │  → firstEffect: → effect ĐẦU TIÊN trong list        │
+  │  → lastEffect: → effect CUỐI CÙNG trong list         │
+  │  → nextEffect: → effect TIẾP THEO                    │
+  │                                                        │
+  │  Khi completeWork(fiber):                              │
+  │  → Merge effect list CỦA fiber LÊN parent (return)!  │
+  │  → parent.lastEffect.nextEffect = fiber.firstEffect!  │
+  │  → Nếu fiber CÓ effect → thêm fiber vào cuối!      │
+  │                                                        │
+  │  KẾT QUẢ: root.firstEffect = ĐẦU linked list!       │
+  │  → Duyệt từ firstEffect → nextEffect → ... → null!  │
+  │  → = TẤT CẢ side effects trong cây!                  │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  SƠ ĐỒ MERGE EFFECT LIST:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Fiber Tree:                                            │
+  │       App                                               │
+  │      / | \                                              │
+  │    A   B   C                                            │
+  │   /|       |                                            │
+  │  D  E      F                                            │
+  │                                                        │
+  │  Giả sử D(Update), E(Placement), B(Update), F(Delete)│
+  │                                                        │
+  │  ① completeWork(D):                                   │
+  │     D.effectTag = Update                               │
+  │     A.firstEffect = D, A.lastEffect = D               │
+  │                                                        │
+  │  ② completeWork(E):                                   │
+  │     E.effectTag = Placement                             │
+  │     D.nextEffect = E                                   │
+  │     A.lastEffect = E                                   │
+  │                                                        │
+  │  ③ completeWork(A): (A không có effect)               │
+  │     App.firstEffect = D (merge A's list!)              │
+  │     App.lastEffect = E                                 │
+  │                                                        │
+  │  ④ completeWork(B):                                   │
+  │     B.effectTag = Update                               │
+  │     E.nextEffect = B                                   │
+  │     App.lastEffect = B                                 │
+  │                                                        │
+  │  ⑤ completeWork(F):                                   │
+  │     F.effectTag = Deletion                              │
+  │     C.firstEffect = F, C.lastEffect = F               │
+  │                                                        │
+  │  ⑥ completeWork(C): (C không có effect)               │
+  │     B.nextEffect = F (merge C's list!)                 │
+  │     App.lastEffect = F                                 │
+  │                                                        │
+  │  KẾT QUẢ EFFECT LIST TẠI ROOT:                        │
+  │  ┌───┐  next  ┌───┐  next  ┌───┐  next  ┌───┐        │
+  │  │ D ├───────▶│ E ├───────▶│ B ├───────▶│ F │        │
+  │  │UPD│        │PLM│        │UPD│        │DEL│        │
+  │  └───┘        └───┘        └───┘        └───┘        │
+  │                                                        │
+  │  → Commit phase duyệt list này, thực thi từng cái! │
+  │  → CHỈ xử lý nodes CÓ effect!                       │
+  │  → Nodes KHÔNG thay đổi = BỎ QUA!                   │
+  │  → HIỆU QUẢ hơn duyệt cả cây!                     │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §14. Lifecycle Hooks Trong Fiber
+
+```
+═══════════════════════════════════════════════════════════════
+  LIFECYCLE BỊ CHIA 2 PHASE — CÓ HOOK BỊ DEPRECATED!
+═══════════════════════════════════════════════════════════════
+
+
+  CHIA THEO PHASE:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ═══ PHASE 1: RENDER (CÓ THỂ GỌI NHIỀU LẦN!) ═══   │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  ⚠ DEPRECATED (KHÔNG AN TOÀN!):             │      │
+  │  │  ❌ componentWillMount                       │      │
+  │  │  ❌ componentWillReceiveProps                 │      │
+  │  │  ❌ componentWillUpdate                       │      │
+  │  │                                               │      │
+  │  │  → Gọi NHIỀU LẦN nếu bị interrupt!          │      │
+  │  │  → Side effects sẽ chạy NHIỀU LẦN!         │      │
+  │  │  → fetch API → gọi 3 lần = 3 requests!     │      │
+  │  │  → setState → loop vô hạn!                 │      │
+  │  │                                               │      │
+  │  │  ✅ AN TOÀN (dùng thay thế!):                │      │
+  │  │  ✅ constructor()                             │      │
+  │  │  ✅ static getDerivedStateFromProps()         │      │
+  │  │  ✅ shouldComponentUpdate()                   │      │
+  │  │  ✅ render()                                  │      │
+  │  │                                               │      │
+  │  │  → PURE functions! Không side effects!        │      │
+  │  │  → Gọi nhiều lần = KẾT QUẢ GIỐNG NHAU!    │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  │  ═══ PHASE 2: COMMIT (CHỈ GỌI 1 LẦN!) ═══           │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │  ✅ componentDidMount()                       │      │
+  │  │  ✅ componentDidUpdate()                      │      │
+  │  │  ✅ componentWillUnmount()                    │      │
+  │  │  ✅ getSnapshotBeforeUpdate()                 │      │
+  │  │                                               │      │
+  │  │  → AN TOÀN cho side effects!                 │      │
+  │  │  → fetch API, subscriptions, DOM access!      │      │
+  │  │  → CHỈ gọi 1 lần!                           │      │
+  │  │  → Phase này KHÔNG bị interrupt!              │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  │                                                        │
+  │  SƠ ĐỒ UPGRADE PATH:                                   │
+  │  ┌──────────────────────────────────────────────┐      │
+  │  │                                               │      │
+  │  │  ❌ componentWillMount                        │      │
+  │  │  → ✅ constructor() + componentDidMount()    │      │
+  │  │                                               │      │
+  │  │  ❌ componentWillReceiveProps                  │      │
+  │  │  → ✅ static getDerivedStateFromProps()      │      │
+  │  │  → ✅ componentDidUpdate()                   │      │
+  │  │                                               │      │
+  │  │  ❌ componentWillUpdate                        │      │
+  │  │  → ✅ getSnapshotBeforeUpdate()              │      │
+  │  │  → ✅ componentDidUpdate()                   │      │
+  │  │                                               │      │
+  │  └──────────────────────────────────────────────┘      │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §15. Tự Viết Tay Mini Fiber Scheduler
+
+```
+═══════════════════════════════════════════════════════════════
+  TỰ VIẾT TAY MINI FIBER ĐỂ HIỂU NGUYÊN LÝ!
+═══════════════════════════════════════════════════════════════
+
+
+  CODE HOÀN CHỈNH — MINI FIBER:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  // ═══ BƯỚC 1: Tạo Fiber Node ═══                   │
+  │  function createFiber(type, props, ...children) {      │
+  │    return {                                            │
+  │      type,                                             │
+  │      props: {                                          │
+  │        ...props,                                       │
+  │        children: children.map(child =>                 │
+  │          typeof child === 'object'                     │
+  │            ? child                                     │
+  │            : createTextFiber(child)                    │
+  │        ),                                              │
+  │      },                                                │
+  │    };                                                  │
+  │  }                                                     │
+  │                                                        │
+  │  function createTextFiber(text) {                      │
+  │    return {                                            │
+  │      type: 'TEXT_ELEMENT',                             │
+  │      props: { nodeValue: text, children: [] },         │
+  │    };                                                  │
+  │  }                                                     │
+  │                                                        │
+  │                                                        │
+  │  // ═══ BƯỚC 2: Render — Bắt đầu Work Loop ═══      │
+  │  let nextUnitOfWork = null;                            │
+  │  let wipRoot = null;                                   │
+  │  let currentRoot = null;                               │
+  │  let deletions = null;                                 │
+  │                                                        │
+  │  function render(element, container) {                  │
+  │    // Tạo root fiber!                                 │
+  │    wipRoot = {                                         │
+  │      dom: container,                                   │
+  │      props: { children: [element] },                   │
+  │      alternate: currentRoot, // ← double buffering!  │
+  │    };                                                  │
+  │    deletions = [];                                     │
+  │    nextUnitOfWork = wipRoot;                           │
+  │  }                                                     │
+  │                                                        │
+  │                                                        │
+  │  // ═══ BƯỚC 3: Work Loop ═══                        │
+  │  function workLoop(deadline) {                         │
+  │    let shouldYield = false;                            │
+  │                                                        │
+  │    while (nextUnitOfWork && !shouldYield) {            │
+  │      nextUnitOfWork =                                  │
+  │        performUnitOfWork(nextUnitOfWork);              │
+  │      shouldYield = deadline.timeRemaining() < 1;       │
+  │    }                                                   │
+  │                                                        │
+  │    // Phase 1 xong → commit!                          │
+  │    if (!nextUnitOfWork && wipRoot) {                   │
+  │      commitRoot();                                     │
+  │    }                                                   │
+  │                                                        │
+  │    requestIdleCallback(workLoop);                      │
+  │  }                                                     │
+  │  requestIdleCallback(workLoop);                        │
+  │                                                        │
+  │                                                        │
+  │  // ═══ BƯỚC 4: Perform Unit of Work ═══             │
+  │  function performUnitOfWork(fiber) {                   │
+  │    // ① Tạo DOM node nếu chưa có!                   │
+  │    if (!fiber.dom) {                                   │
+  │      fiber.dom = createDom(fiber);                     │
+  │    }                                                   │
+  │                                                        │
+  │    // ② Reconcile children → tạo child fibers!      │
+  │    const elements = fiber.props.children;              │
+  │    reconcileChildren(fiber, elements);                  │
+  │                                                        │
+  │    // ③ Trả về fiber TIẾP THEO!                     │
+  │    // → child → sibling → uncle (return.sibling)    │
+  │    if (fiber.child) return fiber.child;                │
+  │                                                        │
+  │    let nextFiber = fiber;                              │
+  │    while (nextFiber) {                                 │
+  │      if (nextFiber.sibling) return nextFiber.sibling;  │
+  │      nextFiber = nextFiber.return;                     │
+  │    }                                                   │
+  │    return null;                                        │
+  │  }                                                     │
+  │                                                        │
+  │                                                        │
+  │  // ═══ BƯỚC 5: Reconcile Children (DIFF!) ═══       │
+  │  function reconcileChildren(wipFiber, elements) {      │
+  │    let index = 0;                                      │
+  │    let oldFiber =                                      │
+  │      wipFiber.alternate &&                             │
+  │      wipFiber.alternate.child;                         │
+  │    let prevSibling = null;                             │
+  │                                                        │
+  │    while (index < elements.length || oldFiber) {       │
+  │      const element = elements[index];                  │
+  │      let newFiber = null;                              │
+  │                                                        │
+  │      const sameType =                                  │
+  │        oldFiber &&                                     │
+  │        element &&                                      │
+  │        element.type === oldFiber.type;                 │
+  │                                                        │
+  │      // ① CÙNG type → UPDATE!                        │
+  │      if (sameType) {                                   │
+  │        newFiber = {                                    │
+  │          type: oldFiber.type,                          │
+  │          props: element.props,                         │
+  │          dom: oldFiber.dom,        // TÁI SỬ DỤNG!  │
+  │          return: wipFiber,                             │
+  │          alternate: oldFiber,      // DOUBLE BUFFER!  │
+  │          effectTag: 'UPDATE',                          │
+  │        };                                              │
+  │      }                                                 │
+  │                                                        │
+  │      // ② KHÁC type + có element → THÊM MỚI!       │
+  │      if (element && !sameType) {                       │
+  │        newFiber = {                                    │
+  │          type: element.type,                           │
+  │          props: element.props,                         │
+  │          dom: null,                // TẠO MỚI!       │
+  │          return: wipFiber,                             │
+  │          alternate: null,                              │
+  │          effectTag: 'PLACEMENT',                       │
+  │        };                                              │
+  │      }                                                 │
+  │                                                        │
+  │      // ③ KHÁC type + có oldFiber → XÓA!           │
+  │      if (oldFiber && !sameType) {                      │
+  │        oldFiber.effectTag = 'DELETION';                │
+  │        deletions.push(oldFiber);                       │
+  │      }                                                 │
+  │                                                        │
+  │      // Linked list!                                    │
+  │      if (index === 0) {                                │
+  │        wipFiber.child = newFiber;                      │
+  │      } else if (element) {                             │
+  │        prevSibling.sibling = newFiber;                 │
+  │      }                                                 │
+  │                                                        │
+  │      prevSibling = newFiber;                           │
+  │      if (oldFiber) oldFiber = oldFiber.sibling;        │
+  │      index++;                                          │
+  │    }                                                   │
+  │  }                                                     │
+  │                                                        │
+  │                                                        │
+  │  // ═══ BƯỚC 6: Commit (Phase 2!) ═══                │
+  │  function commitRoot() {                               │
+  │    deletions.forEach(commitWork);                      │
+  │    commitWork(wipRoot.child);                          │
+  │    currentRoot = wipRoot;   // ← SWAP!               │
+  │    wipRoot = null;                                     │
+  │  }                                                     │
+  │                                                        │
+  │  function commitWork(fiber) {                          │
+  │    if (!fiber) return;                                 │
+  │                                                        │
+  │    const parentDom = fiber.return.dom;                  │
+  │                                                        │
+  │    if (fiber.effectTag === 'PLACEMENT' && fiber.dom) { │
+  │      parentDom.appendChild(fiber.dom);                 │
+  │    } else if (fiber.effectTag === 'UPDATE') {          │
+  │      updateDom(fiber.dom, fiber.alternate.props,       │
+  │                fiber.props);                            │
+  │    } else if (fiber.effectTag === 'DELETION') {        │
+  │      parentDom.removeChild(fiber.dom);                 │
+  │    }                                                   │
+  │                                                        │
+  │    commitWork(fiber.child);                            │
+  │    commitWork(fiber.sibling);                          │
+  │  }                                                     │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §16. So Sánh: Stack Reconciler vs Fiber Reconciler
+
+```
+═══════════════════════════════════════════════════════════════
+  BẢNG SO SÁNH TOÀN DIỆN!
+═══════════════════════════════════════════════════════════════
+
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ┌─────────────────┬───────────────┬────────────────┐  │
+  │  │                 │Stack          │Fiber           │  │
+  │  │                 │(React ≤15)   │(React 16+)    │  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ Thuật toán      │ ĐỆ QUY       │ VÒNG LẶP     │  │
+  │  │                 │ (recursive)   │ (iterative)    │  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ Interruptible?  │ KHÔNG!        │ CÓ! (Phase 1) │  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ Context lưu    │ System call   │ Fiber objects  │  │
+  │  │   ở đâu?      │ stack         │ (linked list)  │  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ Cấu trúc cây  │ Array         │ Singly linked  │  │
+  │  │                 │ children      │ list (child,   │  │
+  │  │                 │               │ sibling,return)│  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ Priority?       │ KHÔNG!        │ 6 levels!      │  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ Animation       │ GIẬT LAG!    │ MƯỢT 60fps!  │  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ Double buffer?  │ KHÔNG!        │ CÓ! current + │  │
+  │  │                 │               │ workInProgress │  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ Error boundary  │ HẠN CHẾ     │ ĐẦY ĐỦ!     │  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ render() trả  │ 1 element     │ Arrays,        │  │
+  │  │ về            │ DUY NHẤT!    │ fragments,     │  │
+  │  │                 │               │ strings!       │  │
+  │  ├─────────────────┼───────────────┼────────────────┤  │
+  │  │ Source code     │ mountComponent│ beginWork/     │  │
+  │  │                 │ updateComp.   │ completeWork/  │  │
+  │  │                 │               │ commitWork     │  │
+  │  └─────────────────┴───────────────┴────────────────┘  │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §17. Best Practices & Phỏng Vấn Q&A
+
+```
+═══════════════════════════════════════════════════════════════
+  CÂU HỎI PHỎNG VẤN VỀ REACT FIBER
+═══════════════════════════════════════════════════════════════
+
+
+  Q1: React Fiber là gì? Giải quyết vấn đề gì?
+  ┌────────────────────────────────────────────────────────┐
+  │  A: React Fiber là dự án tái cấu trúc CORE ALGORITHM │
+  │  của React, thay thế Stack Reconciler bằng Fiber      │
+  │  Reconciler. Stack Reconciler dùng ĐỆ QUY đồng bộ, │
+  │  chiếm main thread liền mạch, gây giật lag. Fiber    │
+  │  chuyển sang VÒNG LẶP, chia nhỏ rendering thành     │
+  │  các unit of work, xử lý từng fiber node/lần, có    │
+  │  thể DỪNG + TIẾP TỤC, nhường main thread cho        │
+  │  browser render animation và xử lý input.            │
+  └────────────────────────────────────────────────────────┘
+
+  Q2: Fiber tree khác gì vDOM tree?
+  ┌────────────────────────────────────────────────────────┐
+  │  A: Fiber tree xây dựng trên nền vDOM tree nhưng      │
+  │  dùng Singly Linked List (child, sibling, return)      │
+  │  thay vì array children. Thêm thông tin scheduling:    │
+  │  effectTag (Placement/Update/Deletion), effect list,   │
+  │  expirationTime (priority), alternate (double buffer), │
+  │  stateNode (DOM/component instance). Cho phép duyệt  │
+  │  bằng vòng lặp thay vì đệ quy → dừng được!        │
+  └────────────────────────────────────────────────────────┘
+
+  Q3: 2 phase của Fiber Reconciler là gì?
+  ┌────────────────────────────────────────────────────────┐
+  │  A: Phase 1 (Render/Reconciliation): CÓ THỂ NGẮT!   │
+  │  Xây workInProgress tree, diff tìm khác biệt, thu   │
+  │  thập effect list. KHÔNG đụng DOM. Lifecycle: render, │
+  │  shouldComponentUpdate, getDerivedStateFromProps.       │
+  │  Phase 2 (Commit): KHÔNG THỂ NGẮT! Duyệt effect    │
+  │  list, thực thi DOM changes (add/update/remove),       │
+  │  gọi componentDidMount/Update/WillUnmount. Chạy      │
+  │  đồng bộ 1 lượt vì DOM phải consistent.             │
+  └────────────────────────────────────────────────────────┘
+
+  Q4: Double buffering trong Fiber là gì?
+  ┌────────────────────────────────────────────────────────┐
+  │  A: React duy trì 2 fiber trees: current (đang hiển  │
+  │  thị) và workInProgress (đang xây). Mỗi fiber có    │
+  │  alternate pointer trỏ sang bản sao ở cây kia.      │
+  │  Sau commit, WIP thành current (đổi pointer), cây   │
+  │  current cũ thành "dự trữ" cho WIP lần sau. TÁI     │
+  │  SỬ DỤNG fiber objects → tiết kiệm memory và GC.    │
+  └────────────────────────────────────────────────────────┘
+
+  Q5: Tại sao componentWillMount bị deprecated?
+  ┌────────────────────────────────────────────────────────┐
+  │  A: Trong Fiber, Phase 1 (render) CÓ THỂ BỊ NGẮT   │
+  │  bởi high-priority task. Khi ngắt, Phase 1 chạy lại │
+  │  → componentWillMount/WillReceiveProps/WillUpdate     │
+  │  GỌI NHIỀU LẦN! Side effects (fetch API, setState)  │
+  │  sẽ thực thi NHIỀU LẦN → bugs! Thay bằng:          │
+  │  getDerivedStateFromProps (static, pure) cho Phase 1,  │
+  │  componentDidMount/Update (Phase 2, chỉ 1 lần).      │
+  └────────────────────────────────────────────────────────┘
+
+  Q6: requestIdleCallback trong Fiber hoạt động thế nào?
+  ┌────────────────────────────────────────────────────────┐
+  │  A: NGUYÊN LÝ: browser gọi callback khi main thread │
+  │  RẢNH (idle time trong mỗi frame ~5-50ms). React     │
+  │  dùng nguyên lý này để schedule work loop: xử lý    │
+  │  fiber → kiểm tra deadline.timeRemaining() → hết    │
+  │  time thì yield, lên lịch callback tiếp. NHƯNG      │
+  │  thực tế React KHÔNG dùng requestIdleCallback trực   │
+  │  tiếp (browser support kém, chỉ 20fps). React tự    │
+  │  viết scheduler dùng MessageChannel + rAF.             │
+  └────────────────────────────────────────────────────────┘
+
+  Q7: Effect list là gì? Thu thập thế nào?
+  ┌────────────────────────────────────────────────────────┐
+  │  A: Effect list là linked list chứa TẤT CẢ side     │
+  │  effects (DOM changes) cần thực thi trong commit      │
+  │  phase. Mỗi fiber có effectTag (Placement/Update/     │
+  │  Deletion) + firstEffect/lastEffect/nextEffect. Khi   │
+  │  completeWork, effect list của child MERGE LÊN        │
+  │  parent. Cuối cùng, root.firstEffect chứa toàn bộ  │
+  │  effects → commit phase chỉ duyệt list này, BỎ     │
+  │  QUA nodes không thay đổi → hiệu quả hơn!          │
+  └────────────────────────────────────────────────────────┘
+
+  Q8: Từ source code góc nhìn, Fiber thay đổi gì?
+  ┌────────────────────────────────────────────────────────┐
+  │  A: Bản chất: đổi ĐỆ QUY thành VÒNG LẶP! Cụ thể: │
+  │  mountComponent/updateComponent → beginWork/           │
+  │  completeWork/commitWork. ReactDOMComponent →          │
+  │  ReactDOMFiberComponent. ReactCompositeComponent →     │
+  │  ReactFiberClassComponent. ReactReconciler →           │
+  │  ReactFiberScheduler (task scheduling!). vDOM tree     │
+  │  (array children) → fiber tree (singly linked list).  │
+  │  Thêm: priority scheduling, double buffering,          │
+  │  interruptible rendering, effect list collection.       │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+> **Kết luận**: React Fiber là bước tái cấu trúc CỐT LÕI của React, chuyển từ
+> Stack Reconciler (đệ quy đồng bộ, không dừng được) sang Fiber Reconciler (vòng
+> lặp, chia nhỏ thành units of work, dừng/tiếp tục bất cứ lúc nào). Bằng cách
+> lưu context trong fiber objects (virtual stack frames) thay vì system call stack,
+> React 16+ có thể chia nhỏ rendering, điều chỉnh priority, yield main thread cho
+> browser, và mở ra nền tảng cho Concurrent Mode, Suspense, và Selective Hydration
+> trong React 18+. 🚀
