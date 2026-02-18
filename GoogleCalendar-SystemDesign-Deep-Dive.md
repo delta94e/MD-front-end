@@ -1032,8 +1032,7 @@
   └────────────────────────────────────────────────────────┘
 ```
 
-
-## §13. Rendering Optimization — Toi Uu Hoa Rendering
+## §13. Rendering Optimization — Tối Ưu Hóa Rendering
 
 ```
 ================================================================
@@ -1041,54 +1040,54 @@
 ================================================================
 
 
-  VAN DE:
+  VẤN ĐỀ:
   +------------------------------------------------------------+
   |                                                            |
-  |  User switch tu nam 2022 -> 2023:                          |
-  |  -> Can re-fetch events cho 2023!                          |
-  |  -> Can re-render calendar cells!                          |
-  |  -> Neu cham -> user THAY LAG!                             |
+  |  User switch từ năm 2022 -> 2023:                          |
+  |  -> Cần re-fetch events cho 2023!                          |
+  |  -> Cần re-render calendar cells!                          |
+  |  -> Nếu chậm -> user THẤY LAG!                            |
   |                                                            |
-  |  KHONG can virtualization (it elements!)                   |
-  |  NHUNG can smooth transitions!                             |
+  |  KHÔNG cần virtualization (ít elements!)                   |
+  |  NHƯNG cần smooth transitions!                             |
   |                                                            |
   +------------------------------------------------------------+
 
 
-  2 GIAI PHAP:
+  2 GIẢI PHÁP:
   +------------------------------------------------------------+
   |                                                            |
-  |  (1) SOFT UPDATE (Don gian):                               |
+  |  (1) SOFT UPDATE (Đơn giản):                               |
   |  +----------------------------------------------+          |
-  |  |  Switch year -> update text fields truc tiep  |          |
-  |  |  -> Fetch data moi -> re-render cells         |          |
+  |  |  Switch year -> update text fields trực tiếp  |          |
+  |  |  -> Fetch data mới -> re-render cells         |          |
   |  |                                               |          |
-  |  |  [+] De implement!                            |          |
-  |  |  [-] Co the lag khi re-render!                 |          |
-  |  |  [-] Switch nhanh = NHIEU requests!            |          |
+  |  |  [+] Dễ implement!                            |          |
+  |  |  [-] Có thể lag khi re-render!                |          |
+  |  |  [-] Switch nhanh = NHIỀU requests!           |          |
   |  +----------------------------------------------+          |
   |                                                            |
   |                                                            |
-  |  (2) PRE-RENDERING (De xuat!):                             |
+  |  (2) PRE-RENDERING (Đề xuất!):                             |
   |  +----------------------------------------------+          |
-  |  |  Pre-render cac periods TRUOC + SAU!          |          |
-  |  |  Dung CSS transform de SLIDE vao man hinh!   |          |
+  |  |  Pre-render các periods TRƯỚC + SAU!          |          |
+  |  |  Dùng CSS transform để SLIDE vào màn hình!   |          |
   |  |                                               |          |
-  |  |  [+] Previous + Next da RENDER SAN!           |          |
-  |  |  [+] Chi can CSS transform -> SMOOTH!          |          |
-  |  |  [+] Khong re-render -> fast!                  |          |
-  |  |  [-] Render nhieu elements hon!                |          |
-  |  |  [-] Kho implement hon!                        |          |
+  |  |  [+] Previous + Next đã RENDER SẴN!           |          |
+  |  |  [+] Chỉ cần CSS transform -> SMOOTH!         |          |
+  |  |  [+] Không re-render -> fast!                  |          |
+  |  |  [-] Render nhiều elements hơn!               |          |
+  |  |  [-] Khó implement hơn!                       |          |
   |  +----------------------------------------------+          |
   |                                                            |
   +------------------------------------------------------------+
 
 
-  PRE-RENDERING HOAT DONG THE NAO?
+  PRE-RENDERING HOẠT ĐỘNG THẾ NÀO?
   +------------------------------------------------------------+
   |                                                            |
-  |  Visible area = 1 man hinh (VD: nam 2022)                 |
-  |  Hidden areas = periods truoc + sau!                       |
+  |  Visible area = 1 màn hình (VD: năm 2022)                 |
+  |  Hidden areas = periods trước + sau!                       |
   |                                                            |
   |  +--------+  +--------+  +--------+                       |
   |  |  2021  |  |  2022  |  |  2023  |                       |
@@ -1105,22 +1104,22 @@
   |  | -200%  |  | -100%  |  |VISIBLE |  <-- SMOOTH SLIDE!    |
   |  +--------+  +--------+  +--------+                       |
   |                            +--------+                      |
-  |                            |  2024  |  <-- PRE-RENDER MOI! |
+  |                            |  2024  |  <-- PRE-RENDER MỚI! |
   |                            | HIDDEN |                      |
   |                            +--------+                      |
   |                                                            |
   |                                                            |
   |  BUFFER SIZE:                                              |
-  |  -> VD: 4 screens trai + 1 visible + 4 screens phai       |
-  |  -> Tong = 9 screens pre-rendered!                         |
-  |  -> User switch NHANH -> van smooth!                       |
+  |  -> VD: 4 screens trái + 1 visible + 4 screens phải       |
+  |  -> Tổng = 9 screens pre-rendered!                         |
+  |  -> User switch NHANH -> vẫn smooth!                       |
   |                                                            |
   |                                                            |
-  |  TAI SAO SMOOTH?                                           |
-  |  -> CSS transform = CHI PAINT step!                        |
-  |  -> KHONG trigger reflow/relayout!                         |
+  |  TẠI SAO SMOOTH?                                           |
+  |  -> CSS transform = CHỈ PAINT step!                        |
+  |  -> KHÔNG trigger reflow/relayout!                         |
   |  -> GPU-accelerated!                                       |
-  |  -> Browser chi DICH CHUYEN pixels!                        |
+  |  -> Browser chỉ DỊCH CHUYỂN pixels!                       |
   |                                                            |
   +------------------------------------------------------------+
 ```
@@ -1136,16 +1135,16 @@
 .calendar-period {
   min-width: 100vw;
   transition: transform 0.3s ease-out;
-  /* GPU-accelerated! Khong trigger reflow! */
+  /* GPU-accelerated! Không trigger reflow! */
   will-change: transform;
 }
 
-/* Khi switch sang period tiep theo */
+/* Khi switch sang period tiếp theo */
 .calendar-container.slide-left .calendar-period {
   transform: translateX(-100%);
 }
 
-/* Khi switch ve period truoc do */
+/* Khi switch về period trước đó */
 .calendar-container.slide-right .calendar-period {
   transform: translateX(100%);
 }
@@ -1153,46 +1152,46 @@
 
 ---
 
-## §14. Notification System — He Thong Thong Bao
+## §14. Notification System — Hệ Thống Thông Báo
 
 ```
 ================================================================
-  NOTIFICATIONS = NHAC NHO USER VE EVENTS!
+  NOTIFICATIONS = NHẮC NHỞ USER VỀ EVENTS!
 ================================================================
 
 
-  2 CACH BRIDGE DEN MOBILE:
+  2 CÁCH BRIDGE ĐẾN MOBILE:
   +------------------------------------------------------------+
   |                                                            |
   |  (1) WEB PUSH NOTIFICATIONS:                               |
   |  +----------------------------------------------+          |
   |  |  Web Push API -> Browser -> User               |          |
   |  |                                               |          |
-  |  |  -> Moi device deu co browser!                 |          |
-  |  |  -> Browser ho tro push notifications!         |          |
+  |  |  -> Mọi device đều có browser!                |          |
+  |  |  -> Browser hỗ trợ push notifications!        |          |
   |  |                                               |          |
-  |  |  CACH HOAT DONG:                               |          |
-  |  |  (1) App xin phep push permission              |          |
-  |  |  (2) User dong y -> nhan push token            |          |
-  |  |  (3) Server gui push qua Push Service          |          |
-  |  |  (4) Browser hien notification!                |          |
+  |  |  CÁCH HOẠT ĐỘNG:                               |          |
+  |  |  (1) App xin phép push permission              |          |
+  |  |  (2) User đồng ý -> nhận push token           |          |
+  |  |  (3) Server gửi push qua Push Service          |          |
+  |  |  (4) Browser hiện notification!                |          |
   |  |                                               |          |
-  |  |  [-] Can user CONSENT! (thuong user tu choi!) |          |
-  |  |  [-] Can push server rieng (backend work!)     |          |
-  |  |  [+] Hoat dong ca khi tab dong!                |          |
+  |  |  [-] Cần user CONSENT! (thường user từ chối!) |          |
+  |  |  [-] Cần push server riêng (backend work!)    |          |
+  |  |  [+] Hoạt động cả khi tab đóng!               |          |
   |  +----------------------------------------------+          |
   |                                                            |
   |                                                            |
   |  (2) DEEP LINKS:                                           |
   |  +----------------------------------------------+          |
-  |  |  Link dac biet -> mo app tren dien thoai!      |          |
+  |  |  Link đặc biệt -> mở app trên điện thoại!    |          |
   |  |                                               |          |
   |  |  VD: alarm://create?time=09:00&label=Meeting  |          |
-  |  |  -> Mo app Alarm -> tao alarm tu dong!         |          |
+  |  |  -> Mở app Alarm -> tạo alarm tự động!        |          |
   |  |                                               |          |
-  |  |  [+] Bridge truc tiep den native apps!         |          |
-  |  |  [-] Phu thuoc vao app co ho tro link khong!  |          |
-  |  |  [-] Khong phai app nao cung ho tro!           |          |
+  |  |  [+] Bridge trực tiếp đến native apps!        |          |
+  |  |  [-] Phụ thuộc vào app có hỗ trợ link không! |          |
+  |  |  [-] Không phải app nào cũng hỗ trợ!          |          |
   |  +----------------------------------------------+          |
   |                                                            |
   +------------------------------------------------------------+
@@ -1200,11 +1199,11 @@
 
 ---
 
-## §15. App Optimizations — Toi Uu Hoa Ung Dung
+## §15. App Optimizations — Tối Ưu Hóa Ứng Dụng
 
 ```
 ================================================================
-  OPTIMIZATION = WEB APP NHANH NHU NATIVE!
+  OPTIMIZATION = WEB APP NHANH NHƯ NATIVE!
 ================================================================
 
 
@@ -1212,19 +1211,19 @@
   +------------------------------------------------------------+
   |                                                            |
   |  (1) BUNDLE SPLITTING (HTTP/2):                            |
-  |  -> HTTP/2 cho phep tai NHIEU files dong thoi!             |
-  |  -> Split bundle thanh nhieu files nho!                    |
+  |  -> HTTP/2 cho phép tải NHIỀU files đồng thời!            |
+  |  -> Split bundle thành nhiều files nhỏ!                    |
   |  -> Load sau: link rel="preconnect"                        |
   |                                                            |
   |  (2) COMPRESSION:                                          |
-  |  -> Brotli > Gzip (hieu qua hon 30-33%!)                  |
+  |  -> Brotli > Gzip (hiệu quả hơn 30-33%!)                 |
   |  -> Developed by Google!                                   |
-  |  -> Tat ca browsers hien dai deu ho tro!                   |
+  |  -> Tất cả browsers hiện đại đều hỗ trợ!                  |
   |                                                            |
   |  (3) DIFFERENTIAL BUNDLING:                                |
-  |  -> ES6 bundle: cho browsers moi (nhe hon!)                |
-  |  -> ES5 bundle: cho browsers cu (co polyfills!)            |
-  |  -> Browsers moi = download IT hon!                        |
+  |  -> ES6 bundle: cho browsers mới (nhẹ hơn!)               |
+  |  -> ES5 bundle: cho browsers cũ (có polyfills!)            |
+  |  -> Browsers mới = download ÍT hơn!                       |
   |                                                            |
   +------------------------------------------------------------+
 
@@ -1232,20 +1231,20 @@
   B. RENDERING OPTIMIZATIONS:
   +------------------------------------------------------------+
   |                                                            |
-  |  (1) CSS ANIMATIONS (KHONG JS ANIMATIONS!):                |
+  |  (1) CSS ANIMATIONS (KHÔNG JS ANIMATIONS!):                |
   |  -> transform, opacity = GPU-accelerated!                  |
-  |  -> KHONG trigger reflow!                                  |
+  |  -> KHÔNG trigger reflow!                                  |
   |  -> Pre-rendering + translateX = SMOOTH!                   |
   |                                                            |
-  |  (2) SOFT WRITES (KHONG ADD/REMOVE NODES!):                |
-  |  -> Update noi dung cua cells = NHANH!                     |
-  |  -> Remove + create DOM nodes = CHAM!                      |
-  |  -> Thay doi textContent thay vi innerHTML!                |
+  |  (2) SOFT WRITES (KHÔNG ADD/REMOVE NODES!):                |
+  |  -> Update nội dung của cells = NHANH!                     |
+  |  -> Remove + create DOM nodes = CHẬM!                      |
+  |  -> Thay đổi textContent thay vì innerHTML!                |
   |                                                            |
   |  (3) CSS NAMING (BEM):                                     |
   |  -> .block__element--modifier                              |
   |  -> Flat selector = FAST CSS matching!                     |
-  |  -> TRANH deep nesting!                                    |
+  |  -> TRÁNH deep nesting!                                    |
   |                                                            |
   +------------------------------------------------------------+
 
@@ -1256,11 +1255,11 @@
   |  (1) EFFICIENT DATA STRUCTURES:                            |
   |  -> Interval Tree: O(logN) search!                         |
   |  -> Events Map: O(1) access!                               |
-  |  -> CHI mutate piece of data can thiet!                    |
+  |  -> CHỈ mutate piece of data cần thiết!                    |
   |                                                            |
   |  (2) MINIFY + SHIP LESS POLYFILLS:                         |
-  |  -> Code minified -> nho hon!                              |
-  |  -> Browsers moi -> KHONG can polyfills!                   |
+  |  -> Code minified -> nhỏ hơn!                              |
+  |  -> Browsers mới -> KHÔNG cần polyfills!                   |
   |                                                            |
   +------------------------------------------------------------+
 
@@ -1270,51 +1269,51 @@
   |                                                            |
   |  (1) SERVICE WORKER:                                       |
   |  -> Cache ALL static resources!                            |
-  |  -> App hoat dong OFFLINE!                                 |
-  |  -> Background sync khi co mang!                           |
+  |  -> App hoạt động OFFLINE!                                 |
+  |  -> Background sync khi có mạng!                           |
   |                                                            |
   |  (2) CRITICAL RESOURCES INLINE:                            |
   |  -> Inline CSS/JS critical cho first paint!                |
   |  -> Non-critical resources load sau!                       |
-  |  -> User thay content NHANH NHAT CO THE!                   |
+  |  -> User thấy content NHANH NHẤT CÓ THỂ!                  |
   |                                                            |
   |  (3) SKELETON/PLACEHOLDER:                                 |
-  |  -> Hien skeleton khi loading!                             |
-  |  -> User biet app dang load!                               |
-  |  -> Perceived performance tot hon!                         |
+  |  -> Hiện skeleton khi loading!                             |
+  |  -> User biết app đang load!                               |
+  |  -> Perceived performance tốt hơn!                         |
   |                                                            |
   +------------------------------------------------------------+
 ```
 
 ---
 
-## §16. Accessibility — Kha Nang Tiep Can
+## §16. Accessibility — Khả Năng Tiếp Cận
 
 ```
 ================================================================
-  ACCESSIBILITY = CALENDAR CHO MOI NGUOI!
+  ACCESSIBILITY = CALENDAR CHO MỌI NGƯỜI!
 ================================================================
 
 
-  5 TRUC ACCESSIBILITY:
+  5 TRỤC ACCESSIBILITY:
   +------------------------------------------------------------+
   |                                                            |
-  |  (1) REM UNITS (KHONG PIXELS!):                            |
-  |  -> px = CO DINH, KHONG scale!                             |
+  |  (1) REM UNITS (KHÔNG PIXELS!):                            |
+  |  -> px = CỐ ĐỊNH, KHÔNG scale!                            |
   |  -> rem = scale theo browser font-size!                    |
-  |  -> User tang font -> toan bo app tang!                    |
+  |  -> User tăng font -> toàn bộ app tăng!                   |
   |                                                            |
   |  (2) KEYBOARD HOTKEYS:                                     |
   |  -> Next/Previous period = arrow keys!                     |
   |  -> Search event = Ctrl+F / Cmd+K                          |
   |  -> Help menu = ?                                          |
-  |  -> Tab = navigate giua cells!                             |
+  |  -> Tab = navigate giữa cells!                             |
   |                                                            |
   |  (3) ARIA role="grid":                                     |
   |  -> Calendar = interactive grid/table!                     |
-  |  -> Danh dau bang role="grid"!                             |
-  |  -> Screen reader BIET day la calendar!                    |
-  |  -> Tung cell co role="gridcell"!                          |
+  |  -> Đánh dấu bằng role="grid"!                            |
+  |  -> Screen reader BIẾT đây là calendar!                    |
+  |  -> Từng cell có role="gridcell"!                          |
   |                                                            |
   |  (4) SEMANTIC HTML5:                                       |
   |  -> table cho calendar grid!                               |
@@ -1323,9 +1322,9 @@
   |  -> nav cho navigation controls!                           |
   |                                                            |
   |  (5) COLOR SCHEMES:                                        |
-  |  -> Ho tro nguoi mu mau (color blindness)!                 |
-  |  -> KHONG chi dung MAU de truyen dat thong tin!            |
-  |  -> Ket hop: mau + icon + text!                            |
+  |  -> Hỗ trợ người mù màu (color blindness)!                |
+  |  -> KHÔNG chỉ dùng MÀU để truyền đạt thông tin!           |
+  |  -> Kết hợp: màu + icon + text!                           |
   |  -> prefers-color-scheme media query!                      |
   |  -> High contrast mode!                                    |
   |                                                            |
@@ -1334,11 +1333,11 @@
 
 ---
 
-## §17. React/Next.js Implementation — Code Thuc Te
+## §17. React/Next.js Implementation — Code Thực Tế
 
 ```
 ================================================================
-  IMPLEMENT = BIEN THIET KE THANH CODE!
+  IMPLEMENT = BIẾN THIẾT KẾ THÀNH CODE!
 ================================================================
 ```
 
@@ -1363,7 +1362,7 @@ interface UserInfo {
   lastName: string;
 }
 
-type ViewType = 'year' | 'month' | 'day';
+type ViewType = "year" | "month" | "day";
 
 interface CalendarState {
   events: Record<string, CalendarEvent>;
@@ -1389,7 +1388,7 @@ function insertNode(
   root: IntervalTreeNode | null,
   eventId: string,
   start: number,
-  end: number
+  end: number,
 ): IntervalTreeNode {
   if (!root) {
     return { eventId, start, end, max: end, left: null, right: null };
@@ -1408,7 +1407,7 @@ function insertNode(
 
 function searchOverlapping(
   root: IntervalTreeNode | null,
-  target: number
+  target: number,
 ): string[] {
   const results: string[] = [];
 
@@ -1528,115 +1527,117 @@ const YearView: React.FC<{ currentDate: number }> = ({ currentDate }) => {
 
 ---
 
-## §18. Interview Q&A — Cau Hoi Phong Van
+## §18. Interview Q&A — Câu Hỏi Phỏng Vấn
 
 ```
 ================================================================
-  Q&A = CHUAN BI CHO MOI CAU HOI!
+  Q&A = CHUẨN BỊ CHO MỌI CÂU HỎI!
 ================================================================
 
 
-  Q1: Tai sao chon Interval Tree thay vi Date Map?
+  Q1: Tại sao chọn Interval Tree thay vì Date Map?
   +------------------------------------------------------------+
-  |  -> Date Map: O(1) search NHUNG duplicate KHUNG!           |
-  |  -> Event keo dai 1 nam = push 365 LAN!                   |
-  |  -> Interval Tree: O(logN) search, KHONG duplicate!        |
-  |  -> Memory O(N) thay vi O(N * days)!                       |
-  |  -> Conflict detection = TU DONG tu search result!         |
+  |  -> Date Map: O(1) search NHƯNG duplicate KHỦNG!           |
+  |  -> Event kéo dài 1 năm = push 365 LẦN!                   |
+  |  -> Interval Tree: O(logN) search, KHÔNG duplicate!        |
+  |  -> Memory O(N) thay vì O(N * days)!                       |
+  |  -> Conflict detection = TỰ ĐỘNG từ search result!         |
   +------------------------------------------------------------+
 
 
   Q2: SSE vs WebSocket cho calendar?
   +------------------------------------------------------------+
-  |  -> Calendar KHONG can full-duplex!                        |
-  |  -> Client gui qua GraphQL mutation (HTTP POST)!           |
+  |  -> Calendar KHÔNG cần full-duplex!                        |
+  |  -> Client gửi qua GraphQL mutation (HTTP POST)!           |
   |  -> Server push updates qua SSE (one-way)!                |
   |  -> SSE: HTTP/2 compatible, auto-reconnect!                |
-  |  -> SSE: MONO antenna = TIET KIEM PIN mobile!             |
-  |  -> WebSocket: duplex antenna = TON PIN!                   |
-  |  -> Calendar = mobile-first -> SSE thang!                  |
+  |  -> SSE: MONO antenna = TIẾT KIỆM PIN mobile!             |
+  |  -> WebSocket: duplex antenna = TỐN PIN!                   |
+  |  -> Calendar = mobile-first -> SSE thắng!                  |
   +------------------------------------------------------------+
 
 
-  Q3: Lam sao smooth animation khi switch views?
+  Q3: Làm sao smooth animation khi switch views?
   +------------------------------------------------------------+
   |  -> PRE-RENDERING!                                         |
-  |  -> Render san periods truoc + sau (hidden offscreen)!     |
+  |  -> Render sẵn periods trước + sau (hidden offscreen)!     |
   |  -> Switch = CSS translateX() -> SMOOTH animation!         |
-  |  -> translateX() = GPU-accelerated, KHONG reflow!          |
-  |  -> VD: Buffer 4 trai + 1 visible + 4 phai = 9 screens!  |
+  |  -> translateX() = GPU-accelerated, KHÔNG reflow!          |
+  |  -> VD: Buffer 4 trái + 1 visible + 4 phải = 9 screens!  |
   +------------------------------------------------------------+
 
 
-  Q4: Lam sao handle offline mode?
+  Q4: Làm sao handle offline mode?
   +------------------------------------------------------------+
-  |  -> PWA voi Service Worker!                                |
-  |  -> Cache tat ca static assets (HTML, CSS, JS)!            |
-  |  -> Events luu trong IndexedDB (client-side)!              |
-  |  -> User edit offline -> luu local!                        |
-  |  -> Co mang -> background sync len server!                 |
-  |  -> Conflict resolution: Last Write Wins hoac CRDT!        |
-  +------------------------------------------------------------+
-
-
-  Q5: Tai sao GraphQL thay vi REST cho calendar?
-  +------------------------------------------------------------+
-  |  -> GraphQL co Subscription BUILT-IN!                      |
-  |  -> Implement subscription bang SSE -> perfect!            |
-  |  -> Select exact fields -> tiet kiem bandwidth!            |
-  |  -> Single endpoint -> don gian hon nhieu endpoints!       |
-  |  -> Type-safe schema -> it bugs!                           |
-  |  -> Trade-off: khong co HTTP caching (dung POST)!          |
-  |  -> Nhung dung client lib (Apollo) de cache client-side!   |
+  |  -> PWA với Service Worker!                                |
+  |  -> Cache tất cả static assets (HTML, CSS, JS)!            |
+  |  -> Events lưu trong IndexedDB (client-side)!              |
+  |  -> User edit offline -> lưu local!                        |
+  |  -> Có mạng -> background sync lên server!                 |
+  |  -> Conflict resolution: Last Write Wins hoặc CRDT!        |
   +------------------------------------------------------------+
 
 
-  Q6: Conflicting events duoc xu ly the nao tren UI?
+  Q5: Tại sao GraphQL thay vì REST cho calendar?
   +------------------------------------------------------------+
-  |  -> Search Interval Tree cho ngay dang xem!                |
-  |  -> Ket qua >= 2 events -> CONFLICT!                      |
-  |  -> Populate conflictingEvents[] cho moi event!            |
-  |  -> UI: hien thi events SONG SONG (side by side)!         |
-  |  -> Hoac: highlight bang mau canh bao!                     |
-  |  -> Accessibility: icon + text "Conflict" (khong chi mau)! |
+  |  -> GraphQL có Subscription BUILT-IN!                      |
+  |  -> Implement subscription bằng SSE -> perfect!            |
+  |  -> Select exact fields -> tiết kiệm bandwidth!            |
+  |  -> Single endpoint -> đơn giản hơn nhiều endpoints!       |
+  |  -> Type-safe schema -> ít bugs!                           |
+  |  -> Trade-off: không có HTTP caching (dùng POST)!          |
+  |  -> Nhưng dùng client lib (Apollo) để cache client-side!   |
   +------------------------------------------------------------+
 
 
-  Q7: Optimizations nao quan trong nhat cho mobile calendar?
+  Q6: Conflicting events được xử lý thế nào trên UI?
   +------------------------------------------------------------+
-  |  -> (1) SSE thay WebSocket = tiet kiem pin!                |
-  |  -> (2) GraphQL select fields = tiet kiem bandwidth!       |
+  |  -> Search Interval Tree cho ngày đang xem!                |
+  |  -> Kết quả >= 2 events -> CONFLICT!                      |
+  |  -> Populate conflictingEvents[] cho mỗi event!            |
+  |  -> UI: hiển thị events SONG SONG (side by side)!         |
+  |  -> Hoặc: highlight bằng màu cảnh báo!                     |
+  |  -> Accessibility: icon + text "Conflict" (không chỉ màu)! |
+  +------------------------------------------------------------+
+
+
+  Q7: Optimizations nào quan trọng nhất cho mobile calendar?
+  +------------------------------------------------------------+
+  |  -> (1) SSE thay WebSocket = tiết kiệm pin!               |
+  |  -> (2) GraphQL select fields = tiết kiệm bandwidth!      |
   |  -> (3) Service Worker = offline capability!               |
-  |  -> (4) Brotli compression = giam 30% size!               |
+  |  -> (4) Brotli compression = giảm 30% size!               |
   |  -> (5) Pre-rendering + CSS transform = smooth UX!        |
   |  -> (6) Interval Tree = efficient search O(logN)!         |
   +------------------------------------------------------------+
 
 
-  Q8: Architecture cua calendar khac gi so voi chat app?
+  Q8: Architecture của calendar khác gì so với chat app?
   +------------------------------------------------------------+
-  |  -> Calendar: SSE (one-way) du roi!                        |
-  |  -> Chat: CAN WebSocket (full-duplex, real-time!)          |
+  |  -> Calendar: SSE (one-way) đủ rồi!                        |
+  |  -> Chat: CẦN WebSocket (full-duplex, real-time!)          |
   |  -> Calendar: Interval Tree cho conflict detection!        |
   |  -> Chat: Message queue + pagination!                      |
   |  -> Calendar: Pre-rendering cho smooth switch!             |
   |  -> Chat: Virtualization cho long message list!            |
-  |  -> KHAC NHAU VE REQUIREMENTS -> KHAC ARCHITECTURE!        |
+  |  -> KHÁC NHAU VỀ REQUIREMENTS -> KHÁC ARCHITECTURE!        |
   +------------------------------------------------------------+
 ```
 
 ---
 
-> **KET LUAN:**
-> Google Calendar system design la bai toan tuyet voi cho phong van front-end vi no bao quat:
-> - **Interval Tree** — Cau truc du lieu cho conflict detection (O(logN)!)
+> **KẾT LUẬN:**
+> Google Calendar system design là bài toán tuyệt vời cho phỏng vấn front-end vì nó bao quát:
+>
+> - **Interval Tree** — Cấu trúc dữ liệu cho conflict detection (O(logN)!)
 > - **Event-driven Architecture** — Redux/Zustand pattern
-> - **SSE + GraphQL** — Mobile-first protocol (tiet kiem pin!)
+> - **SSE + GraphQL** — Mobile-first protocol (tiết kiệm pin!)
 > - **Pre-rendering** — CSS transforms cho smooth animation
-> - **PWA** — Offline-first voi Service Worker
+> - **PWA** — Offline-first với Service Worker
 > - **Accessibility** — ARIA role="grid", keyboard nav, rem units
 >
-> Diem noi bat SO VOI cac bai toan khac:
-> - **Interval Tree** = VU KHI BI MAT (hiem thay o bai toan khac!)
-> - **Mobile battery** = SSE mono antenna (hiem ai de cap!)
-> - **Pre-rendering** = CSS translateX (khong virtualization!)
+> Điểm nổi bật SO VỚI các bài toán khác:
+>
+> - **Interval Tree** = VŨ KHÍ BÍ MẬT (hiếm thấy ở bài toán khác!)
+> - **Mobile battery** = SSE mono antenna (hiếm ai đề cập!)
+> - **Pre-rendering** = CSS translateX (không virtualization!)

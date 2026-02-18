@@ -1,0 +1,848 @@
+# WebAssembly Demo — Deep Dive
+
+> **Study Guide cho Senior Front-End Developer**
+> 📅 2026-02-17 · ⏱ 20 phút đọc
+>
+> 5 chủ đề: WebAssembly là gì, wasm & wast,
+> môi trường Demo, chạy thử Demo, ưu nhược điểm & ứng dụng.
+> Độ khó: ⭐️⭐️⭐️⭐️ | Chủ đề: WebAssembly / Performance
+
+---
+
+## Mục Lục
+
+1. [WebAssembly Là Gì?](#§1-webassembly-là-gì)
+2. [wasm & wast — Hai Định Dạng](#§2-wasm--wast)
+3. [Môi Trường Demo](#§3-môi-trường-demo)
+4. [Demo Thực Hành](#§4-demo-thực-hành)
+5. [Ưu Nhược Điểm & Ứng Dụng](#§5-ưu-nhược-điểm--ứng-dụng)
+
+---
+
+## §1. WebAssembly Là Gì?
+
+```
+═══════════════════════════════════════════════════════════════
+  WEBASSEMBLY = ĐỊNH DẠNG NHỊ PHÂN HIỆU NĂNG CAO CHO WEB!
+═══════════════════════════════════════════════════════════════
+
+
+  ĐỊNH NGHĨA:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  WebAssembly (hay wasm) là định dạng NHỊ PHÂN:        │
+  │                                                        │
+  │  → Di động (portable)                                  │
+  │  → Kích thước NHỎ                                     │
+  │  → Tải NHANH                                           │
+  │  → Phù hợp để BIÊN DỊCH cho Web                      │
+  │                                                        │
+  │  MỤC TIÊU CHÍNH:                                      │
+  │  → Hỗ trợ ứng dụng HIỆU NĂNG CAO trên Web!          │
+  │  → NHƯNG không bị ràng buộc bởi Web!                  │
+  │  → Có thể dùng trong MỌI môi trường hỗ trợ!          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  NÓI ĐƠN GIẢN:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  WebAssembly định nghĩa MỘT ĐÍCH BIÊN DỊCH           │
+  │  (compilation target) có thể đạt hiệu năng            │
+  │  GẦN NHƯ NATIVE trong mọi môi trường hỗ trợ!        │
+  │                                                        │
+  │  BẢN CHẤT:                                             │
+  │  → Cho phép MỞ RỘNG module native!                    │
+  │  → Trong kịch bản cần hiệu năng cao:                  │
+  │    viết bằng ngôn ngữ phù hợp (như C/C++)             │
+  │    → biên dịch sang WebAssembly                        │
+  │    → đạt hiệu năng TƯƠNG ĐƯƠNG native code!           │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §1.1. Mục Tiêu Thiết Kế — Ngữ Nghĩa Nhanh, An Toàn, Di Động
+
+```
+  MỤC TIÊU 1: NGỮ NGHĨA NHANH, AN TOÀN, DI ĐỘNG
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① NHANH:                                              │
+  │     → Thực thi với hiệu năng GẦN NATIVE!             │
+  │     → Tận dụng tính năng phần cứng HIỆN ĐẠI!         │
+  │                                                        │
+  │  ② AN TOÀN:                                            │
+  │     → Mã được XÁC THỰC (validated)!                   │
+  │     → Chạy trong môi trường SANDBOX                   │
+  │       an toàn bộ nhớ (memory-safe)!                    │
+  │     → Ngăn hỏng dữ liệu + vi phạm bảo mật!          │
+  │                                                        │
+  │  ③ ĐƯỢC ĐỊNH NGHĨA RÕ RÀNG:                          │
+  │     → Chương trình hợp lệ và hành vi                  │
+  │       được định nghĩa ĐẦY ĐỦ + CHÍNH XÁC!           │
+  │                                                        │
+  │  ④ ĐỘC LẬP PHẦN CỨNG:                               │
+  │     → Biên dịch trên MỌI kiến trúc hiện đại!         │
+  │     → Desktop, mobile, hệ thống nhúng!                │
+  │                                                        │
+  │  ⑤ ĐỘC LẬP NGÔN NGỮ:                                │
+  │     → Không thiên vị bất kỳ ngôn ngữ,                 │
+  │       mô hình lập trình, hay object model nào!        │
+  │                                                        │
+  │  ⑥ ĐỘC LẬP NỀN TẢNG:                                │
+  │     → Nhúng trong trình duyệt                         │
+  │     → Chạy độc lập như VM                              │
+  │     → Tích hợp vào môi trường khác                    │
+  │                                                        │
+  │  ⑦ MỞ:                                                │
+  │     → Chương trình tương tác với môi trường           │
+  │       một cách ĐƠN GIẢN + TỔNG QUÁT!                 │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §1.2. Mục Tiêu Thiết Kế — Biểu Diễn Hiệu Quả & Di Động
+
+```
+  MỤC TIÊU 2: BIỂU DIỄN HIỆU QUẢ & DI ĐỘNG
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① NHỎ GỌN:                                           │
+  │     → Định dạng nhị phân NHỎ HƠN text/native!        │
+  │     → Cho phép truyền tải NHANH!                      │
+  │                                                        │
+  │  ② MODULE HÓA:                                        │
+  │     → Chương trình chia thành phần NHỎ                │
+  │     → Truyền tải, cache, sử dụng RIÊNG BIỆT!        │
+  │                                                        │
+  │  ③ HIỆU QUẢ CAO:                                      │
+  │     → Giải mã, xác thực, biên dịch                    │
+  │       trong MỘT LƯỢT DUYỆT (single pass)!            │
+  │     → Tương đương JIT hoặc AOT compilation!           │
+  │                                                        │
+  │  ④ STREAMING:                                          │
+  │     → Bắt đầu giải mã + xác thực + biên dịch        │
+  │       SỚM NHẤT CÓ THỂ, TRƯỚC KHI có đủ dữ liệu!    │
+  │                                                        │
+  │  ⑤ SONG SONG HÓA:                                     │
+  │     → Cho phép chia nhỏ giải mã + xác thực            │
+  │       + biên dịch thành NHIỀU tác vụ SONG SONG!       │
+  │                                                        │
+  │  ⑥ DI ĐỘNG:                                            │
+  │     → Không giả định kiến trúc nào                    │
+  │       không được hỗ trợ RỘNG RÃI!                     │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §1.3. Tiêu Chuẩn Hóa & Động Lực
+
+```
+  TIÊU CHUẨN HÓA:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  → Được thiết kế như TIÊU CHUẨN MỞ bởi               │
+  │    W3C Community Group!                                │
+  │  → Bao gồm đại diện từ MỌI trình duyệt lớn:         │
+  │    Chrome, Edge, Firefox, WebKit!                      │
+  │                                                        │
+  │  → 4 nhà sản xuất trình duyệt CÙNG HỢP TÁC!        │
+  │  → Không chỉ cho Web — hướng tới tiêu chuẩn          │
+  │    MỞ cho mọi môi trường!                              │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  ĐỘNG LỰC (TẠI SAO CẦN WEBASSEMBLY?):
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Sau khi V8 đưa vào JIT, cải thiện hiệu năng      │
+  │     JavaScript THÊM NỮA gần như KHÔNG THỂ!            │
+  │                                                        │
+  │  ② Lý do: HẠN CHẾ CỐ HỮU của JavaScript:            │
+  │     → Là ngôn ngữ THÔNG DỊCH (interpreted)            │
+  │     → Kiểu DỮ LIỆU YẾU (weakly typed)               │
+  │                                                        │
+  │  ③ Web ngày càng mạnh, client-side JS ngày            │
+  │     càng nặng → NHU CẦU hiệu năng cao vẫn còn!      │
+  │                                                        │
+  │  ④ → Giải pháp CĂN CƠ (radical solution)            │
+  │       từ WebAssembly!                                   │
+  │                                                        │
+  │  TỔNG KẾT:                                             │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  JS interpreted + weakly typed            │          │
+  │  │    → JIT đã tối ưu TỐI ĐA                │          │
+  │  │    → V8 khó cải thiện thêm               │          │
+  │  │    → WebAssembly = GIẢI PHÁP CĂN CƠ!    │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §2. wasm & wast — Hai Định Dạng
+
+```
+═══════════════════════════════════════════════════════════════
+  WASM = NHỊ PHÂN | WAST = VĂN BẢN ĐỌC ĐƯỢC!
+═══════════════════════════════════════════════════════════════
+
+
+  WASM (BINARY FORMAT):
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  WebAssembly định nghĩa định dạng NHỊ PHÂN,          │
+  │  chính là wasm. Ví dụ:                                 │
+  │                                                        │
+  │  0061 736d 0100 0000 0187 8080 8000 0160 │
+  │  027f 7f01 7f03 8280 8080 0001 0004 8480 │
+  │  8080 0001 7000 0005 8380 8080 0001 ...  │
+  │                                                        │
+  │  Mã hex ở trên tương ứng với đoạn C:                  │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  // Thuật toán Euclid tìm ƯỚC CHUNG      │          │
+  │  │  // LỚN NHẤT (GCD)                       │          │
+  │  │  int gcd(int m, int n) {                  │          │
+  │  │      if (m == 0) return n;                │          │
+  │  │      return gcd(n % m, m);                │          │
+  │  │  }                                        │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  → wasm KHÔNG CÓ tính đọc được!                      │
+  │  → Con người KHÔNG THỂ đọc hiểu!                     │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §2.1. wast — Định Dạng Văn Bản Đọc Được
+
+```
+  WAST (TEXT FORMAT):
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Để giảm bớt vấn đề đọc hiểu, một định dạng          │
+  │  VĂN BẢN dễ đọc hơn được tạo ra: wast!               │
+  │                                                        │
+  │  Cú pháp NGOẶC ĐƠN giống Lisp:                       │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  (module                                  │          │
+  │  │    (export "memory" (memory $0))          │          │
+  │  │    (export "gcd" (func $gcd))             │          │
+  │  │    (func $gcd (param $0 i32)              │          │
+  │  │              (param $1 i32)               │          │
+  │  │              (result i32)                  │          │
+  │  │      ;; thân hàm...                       │          │
+  │  │    )                                      │          │
+  │  │  )                                        │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ĐỌC HIỂU:                                            │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → export "memory" → Xuất đối tượng     │          │
+  │  │    bộ nhớ tên "memory"                    │          │
+  │  │  → export "gcd" → Xuất hàm tên "gcd"    │          │
+  │  │  → func $gcd → Hàm nhận 2 tham số       │          │
+  │  │    kiểu i32, trả về kiểu i32             │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  wast và wasm CÓ THỂ CHUYỂN ĐỔI qua lại!            │
+  │  → Xem WABT (WebAssembly Binary Toolkit)!             │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §2.2. Trình Duyệt Hiển Thị
+
+```
+  TRÌNH DUYỆT HIỂN THỊ:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Trong bảng Source của trình duyệt, có thể            │
+  │  thấy dạng lệnh văn bản khác:                         │
+  │                                                        │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  func (param i32 i32) (result i32)        │          │
+  │  │  (local i32)                              │          │
+  │  │    block                                  │          │
+  │  │      get_local 0                          │          │
+  │  │      i32.eqz                              │          │
+  │  │      br_if 0                              │          │
+  │  │      loop                                 │          │
+  │  │        get_local 1                        │          │
+  │  │        get_local 0                        │          │
+  │  │        ...                                │          │
+  │  │      end                                  │          │
+  │  │    end                                    │          │
+  │  │    get_local 1                            │          │
+  │  │  end                                      │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  → Rất giống wast, đây là phiên bản trình             │
+  │    duyệt CHUYỂN ĐỔI từ wasm!                          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  TÓM TẮT CÁC ĐỊNH DẠNG:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  C/C++/Rust  ──biên dịch──→  .wasm (nhị phân)        │
+  │                                    ↕                   │
+  │                               .wast (văn bản)         │
+  │                                    ↓                   │
+  │                          Trình duyệt hiển thị         │
+  │                          (dạng lệnh text)              │
+  │                                                        │
+  │  → wasm ←→ wast: chuyển đổi qua WABT toolkit!       │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §3. Môi Trường Demo
+
+```
+═══════════════════════════════════════════════════════════════
+  MÔI TRƯỜNG = EMSCRIPTEN + TRÌNH DUYỆT HỖ TRỢ!
+═══════════════════════════════════════════════════════════════
+
+
+  YÊU CẦU:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Môi trường biên dịch C/C++: Emscripten            │
+  │  ② Trình duyệt hỗ trợ WebAssembly                    │
+  │     (Chrome mới nhất hỗ trợ mặc định)                 │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §3.1. Môi Trường Online
+
+```
+  MÔI TRƯỜNG ONLINE — KHÔNG CẦN CÀI ĐẶT:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  → WebAssembly Explorer:                               │
+  │    Dùng thử KHÔNG lo hỏng gì!                         │
+  │                                                        │
+  │  CÁCH DÙNG:                                            │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  ① Viết code C/C++ bên trái             │          │
+  │  │  ② Nhấn COMPILE                          │          │
+  │  │  ③ Nhấn DOWNLOAD → được file .wasm      │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ⚠️ LƯU Ý QUAN TRỌNG:                                │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Mặc định là C++. Nếu muốn dùng C,      │          │
+  │  │  chọn C99 hoặc C89 bên trái!             │          │
+  │  │                                          │          │
+  │  │  NẾU KHÔNG → tên hàm bị XÁO TRỘN       │          │
+  │  │  (name mangling)!                         │          │
+  │  │                                          │          │
+  │  │  VÍ DỤ trong C++11:                       │          │
+  │  │  → gcd bị đổi thành _Z3gcdii             │          │
+  │  │  → Nguyên nhân: namespace/mangling C++    │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  Ngoài C/C++, ngôn ngữ KHÁC cũng dùng được:          │
+  │  → VD: Rust cũng biên dịch sang WebAssembly!          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §3.2. Môi Trường Local (Emscripten)
+
+```
+  MÔI TRƯỜNG LOCAL — EMSCRIPTEN SDK:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Tải platform SDK                                   │
+  │  ② Làm theo bước cài đặt                              │
+  │  ③ Kiểm tra: emcc -v                                  │
+  │                                                        │
+  │  KẾT QUẢ MẪU:                                         │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  emcc (Emscripten gcc/clang-like          │          │
+  │  │  replacement + linker) 1.37.22            │          │
+  │  │  clang version 4.0.0                      │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ⚠️ Trên Windows: có thể gặp lỗi thiếu               │
+  │  MSVCP140.dll → cần cài thêm môi trường C++!         │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  BIÊN DỊCH FILE C SANG WASM:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Lưu code C vào file gcd.c, rồi chạy:                 │
+  │                                                        │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  emcc ./c/gcd.c -Os                       │          │
+  │  │    -s WASM=1                              │          │
+  │  │    -s SIDE_MODULE=1                       │          │
+  │  │    -s BINARYEN_ASYNC_COMPILATION=0        │          │
+  │  │    -o ./output/gcd.wasm                   │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ⚠️ LƯU Ý:                                            │
+  │  → Tên phương thức mặc định có TIỀN TỐ _              │
+  │    (dấu gạch dưới)!                                    │
+  │                                                        │
+  │  VÍ DỤ: hàm gcd → export thành _gcd                  │
+  │                                                        │
+  │  GIẢI THÍCH (từ Emscripten docs):                      │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Các keys truyền vào mergeInto tạo ra    │          │
+  │  │  hàm có tiền tố _                         │          │
+  │  │  → my_func → _my_func()                  │          │
+  │  │  (tất cả phương thức C trong Emscripten  │          │
+  │  │  đều có tiền tố _)                        │          │
+  │  │                                          │          │
+  │  │  Keys bắt đầu bằng $ → bỏ $ và          │          │
+  │  │  KHÔNG thêm _                             │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  → Khi dùng giao diện module trong JS,                │
+  │    NHỚ THÊM dấu gạch dưới _!                          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §4. Demo Thực Hành
+
+```
+═══════════════════════════════════════════════════════════════
+  DEMO = BIÊN DỊCH + TẢI + GỌI HÀM WASM TỪ JAVASCRIPT!
+═══════════════════════════════════════════════════════════════
+```
+
+### §4.1. Demo 1 — Phiên Bản Online (Đơn Giản)
+
+```javascript
+// ================================================
+// DEMO 1 — TẢI WASM TỪ HEX STRING
+// ================================================
+
+// Hex string lấy từ online demo, tương ứng hàm gcd
+WebAssembly.compile(
+  new Uint8Array(
+    `
+    0061 736d 0100 0000 0187 8080 8000 0160
+    027f 7f01 7f03 8280 8080 0001 0004 8480
+    8080 0001 7000 0005 8380 8080 0001 0001
+    0681 8080 8000 0007 9080 8080 0002 066d
+    656d 6f72 7902 0003 6763 6400 000a ab80
+    8080 0001 a580 8080 0001 017f 0240 2000
+    450d 0003 4020 0120 0022 026f 2100 2002
+    2101 2000 0d00 0b20 020f 0b20 010b
+    `
+      .match(/\S{2}/g)
+      .map((s) => parseInt(s, 16)),
+  ),
+).then((module) => {
+  const instance = new WebAssembly.Instance(module);
+
+  // Xem exports của module
+  console.log(instance.exports);
+  // → {memory: Memory, gcd: ƒ}
+
+  // Gọi hàm GCD hiệu năng cao!
+  const { gcd } = instance.exports;
+  console.log("gcd(328, 648)", gcd(328, 648));
+  // → gcd(328, 648) 8
+});
+```
+
+```
+  GIẢI THÍCH LUỒNG HOẠT ĐỘNG:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Hex string → chuyển thành Uint8Array               │
+  │  ② WebAssembly.compile() → biên dịch module           │
+  │  ③ WebAssembly.Instance() → tạo instance              │
+  │  ④ instance.exports → lấy hàm đã export              │
+  │  ⑤ Gọi gcd(328, 648) → kết quả: 8                    │
+  │                                                        │
+  │  Dòng 1 output: {memory: Memory, gcd: ƒ}              │
+  │  → Module export 2 thứ:                                │
+  │    ① memory: đối tượng bộ nhớ                         │
+  │    ② gcd: hàm tính ước chung lớn nhất                 │
+  │                                                        │
+  │  Dòng 2 output: gcd(328, 648) 8                        │
+  │  → Kết quả ước chung lớn nhất qua                     │
+  │    module HIỆU NĂNG CAO!                               │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  ⚠️ LƯU Ý CSP (Content Security Policy):
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Nếu dán vào Chrome Console → có thể gặp lỗi:        │
+  │                                                        │
+  │  CompileError: WasmCompile: Wasm code                  │
+  │  generation disallowed in this context                  │
+  │                                                        │
+  │  NGUYÊN NHÂN: Giới hạn CSP mặc định!                  │
+  │  GIẢI PHÁP: Chạy ở CHẾ ĐỘ ẨN DANH                   │
+  │    (Ctrl/CMD + Shift + N)!                             │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §4.2. Demo 2 — Phiên Bản Local (Emscripten)
+
+```javascript
+// ================================================
+// DEMO 2 — TẢI WASM BIÊN DỊCH LOCAL
+// (Cần truyền imports cho env)
+// ================================================
+
+WebAssembly.compile(
+  new Uint8Array(
+    `
+    0061 736d 0100 0000 000c 0664 796c 696e
+    6b80 80c0 0200 010a 0260 027f 7f01 7f60
+    0000 0241 0403 656e 760a 6d65 6d6f 7279
+    4261 7365 037f 0003 656e 7606 6d65 6d6f
+    7279 0200 8002 0365 6e76 0574 6162 6c65
+    0170 0000 0365 6e76 0974 6162 6c65 4261
+    7365 037f 0003 0403 0001 0106 0b02 7f01
+    4100 0b7f 0141 000b 072b 0312 5f5f 706f
+    7374 5f69 6e73 7461 6e74 6961 7465 0002
+    0b72 756e 506f 7374 5365 7473 0001 045f
+    6763 6400 0009 0100 0a40 0327 0101 7f20
+    0004 4003 4020 0120 006f 2202 0440 2000
+    2101 2002 2100 0c01 0b0b 0520 0121 000b
+    2000 0b03 0001 0b12 0023 0024 0223 0241
+    8080 c002 6a24 0310 010b
+    `
+      .match(/\S{2}/g)
+      .map((s) => parseInt(s, 16)),
+  ),
+).then((module) => {
+  // Phiên bản local CẦN imports cho env!
+  let imports = {
+    env: {
+      memoryBase: 0,
+      memory: new WebAssembly.Memory({ initial: 256 }),
+      tableBase: 0,
+      table: new WebAssembly.Table({
+        initial: 0,
+        element: "anyfunc",
+      }),
+    },
+  };
+
+  const instance = new WebAssembly.Instance(module, imports);
+  console.log(instance.exports);
+  // → {__post_instantiate: ƒ, runPostSets: ƒ, _gcd: ƒ}
+
+  // CHÚ Ý: tiền tố dấu gạch dưới _gcd
+  const { _gcd } = instance.exports;
+  console.log("gcd(328, 648)", _gcd(328, 648));
+  // → gcd(328, 648) 8
+});
+```
+
+```
+  KHÁC BIỆT SO VỚI DEMO 1:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① CẦN TRUYỀN imports:                                │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  env: {                                   │          │
+  │  │    memoryBase: 0,                         │          │
+  │  │    memory: WebAssembly.Memory({           │          │
+  │  │              initial: 256                 │          │
+  │  │            }),                             │          │
+  │  │    tableBase: 0,                          │          │
+  │  │    table: WebAssembly.Table({             │          │
+  │  │             initial: 0,                   │          │
+  │  │             element: 'anyfunc'            │          │
+  │  │           })                              │          │
+  │  │  }                                        │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ② TÊN HÀM CÓ TIỀN TỐ _:                            │
+  │  → _gcd thay vì gcd!                                  │
+  │  → Emscripten tự thêm _ vào tất cả hàm C!            │
+  │                                                        │
+  │  ③ EXPORTS NHIỀU HƠN:                                 │
+  │  → __post_instantiate, runPostSets                     │
+  │  → Emscripten thêm một số tính năng nhỏ              │
+  │    mặc định, KHÔNG ẢNH HƯỞNG chức năng!              │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  API THAM KHẢO:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① WebAssembly.compile(buffer)                        │
+  │     → Biên dịch buffer thành module                    │
+  │     → Trả về Promise<WebAssembly.Module>              │
+  │                                                        │
+  │  ② WebAssembly.Instance(module, imports?)              │
+  │     → Tạo instance từ module                           │
+  │     → imports: cung cấp env nếu cần                   │
+  │                                                        │
+  │  ③ instance.exports                                    │
+  │     → Object chứa các hàm/memory đã export            │
+  │                                                        │
+  │  Tham khảo chi tiết:                                   │
+  │  → JavaScript API – WebAssembly (Spec)                │
+  │  → WebAssembly – JavaScript | MDN (Ví dụ)            │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §5. Ưu Nhược Điểm & Ứng Dụng
+
+```
+═══════════════════════════════════════════════════════════════
+  ƯU NHƯỢC ĐIỂM & KỊCH BẢN ỨNG DỤNG THỰC TẾ!
+═══════════════════════════════════════════════════════════════
+```
+
+### §5.1. Ưu Điểm
+
+```
+  ƯU ĐIỂM:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① KÍCH THƯỚC RẤT NHỎ:                               │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Logic JS ~300KB (sau nén)                │          │
+  │  │  → Viết lại bằng WebAssembly: ~90KB!     │          │
+  │  │                                          │          │
+  │  │  ⚠️ NHƯNG: cần thêm thư viện JS hạ tầng │          │
+  │  │     (~50KB - 100KB) để chạy WebAssembly! │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ② BẢO MẬT TỐT HƠN (MỘT CHÚT):                     │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → Lệnh text tương ứng source code       │          │
+  │  │    vẫn BỊ LỘ hoàn toàn!                  │          │
+  │  │  → NHƯNG chi phí dịch ngược              │          │
+  │  │    (reverse engineering) TĂNG LÊN!        │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ③ CẢI THIỆN HIỆU NĂNG:                              │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → Về lý thuyết: hiệu năng GẦN NATIVE   │          │
+  │  │    vì BỎ QUA giai đoạn thông dịch!       │          │
+  │  │  → Kích thước nhỏ → truyền tải          │          │
+  │  │    NHANH HƠN!                             │          │
+  │  │                                          │          │
+  │  │  ⚠️ ĐIỀU KIỆN TIÊN QUYẾT:                │          │
+  │  │  → Lượng code nghiệp vụ RẤT LỚN        │          │
+  │  │  → Yêu cầu hiệu năng CỰC CAO           │          │
+  │  │                                          │          │
+  │  │  → Trong kịch bản lặp lại (benchmarks), │          │
+  │  │    JIT KHÔNG CHẬM hơn AOT bao nhiêu!    │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §5.2. Nhược Điểm
+
+```
+  NHƯỢC ĐIỂM — KHẢ NĂNG HIỆN TẠI CÒN HẠN CHẾ:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Chỉ hỗ trợ MỘT SỐ kiểu dữ liệu CƠ BẢN:         │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  i32 / i64 / f32 / f64 / i8 / i16       │          │
+  │  │  → KHÔNG có string, object, array...     │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ② KHÔNG THỂ truy cập trực tiếp DOM                  │
+  │     và các Web API khác!                               │
+  │                                                        │
+  │  ③ KHÔNG THỂ kiểm soát GC                            │
+  │     (Garbage Collection)!                              │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §5.3. Kịch Bản Ứng Dụng
+
+```
+  KỊCH BẢN ỨNG DỤNG:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  TẦM NHÌN CỦA WEBASSEMBLY:                           │
+  │  → Định nghĩa định dạng nhị phân thực thi            │
+  │    TIÊU CHUẨN cho trình duyệt!                        │
+  │  → Cho phép NHIỀU nhà phát triển tham gia             │
+  │    qua cơ chế biên dịch THỐNG NHẤT!                   │
+  │  → Cùng xây dựng hệ sinh thái Web PHÁT TRIỂN!        │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  KỊCH BẢN CỤ THỂ (TÍNH TOÁN NẶNG):
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Giải mã Video (Video Decoding)                     │
+  │  ② Xử lý Ảnh (Image Processing)                      │
+  │  ③ 3D / WebVR / AR Visualization                      │
+  │  ④ Rendering Engine (Công cụ kết xuất)                │
+  │  ⑤ Physics Engine (Công cụ vật lý)                    │
+  │  ⑥ Thuật toán Nén / Mã hóa                           │
+  │  ⑦ ...và các kịch bản tính toán NẶNG khác            │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  Ý NGHĨA THỰC SỰ CỦA WEBASSEMBLY:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  → Một số hỗ trợ CÓ THỂ được trình duyệt             │
+  │    tích hợp sẵn (built-in), KHÔNG CẦN extension!     │
+  │                                                        │
+  │  → NHƯNG ý nghĩa THỰC SỰ nằm ở:                     │
+  │    cung cấp KHẢ NĂNG MỞ RỘNG module "native"         │
+  │    hiệu năng cao!                                      │
+  │                                                        │
+  │  → Chờ trình duyệt hỗ trợ + tương thích              │
+  │    → MẤT THỜI GIAN LÂU!                               │
+  │                                                        │
+  │  → Với WebAssembly:                                    │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → KHÔNG CẦN chờ trình duyệt hỗ trợ    │          │
+  │  │    tính năng native cụ thể!               │          │
+  │  │  → TỰ TRIỂN KHAI, không lo tương thích!  │          │
+  │  │  → Module phổ biến từ cộng đồng         │          │
+  │  │    → dần được trình duyệt tích hợp      │          │
+  │  │    → ĐÓNG GÓP ngược lại hệ sinh thái    │          │
+  │  │      Web!                                 │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Tóm Tắt & Câu Hỏi Phỏng Vấn
+
+### Quick Reference
+
+```
+WEBASSEMBLY — QUICK REFERENCE:
+═══════════════════════════════════════════════════════════════
+
+  ĐỊNH NGHĨA:
+    wasm       → Định dạng NHỊ PHÂN, không đọc được
+    wast       → Định dạng VĂN BẢN, đọc được (giống Lisp)
+    WABT       → Toolkit chuyển đổi wasm ↔ wast
+
+  MỤC TIÊU:
+    Nhanh      → Hiệu năng GẦN NATIVE
+    An toàn    → Sandbox bộ nhớ, validated
+    Di động    → Mọi kiến trúc, nền tảng, ngôn ngữ
+    Nhỏ gọn   → Nhỏ hơn text/native format
+    Streaming  → Biên dịch TRƯỚC KHI tải xong
+
+  LUỒNG DEMO:
+    C/C++/Rust → emcc biên dịch → .wasm
+    → WebAssembly.compile(buffer)
+    → WebAssembly.Instance(module, imports?)
+    → instance.exports.functionName()
+
+  API CHÍNH:
+    WebAssembly.compile()    → buffer → Module
+    WebAssembly.Instance()   → Module → Instance
+    instance.exports         → {functions, memory}
+
+  ƯU ĐIỂM:
+    ① Kích thước nhỏ (~300KB JS → ~90KB wasm)
+    ② Bảo mật tốt hơn (tăng chi phí reverse)
+    ③ Hiệu năng gần native (bỏ qua thông dịch)
+
+  NHƯỢC ĐIỂM:
+    ① Chỉ kiểu cơ bản (i32/i64/f32/f64)
+    ② Không truy cập DOM / Web API trực tiếp
+    ③ Không kiểm soát GC
+
+  ỨNG DỤNG:
+    Video decoding, Image processing, 3D/WebVR/AR,
+    Rendering engine, Physics engine, Nén/Mã hóa
+```
+
+### Câu Hỏi Phỏng Vấn
+
+**1. WebAssembly là gì? Giải quyết vấn đề gì?**
+
+> WebAssembly là định dạng nhị phân di động, nhỏ, tải nhanh, phù hợp biên dịch cho Web. Giải quyết vấn đề **giới hạn hiệu năng của JavaScript** (interpreted + weakly typed) — sau JIT của V8, không thể cải thiện thêm → WebAssembly cho phép viết module bằng C/C++/Rust rồi biên dịch sang wasm, đạt hiệu năng **gần native**.
+
+**2. wasm và wast khác nhau thế nào?**
+
+> **wasm** là định dạng **nhị phân**, máy đọc, không có tính đọc hiểu. **wast** là định dạng **văn bản**, người đọc được (cú pháp ngoặc đơn giống Lisp). Hai định dạng **chuyển đổi qua lại** được nhờ WABT toolkit.
+
+**3. Tại sao cần imports khi tạo Instance?**
+
+> Phiên bản biên dịch local (Emscripten) yêu cầu `env` imports: `memory` (WebAssembly.Memory), `table` (WebAssembly.Table), `memoryBase`, `tableBase`. Phiên bản online đơn giản hơn có thể không cần imports vì module **tự quản lý** bộ nhớ.
+
+**4. Tên hàm bị thêm tiền tố \_ là sao?**
+
+> Emscripten tự động thêm tiền tố `_` (dấu gạch dưới) vào **tất cả phương thức C**. VD: `gcd` → `_gcd`. Khi dùng JS phải thêm `_`. Ngoại lệ: keys bắt đầu bằng `$` → bỏ `$`, không thêm `_`.
+
+**5. WebAssembly có thay thế JavaScript không?**
+
+> **Không**. WebAssembly **bổ sung** cho JavaScript, không thay thế. Nó dành cho kịch bản **tính toán nặng** (video decoding, 3D, physics). Không truy cập DOM trực tiếp, không kiểm soát GC, chỉ hỗ trợ kiểu dữ liệu cơ bản. JavaScript vẫn cần cho UI logic, DOM manipulation, Web APIs.
+
+**6. Ưu điểm hiệu năng cụ thể?**
+
+> Bỏ qua giai đoạn **thông dịch** (interpretation) → thực thi gần native. Kích thước nhỏ hơn → truyền tải nhanh hơn. Tuy nhiên, trong kịch bản lặp lại (benchmarks), **JIT không chậm hơn AOT bao nhiêu**. Lợi ích rõ nhất khi lượng code nghiệp vụ **rất lớn** và yêu cầu hiệu năng **cực cao**.
+
+---
+
+## Checklist Học Tập
+
+- [ ] WebAssembly là gì (định dạng nhị phân, compilation target)
+- [ ] Mục tiêu thiết kế (nhanh, an toàn, di động, nhỏ gọn, streaming)
+- [ ] Động lực (hạn chế JS interpreted + weakly typed, JIT đã tối đa)
+- [ ] wasm (binary) vs wast (text format, Lisp-like)
+- [ ] WABT toolkit (chuyển đổi wasm ↔ wast)
+- [ ] Môi trường online (WebAssembly Explorer)
+- [ ] Môi trường local (Emscripten SDK, emcc)
+- [ ] Name mangling trong C++ (chọn C99/C89 để tránh)
+- [ ] Tiền tố \_ trong Emscripten exports
+- [ ] WebAssembly.compile() → Module
+- [ ] WebAssembly.Instance() với/không imports
+- [ ] CSP restrictions (giải pháp: incognito mode)
+- [ ] Khác biệt online vs local compiled wasm
+- [ ] Ưu điểm: kích thước nhỏ, bảo mật hơn, hiệu năng cao
+- [ ] Nhược điểm: kiểu cơ bản, không DOM, không GC
+- [ ] Kịch bản: video, ảnh, 3D/VR/AR, physics, nén/mã hóa
+
+---
+
+## Tài Liệu Tham Khảo
+
+- WebAssembly Official (webassembly.org)
+- WebAssembly in Practice: How to Code — Hướng dẫn bắt đầu
+- JavaScript API – WebAssembly (W3C Spec)
+- WebAssembly – JavaScript | MDN
+- WABT: The WebAssembly Binary Toolkit
+- Emscripten Tutorial
+- wasm-arrays: Thư viện wrapper mảng WebAssembly
+
+---
+
+_Cập nhật lần cuối: Tháng 2, 2026_

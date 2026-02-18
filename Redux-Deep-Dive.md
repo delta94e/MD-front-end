@@ -653,3 +653,678 @@ REDUX — QUICK REFERENCE:
 ---
 
 _Cập nhật lần cuối: Tháng 2, 2026_
+
+---
+
+---
+
+# PHẦN 2 — Redux Gốc: Triết Lý, Cấu Trúc & So Sánh Với Flux
+
+> Phần bổ sung đi sâu vào nền tảng triết lý gốc của Redux:
+> Tại sao MVC thất bại, Redux giải quyết bằng cách nào,
+> cấu trúc chi tiết từng thành phần, 3 nguyên tắc,
+> react-redux internals, và so sánh Redux vs Flux.
+
+---
+
+## §1. Chức Năng — Redux Làm Gì?
+
+```
+═══════════════════════════════════════════════════════════════
+  REDUX = LỚP QUẢN LÝ STATE + RÀNG BUỘC MẠNH MỘT CHIỀU!
+═══════════════════════════════════════════════════════════════
+
+
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  → Redux là LỚP QUẢN LÝ STATE (state management)     │
+  │  → Áp đặt RÀNG BUỘC MẠNH lên luồng dữ liệu         │
+  │    một chiều (unidirectional data flow)                │
+  │                                                        │
+  │  KHÁC VỚI FLUX:                                       │
+  │  → Flux là PATTERN (mẫu kiến trúc)                   │
+  │  → Redux là MỘT IMPLEMENTATION CỤ THỂ                │
+  │    (cài đặt cụ thể của pattern đó)                    │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §2. Điểm Xuất Phát — Tại Sao Cần Redux?
+
+```
+═══════════════════════════════════════════════════════════════
+  VẤN ĐỀ CỦA MVC = LUỒNG DỮ LIỆU HAI CHIỀU!
+═══════════════════════════════════════════════════════════════
+
+
+  VẤN ĐỀ:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Trong MVC, ranh giới giữa Model, View, Controller   │
+  │  RÕ RÀNG, NHƯNG luồng dữ liệu là HAI CHIỀU!        │
+  │  Đặc biệt rõ ràng trong ứng dụng LỚN!               │
+  │                                                        │
+  │  Model ◀═══════▶ View                                 │
+  │    ↕                ↕                                  │
+  │  Model ◀═══════▶ View                                 │
+  │                                                        │
+  │  → Nếu 1 model cập nhật model khác,                  │
+  │    rồi model đó cập nhật view,                        │
+  │    view lại cập nhật model khác...                    │
+  │                                                        │
+  │  → KHÔNG THỂ BIẾT chính xác điều gì đang             │
+  │    xảy ra trong ứng dụng!                             │
+  │  → KHÔNG BIẾT khi nào, tại sao, bằng cách nào       │
+  │    state thay đổi!                                     │
+  │  → Hệ thống THIẾU MINH BẠCH!                         │
+  │  → Khó tái hiện bugs + thêm tính năng mới!            │
+  │                                                        │
+  │  VÍ DỤ:                                                │
+  │  → Two-way data binding → bảo trì + debug KHÓ!       │
+  │  → Một thay đổi (user input hoặc API call)            │
+  │    → ảnh hưởng NHIỀU states của ứng dụng!             │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  MỤC TIÊU CỦA REDUX:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  → GIẢM ĐỘ PHỨC TẠP                                  │
+  │  → TĂNG KHẢ NĂNG BẢO TRÌ                             │
+  │  → TĂNG TÍNH DỰ ĐOÁN của code                        │
+  │                                                        │
+  │  BẰNG CÁCH: ÉP BUỘC luồng dữ liệu MỘT CHIỀU!       │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §3. Khái Niệm Cốt Lõi — Core Concepts
+
+```
+═══════════════════════════════════════════════════════════════
+  CORE = STATE TREE BẤT BIẾN + ACTION + REDUCER!
+═══════════════════════════════════════════════════════════════
+
+
+  REDUX DUY TRÌ STATE NHƯ THẾ NÀO?
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  → Toàn bộ state = MỘT state tree BẤT BIẾN!          │
+  │  → KHÔNG THỂ thay đổi trực tiếp!                     │
+  │                                                        │
+  │  3 QUY TẮC:                                            │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  ① State object KHÔNG có setter!         │          │
+  │  │  ② Dispatch ACTION để yêu cầu thay đổi! │          │
+  │  │  ③ REDUCER liên kết action → state mới!  │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  Reducers tổ chức theo CÂY:                           │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Root Reducer                             │          │
+  │  │    ├── User Reducer                       │          │
+  │  │    ├── Message Reducer                    │          │
+  │  │    └── Settings Reducer                   │          │
+  │  │                                          │          │
+  │  │  → Tầng trên tổ chức tầng dưới!         │          │
+  │  │  → Tính toán TỪNG LỚP để ra state!      │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  CHÌA KHÓA = REDUCER LÀ HÀM THUẦN TÚY:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① NHỎ (Single Responsibility)                        │
+  │  ② THUẦN TÚY (No Side Effects)                       │
+  │  ③ ĐỘC LẬP (Fixed Input → Fixed Output)             │
+  │     → DỄ TEST! Chỉ kiểm tra input → output!          │
+  │                                                        │
+  │  → HÀM THUẦN TÚY cho phép TÍNH NĂNG DEBUG MẠNH:     │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Nếu không thuần túy → state rollback    │          │
+  │  │  GẦN NHƯ KHÔNG THỂ!                     │          │
+  │  │                                          │          │
+  │  │  Nhờ thuần túy → DevTools có thể:        │          │
+  │  │  ① Hiển thị state, lịch sử action       │          │
+  │  │  ② Bỏ qua action → lắp ráp kịch bản    │          │
+  │  │    bug KHÔNG CẦN chuẩn bị thủ công!     │          │
+  │  │  ③ Reset state, Commit, Revert!          │          │
+  │  │  ④ Hot reloading: sửa reducer →          │          │
+  │  │    có hiệu lực NGAY LẬP TỨC!            │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §4. Cấu Trúc — Kiến Trúc Redux (Góc Nhìn Triết Lý)
+
+```
+═══════════════════════════════════════════════════════════════
+  CẤU TRÚC = ACTION → STORE → REDUCERS → VIEW!
+═══════════════════════════════════════════════════════════════
+
+
+  LUỒNG DỮ LIỆU MỘT CHIỀU NGHIÊM NGẶT:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │               gọi              state mới               │
+  │  action → store ────→ reducers ──────────→ view       │
+  │                                                        │
+  │  → Action mang data đến reducer tầng cao nhất         │
+  │  → Rồi chảy xuống cây con tương ứng!                 │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §4.1. Action — Mô Tả Điều Gì Đã Xảy Ra
+
+```
+  ACTION = SỰ KIỆN VỚI TYPE VÀ DATA (PAYLOAD)!
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  GIỐNG FLUX: sự kiện mang type + data (payload)       │
+  │  → Dispatch thủ công: store.dispatch(action)          │
+  │                                                        │
+  │  ACTION CREATORS:                                      │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  action = event description              │          │
+  │  │  action creator = createEvent()          │          │
+  │  │                                          │          │
+  │  │  Tại sao cần?                             │          │
+  │  │  → Tăng TÍNH DI ĐỘNG (portability)!     │          │
+  │  │  → Tăng KHẢ NĂNG TEST (testability)!    │          │
+  │  │                                          │          │
+  │  │  Server-Side Rendering:                   │          │
+  │  │  → Tách action creator và store          │          │
+  │  │  → Mỗi request có binding ĐỘC LẬP!     │          │
+  │  │  → Binding xử lý BÊN NGOÀI store!       │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  bindActionCreators:                                   │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → Tạo action và dispatch nên TÁCH RIÊNG │          │
+  │  │  → bindActionCreators GỘP LẠI khi cần   │          │
+  │  │  → VD: truyền xuống con, ẨN dispatch đi!│          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  XỬ LÝ BẤT ĐỒNG BỘ (ASYNC):
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Mỗi async CẦN 3 actions (hoặc 3 giai đoạn):      │
+  │     (a) BẮT ĐẦU  → hiện loading                      │
+  │     (b) THÀNH CÔNG → ẩn loading, hiện data            │
+  │     (c) THẤT BẠI  → ẩn loading, hiện lỗi             │
+  │                                                        │
+  │  ② Dispatch action SAU KHI async hoàn thành!          │
+  │     → KHÔNG CẦN lo thứ tự nhiều async!               │
+  │     → Lịch sử action là CỐ ĐỊNH!                     │
+  │                                                        │
+  │  ③ Middleware (redux-thunk, redux-promise,...):        │
+  │     → Chỉ làm async ĐẸP HƠN VỀ HÌNH THỨC!          │
+  │     → Về kỹ thuật dispatch: KHÔNG KHÁC BIỆT!         │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §4.2. Reducer — Cập Nhật State Cụ Thể
+
+```
+  REDUCER = BIẾN MÔ TẢ THÀNH SỰ THẬT!
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  → Dựa trên action → cập nhật state!                  │
+  │                                                        │
+  │  GIỐNG arr.reduce():                                   │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  reducer ≈ callback                       │          │
+  │  │  Input:  state hiện tại + action          │          │
+  │  │  Output: state MỚI!                       │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  GIỐNG MIDDLEWARE / GULP PLUGINS:                      │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → Mỗi reducer lo MỘT PHẦN NHỎ          │          │
+  │  │  → Xâu chuỗi: output trước = input sau  │          │
+  │  │  → Kết quả cuối = state hoàn chỉnh!     │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  TẠO STATE MỚI, KHÔNG MODIFY:                         │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → Mỗi lần sửa → TẠO object mới!        │          │
+  │  │  → Giá trị cũ → giữ reference gốc!      │          │
+  │  │  → Giá trị mới → tạo mới!               │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  SO VỚI FLUX — DÙNG PURE FUNCTIONS THAY EVENT EMITTER:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① PHÂN TÁCH VÀ TỔ HỢP:                              │
+  │  → Phân tách state bằng cách chia nhỏ reducers!       │
+  │  → Tổ hợp lại bằng combineReducers()!                │
+  │  → Reducer Composition = KỸ THUẬT CƠ BẢN NHẤT!       │
+  │  → 1 reducer → tách thành nhóm reducers tương tự     │
+  │    (hoặc reducer factory)!                             │
+  │                                                        │
+  │  ② ĐƠN TRÁCH NHIỆM:                                  │
+  │  → Mỗi reducer CHỈ lo một phần global state!          │
+  │                                                        │
+  │  ③ RÀNG BUỘC PURE FUNCTION:                           │
+  │  → KHÔNG modify tham số!                               │
+  │  → Tính toán ĐƠN GIẢN, không side effects!           │
+  │  → TRÁNH: Math.random(), new Date(),...               │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  KỸ THUẬT THIẾT KẾ STATE:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Vì kết quả reducers GẮN CHẶT với state,             │
+  │  cần THIẾT KẾ cấu trúc state TRƯỚC!                  │
+  │                                                        │
+  │  ① CHIA STATE = Data State + UI State:                │
+  │  → UI state: giữ trong component hoặc state tree     │
+  │  → PHẢI PHÂN BIỆT rõ data vs UI state!               │
+  │  → Kịch bản đơn giản: giữ UI state ở component!      │
+  │                                                        │
+  │  ② COI STATE NHƯ DATABASE:                            │
+  │  → App phức tạp: coi state như DB!                     │
+  │  → Tạo INDEX khi lưu dữ liệu!                        │
+  │  → Dữ liệu liên quan → tham chiếu bằng ID!          │
+  │  → GIẢM nested state (tránh cây con phình to)!       │
+  │  → Bảng dữ liệu + Bảng quan hệ → giải quyết!       │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §4.3. Store — Keo Kết Nối
+
+```
+  STORE = KEO TỔ CHỨC ACTION + REDUCER + LISTENER!
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Toàn cục CHỈ CÓ 1 store (khác Flux: nhiều stores!)  │
+  │  → Là CÂY STATE BẤT BIẾN (immutable state tree)!     │
+  │                                                        │
+  │  3 TRÁCH NHIỆM:                                       │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  ① getState() ĐỌC, dispatch(action) GHI │          │
+  │  │  ② Nhận action → gọi reducers → state   │          │
+  │  │    mới → thông báo view (setState())!    │          │
+  │  │  ③ Đăng ký / hủy listener               │          │
+  │  │    (kích hoạt mỗi khi state thay đổi!)  │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  QUÁ TRÌNH ĐIỀU PHỐI:                                 │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Store nhận action                        │          │
+  │  │    → truyền action + state hiện tại      │          │
+  │  │      cho reducer tree                     │          │
+  │  │    → nhận lại state MỚI                   │          │
+  │  │    → cập nhật state hiện tại             │          │
+  │  │    → thông báo view!                      │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §5. Ba Nguyên Tắc Cơ Bản — Three Principles (Chi Tiết)
+
+```
+═══════════════════════════════════════════════════════════════
+  3 NGUYÊN TẮC = NỀN TẢNG CỦA REDUX!
+═══════════════════════════════════════════════════════════════
+
+
+  ① SINGLE SOURCE OF TRUTH:
+  ┌────────────────────────────────────────────────────────┐
+  │  Toàn bộ ứng dụng = MỘT state tree DUY NHẤT!         │
+  │  → Dễ tạo BẢN SAO state (lưu version lịch sử)!      │
+  │  → Dễ implement REDO / UNDO!                          │
+  └────────────────────────────────────────────────────────┘
+
+
+  ② STATE IS READ-ONLY:
+  ┌────────────────────────────────────────────────────────┐
+  │  CHỈ cập nhật state bằng ACTION!                      │
+  │  → Thay đổi TẬP TRUNG, THỨ TỰ NGHIÊM NGẶT!         │
+  │  → Không race conditions!                             │
+  │  → Actions = pure objects → LOG, SERIALIZE,           │
+  │    LƯU TRỮ, PHÁT LẠI để debug/test!                  │
+  └────────────────────────────────────────────────────────┘
+
+
+  ③ CHANGES WITH PURE FUNCTIONS:
+  ┌────────────────────────────────────────────────────────┐
+  │  Reducers = HÀM THUẦN TÚY!                            │
+  │  → Input: state + action → Output: state MỚI!         │
+  │  → LUÔN trả giá trị mới, KHÔNG modify input!          │
+  │  → Điều chỉnh thứ tự reducer TÙY Ý!                  │
+  │  → Debug như XEM PHIM: tua lại, tua tới!              │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §6. React-Redux — Kết Nối Với React (Góc Nhìn Nền Tảng)
+
+```
+═══════════════════════════════════════════════════════════════
+  REACT-REDUX = CẦU NỐI GIỮA REDUX VÀ REACT!
+═══════════════════════════════════════════════════════════════
+
+
+  REDUX KHÔNG LIÊN QUAN ĐẾN REACT!
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  → Redux có thể dùng với BẤT KỲ UI nào:              │
+  │    Backbone, Angular, React,...                        │
+  │  → react-redux xử lý phần:                            │
+  │    new state → ĐỒNG BỘ → view                        │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §6.1. Container vs View
+
+```
+  CONTAINER VÀ VIEW (GIỐNG FLUX):
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  CONTAINER:                                            │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → Component ĐẶC BIỆT, gắn chặt store! │          │
+  │  │  → KHÔNG chứa view logic!                │          │
+  │  │  → store.subscribe() đọc state tree      │          │
+  │  │  → Truyền xuống views bằng props!        │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  VIEW:                                                 │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → Component bình thường                  │          │
+  │  │  → Nhận data + callbacks qua props       │          │
+  │  │  → Chỉ lo UI + rendering!                │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §6.2. connect() API
+
+```
+  connect() = API QUAN TRỌNG NHẤT CỦA REACT-REDUX!
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Làm 3 việc chính:                                     │
+  │                                                        │
+  │  ① INJECT dispatch + state vào component              │
+  │     → Truyền xuống dưới dạng props!                   │
+  │                                                        │
+  │  ② TỰ ĐỘNG chèn container vào virtual DOM tree       │
+  │                                                        │
+  │  ③ TỐI ƯU HIỆU NĂNG: tránh re-render không cần     │
+  │     → Built-in shouldComponentUpdate!                  │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+### §6.3. Provider — Cơ Chế Bên Trong
+
+```
+  PROVIDER = CÁCH STORE "XUYÊN THẤU" TOÀN BỘ CÂY!
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  Sử dụng:                                              │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  render(                                  │          │
+  │  │    <Provider store={store}>               │          │
+  │  │      <App />                              │          │
+  │  │    </Provider>,                           │          │
+  │  │    document.getElementById('root')        │          │
+  │  │  )                                        │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │                                                        │
+  │  BÊN TRONG HOẠT ĐỘNG THẾ NÀO?                        │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → React cung cấp CONTEXT API            │          │
+  │  │  → Giống props nhưng XUYÊN THẤU          │          │
+  │  │    toàn bộ cây component!                 │          │
+  │  │  → KHÔNG CẦN truyền thủ công từng tầng!  │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+```typescript
+// ================================================
+// PROVIDER — CƠ CHẾ THỰC TẾ
+// ================================================
+
+// Provider đặt store vào context
+class Provider extends React.Component {
+  // Lấy store từ props, đặt làm thuộc tính context
+  getChildContext() {
+    return { store: this.props.store };
+  }
+  render() {
+    return this.props.children;
+  }
+}
+
+// Container lấy store từ context
+class Container extends React.Component {
+  // Lấy store từ context → dùng như props
+  // container truy cập qua this.props.store
+  getDefaultProps() {
+    return {
+      store: this.context.store,
+    };
+  }
+}
+
+// → Store "xuyên thấu" từ top xuống MỌI component!
+// → Về kỹ thuật, view thường CŨNG CÓ THỂ truy cập
+//   this.context.store (vì context lan truyền
+//   xuống KHÔNG KIỂM SOÁT)
+// → NHƯNG làm vậy là VI PHẠM QUY ƯỚC!
+// → Chỉ container mới nên truy cập store!
+```
+
+> **Insight:** `hostContainerInfo` trong ReactDOM chỉ chứa thông tin DOM node
+> (nodeType, namespaceURI,...), KHÔNG phải cơ chế truyền store.
+> React cung cấp `context` — phiên bản nâng cao của `hostContainerInfo` —
+> cho các kịch bản cần truyền data sâu mà không cần props thủ công từng tầng.
+> `__reactInternalInstance` là private property (key ngẫu nhiên),
+> nên component KHÔNG THỂ truy cập `hostContainerInfo` trực tiếp!
+
+---
+
+## §7. Redux vs Flux — So Sánh Chi Tiết
+
+```
+═══════════════════════════════════════════════════════════════
+  REDUX VS FLUX = GIỐNG VÀ KHÁC!
+═══════════════════════════════════════════════════════════════
+
+
+  GIỐNG NHAU:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① Tách model update logic thành lớp riêng            │
+  │     (Redux: reducer, Flux: store)                      │
+  │                                                        │
+  │  ② KHÔNG cho phép cập nhật model trực tiếp            │
+  │     → Cần mô tả mỗi thay đổi bằng action!           │
+  │                                                        │
+  │  ③ Ý tưởng cơ bản NHẤT QUÁN:                         │
+  │     (state, action) => state                           │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  KHÁC NHAU:
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  ① ĐỊNH NGHĨA:                                        │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Flux  = PATTERN (>10 implementations!)  │          │
+  │  │  Redux = MỘT implementation cụ thể!      │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ② STATE TREE:                                         │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Flux  = NHIỀU stores! Broadcast events  │          │
+  │  │          → components subscribe events    │          │
+  │  │          → đồng bộ state!                 │          │
+  │  │                                          │          │
+  │  │  Redux = MỘT store DUY NHẤT! State là   │          │
+  │  │          cây bất biến!                    │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ③ DISPATCHER:                                         │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Flux  = CÓ dispatcher riêng!            │          │
+  │  │          → Chuyển action đến mọi store!  │          │
+  │  │                                          │          │
+  │  │  Redux = KHÔNG CÓ dispatcher!            │          │
+  │  │          → Dựa vào PURE FUNCTIONS!       │          │
+  │  │          → Pure functions tổ hợp TỰ DO   │          │
+  │  │            KHÔNG CẦN quản lý thứ tự!     │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  ④ IMMUTABILITY:                                       │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Redux GIẢ ĐỊNH không modify state       │          │
+  │  │  thủ công!                                │          │
+  │  │                                          │          │
+  │  │  → Ràng buộc ĐẠO ĐỨC, không bắt buộc   │          │
+  │  │    về kỹ thuật!                           │          │
+  │  │  → KHÔNG bắt buộc immutable data         │          │
+  │  │    structures (vì lý do hiệu năng +      │          │
+  │  │    linh hoạt)!                            │          │
+  │  │  → Có thể dùng kèm: const, Immutable.js │          │
+  │  │                                          │          │
+  │  │  NẾU vi phạm (impure reducer):            │          │
+  │  │  → Tính năng debug MẠNH MẼ sẽ BỊ PHÁ!  │          │
+  │  │  → KHUYẾN CÁO MẠNH: KHÔNG LÀM VẬY!     │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §8. Câu Hỏi & Suy Ngẫm Nâng Cao
+
+```
+═══════════════════════════════════════════════════════════════
+  Q&A = HIỂU SÂU HƠN VỀ REDUX!
+═══════════════════════════════════════════════════════════════
+
+
+  Q1: Cơ chế subscribe quản lý ĐỘ MỊN thế nào?
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  subscribe(listener) → chỉ nhận TOÀN BỘ state!       │
+  │                                                        │
+  │  → BẤT KỲ thay đổi nào trên state tree →            │
+  │    THÔNG BÁO TẤT CẢ listeners!                       │
+  │  → Listener phải TỰ KIỂM TRA xem phần state         │
+  │    mình quan tâm có thay đổi không!                    │
+  │  → Cơ chế subscribe KHÔNG quản lý phân phối!          │
+  │  → Phân phối cần xử lý THỦ CÔNG!                     │
+  │                                                        │
+  │  → Trong React: setState() là cách kích hoạt          │
+  │    re-render, và connect() đã tối ưu bằng cách       │
+  │    so sánh state trước/sau!                            │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  Q2: Provider trong react-redux hoạt động thế nào?
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  → Dùng React CONTEXT API!                             │
+  │  → Provider đặt store vào context                      │
+  │    (qua getChildContext())                             │
+  │  → MỌI component con đều truy cập được               │
+  │    this.context.store!                                 │
+  │                                                        │
+  │  Đoán ban đầu: dùng hostContainerInfo → SAI!          │
+  │  (hostContainerInfo chỉ chứa DOM info, và             │
+  │  __reactInternalInstance là private property            │
+  │  nên component không truy cập được!)                   │
+  │                                                        │
+  │  → Context = phiên bản nâng cao của                    │
+  │    hostContainerInfo cho deep data passing!            │
+  │  → Về kỹ thuật: view CŨNG truy cập được              │
+  │    (context lan truyền không kiểm soát)                │
+  │  → NHƯNG chỉ container mới NÊN truy cập!             │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+
+
+  Q3: Bài toán CÂY VÔ HẠN CẤP xử lý thế nào?
+  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │  VÍ DỤ: cây thư mục có vô hạn cấp mở rộng           │
+  │                                                        │
+  │  GIẢI PHÁP — FLATTEN (LÀM PHẲNG):                     │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  Theo triết lý Redux, flatten cây thành  │          │
+  │  │  2 phần:                                  │          │
+  │  │                                          │          │
+  │  │  ① Bảng thô (coarse-grained):            │          │
+  │  │     nodeId → children (danh sách         │          │
+  │  │     childrenIdList)                       │          │
+  │  │                                          │          │
+  │  │  ② Bảng chi tiết (fine-grained):          │          │
+  │  │     nodeId → node data                    │          │
+  │  │                                          │          │
+  │  │  → Giống CHUẨN HÓA 3NF trong Database!  │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  │  TẠI SAO?                                              │
+  │  ┌──────────────────────────────────────────┐          │
+  │  │  → Flatten dễ BẢO TRÌ hơn nested state!  │          │
+  │  │  → Nếu 1 tree component = 1 object lớn  │          │
+  │  │    (node lồng trong tree) → CẬP NHẬT    │          │
+  │  │    TỪNG PHẦN cây lớn RẤT KHÓ!           │          │
+  │  │                                          │          │
+  │  │  → Chuẩn hóa 3NF dùng được cả FE!       │          │
+  │  │    (Không ngờ 3NF lại có thể áp dụng    │          │
+  │  │    cho front-end!)                        │          │
+  │  └──────────────────────────────────────────┘          │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+> **KẾT LUẬN PHẦN 2:**
+> Redux là implementation cụ thể của Flux pattern, với những cải tiến quan trọng:
+>
+> - **Single Store** — Chỉ MỘT state tree duy nhất, dễ quản lý!
+> - **Pure Reducers** — Thay thế event emitter bằng hàm thuần túy
+> - **Không Dispatcher** — Pure functions tổ hợp tự do, không cần quản lý thứ tự
+> - **DevTools mạnh mẽ** — Time-travel debugging nhờ immutability
+> - **React-Redux** — Context API "xuyên thấu" store qua Provider
+> - **State như Database** — Chuẩn hóa 3NF cho FE, flatten nested state!
