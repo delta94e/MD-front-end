@@ -10286,13 +10286,62 @@ let arr = [1, 2, 15];
 arr.sort();
 alert(arr); // [1, 15, 2] ← SAI! (so sánh STRING)
 
+// ═══════════════════════════════════════════════════════
+// a và b LÀ GÌ trong sort((a, b) => ...)?
+// ═══════════════════════════════════════════════════════
+//
+// sort() gọi callback NHIỀU LẦN với CẶP phần tử:
+//   a = phần tử ĐANG XÉT (current element)
+//   b = phần tử SO SÁNH (comparison element)
+//
+// RETURN VALUE quyết định THỨ TỰ:
+//   < 0 (âm)  → a đứng TRƯỚC b  (a ← b)
+//   = 0        → giữ nguyên       (a = b)
+//   > 0 (dương)→ a đứng SAU b    (b ← a)
+//
+// VÍ DỤ: sort((a, b) => a - b) — sắp xếp TĂNG DẦN:
+//   a=2, b=15 → 2-15 = -13 (âm) → 2 trước 15 ✅
+//   a=15, b=1 → 15-1 = 14 (dương) → 15 sau 1 ✅
+//
+// sort((a, b) => b - a) — sắp xếp GIẢM DẦN:
+//   a=2, b=15 → 15-2 = 13 (dương) → 2 sau 15
+//   → kết quả: [15, 2, 1]
+//
+// ┌──────────────────────────────────────────────────┐
+// │  SORT COMPARISON FLOW:                            │
+// │                                                    │
+// │  sort((a, b) => a - b)  — TĂNG DẦN               │
+// │  ┌──────┬──────┬────────┬──────────────────┐       │
+// │  │  a   │  b   │ a - b  │ Kết quả          │       │
+// │  ├──────┼──────┼────────┼──────────────────┤       │
+// │  │  2   │  15  │  -13   │ 2 trước 15       │       │
+// │  │  15  │  1   │  +14   │ 15 sau 1         │       │
+// │  │  2   │  1   │  +1    │ 2 sau 1          │       │
+// │  └──────┴──────┴────────┴──────────────────┘       │
+// │  → Kết quả: [1, 2, 15] ✅                         │
+// │                                                    │
+// │  sort((a, b) => b - a)  — GIẢM DẦN               │
+// │  → Đảo a và b → số lớn đứng trước!               │
+// │  → Kết quả: [15, 2, 1]                            │
+// └──────────────────────────────────────────────────┘
+
 arr.sort((a, b) => a - b);
 alert(arr); // [1, 2, 15] ← ĐÚNG!
 
 // Strings → dùng localeCompare
+// a.localeCompare(b) trả -1/0/1 (âm = a trước b theo alphabet)
 let countries = ["Österreich", "Andorra", "Vietnam"];
 countries.sort((a, b) => a.localeCompare(b));
 alert(countries); // ["Andorra", "Österreich", "Vietnam"]
+
+// Sort objects theo property:
+let users = [
+  { name: "John", age: 25 },
+  { name: "Pete", age: 20 },
+];
+users.sort((a, b) => a.age - b.age);
+// a.age=25, b.age=20 → 25-20=5 (dương) → a sau b
+// → [{age:20}, {age:25}] — TĂNG DẦN theo tuổi
 
 // ═══════════════════════════════════════════════════════
 // reverse() — MUTATE! Đảo ngược array
