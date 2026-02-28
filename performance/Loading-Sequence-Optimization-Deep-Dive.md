@@ -1,0 +1,901 @@
+# Tối Ưu Trình Tự Tải Trang (Loading Sequence) — Deep Dive
+
+> 📅 2026-02-15 · ⏱ 25 phút đọc
+>
+> Tối ưu trình tự tải trang web, Mối liên hệ giữa tài nguyên và Web Vitals,
+> Critical CSS / Fonts / Images / JavaScript Sequencing,
+> First-Party vs Third-Party Resource Management,
+> Network & CPU Utilization, HTTP/2 Prioritization,
+> Next.js ScriptLoader & Preconnect Strategy
+> Độ khó: ⭐️⭐️⭐️⭐️⭐️ | Performance / System Design
+>
+> _Dựa trên nghiên cứu của đội Aurora (Chrome) — Shubhie Panicker_
+
+---
+
+## Mục Lục
+
+| #   | Phần                                         |
+| --- | -------------------------------------------- |
+| 1   | Tổng quan — Tại sao trình tự tải quan trọng? |
+| 2   | Tại sao tối ưu trình tự tải lại KHÓ?         |
+| 3   | Core Web Vitals — Mối liên hệ với tài nguyên |
+| 4   | Phân tích từng loại tài nguyên               |
+| 5   | Bảng ưu tiên tài nguyên trong Chrome         |
+| 6   | Trình tự tải lý tưởng — KHÔNG có 3P          |
+| 7   | Trình tự tải lý tưởng — CÓ 3P                |
+| 8   | Chiến lược tối ưu từng loại tài nguyên       |
+| 9   | Next.js ScriptLoader — Quản lý 3P            |
+| 10  | Sai lầm thường gặp & Cách khắc phục          |
+| 11  | Tóm tắt phỏng vấn                            |
+
+---
+
+## §1. Tổng quan — Tại sao trình tự tải quan trọng?
+
+```
+TẠI SAO TRÌNH TỰ TẢI QUAN TRỌNG?
+═══════════════════════════════════════════════════════════════
+
+  Mỗi trang web tải THÀNH CÔNG đều có đặc điểm chung:
+  → Các tài nguyên QUAN TRỌNG sẵn sàng ĐÚNG THỜI ĐIỂM!
+  → Người dùng cảm nhận trang tải NHANH và MƯỢT!
+  → → Kết quả: Core Web Vitals ĐẠT chuẩn!
+
+  MỐI LIÊN HỆ:
+  ┌────────────────────────────────────────────────────────┐
+  │ Trình tự tải tài nguyên  →  Thời điểm metric kích hoạt │
+  │ (Loading Sequence)           (FCP, LCP, FID...)        │
+  │                                                        │
+  │ VÍ DỤ:                                                │
+  │ → Trang KHÔNG THỂ có LCP nếu hero image CHƯA tải!     │
+  │ → FID KHÔNG THỂ tốt nếu JS chưa parse xong!          │
+  │ → FCP bị CHẬM nếu CSS critical chưa sẵn sàng!         │
+  └────────────────────────────────────────────────────────┘
+
+  MỤC TIÊU:
+  → Tài nguyên ĐÚNG → tải ở thời điểm ĐÚNG!
+  → Không quá sớm (lãng phí!) → Không quá muộn (chậm!)
+  → Tìm điểm CÂN BẰNG: "Too little Too late" vs
+                          "Too much Too soon"
+```
+
+```
+DÒNG THỜI GIAN CÁC METRIC:
+═══════════════════════════════════════════════════════════════
+
+  Thời gian →
+  ─────────────────────────────────────────────────────────→
+
+  ┌─────┐   ┌─────┐   ┌─────┐   ┌──────────────┐
+  │ FCP │──→│ LCP │──→│ FID │──→│ Visually     │
+  │     │   │     │   │     │   │ Complete     │
+  └──┬──┘   └──┬──┘   └──┬──┘   └──────────────┘
+     │         │         │
+     │         │         │
+     ▼         ▼         ▼
+  Critical   Hero      JavaScript
+  CSS +      Image +   parsed +
+  Fonts      Text      hydrated
+
+  QUY TẮC: FCP trước LCP trước FID!
+  → Tài nguyên FCP phải được ƯU TIÊN trước LCP!
+  → Tài nguyên LCP phải được ưu tiên trước FID!
+```
+
+---
+
+## §2. Tại sao tối ưu trình tự tải lại KHÓ?
+
+```
+6 LÝ DO KHIẾN TỐI ƯU TRÌNH TỰ TẢI RẤT KHÓ:
+═══════════════════════════════════════════════════════════════
+
+  ① TRÌNH TỰ KHÔNG TỐI ƯU (Sub-optimal Sequencing):
+  ┌────────────────────────────────────────────────────────┐
+  │ → Developer KHÔNG BIẾT metric nào phụ thuộc           │
+  │   tài nguyên nào!                                      │
+  │ → Tài nguyên không được xếp ĐÚNG THỨ TỰ!             │
+  │ → VD: Hero image tải SAU JS → LCP bị chậm!           │
+  │ → VD: JS tải SAU images → FID bị chậm!                │
+  └────────────────────────────────────────────────────────┘
+
+  ② SỬ DỤNG NETWORK/CPU KHÔNG HIỆU QUẢ:
+  ┌────────────────────────────────────────────────────────┐
+  │ Tải SONG SONG (concurrent):                            │
+  │ ┌──── Script A ──────────────────────┐                 │
+  │ ┌──── Script B ──────────────────────┐                 │
+  │ ┌──── Script C ──────────────────────┐                 │
+  │ CPU: ░░░░░░░░░░░░ (NHÀN RỖI!)  ███ (xử lý tất cả)   │
+  │ → Bandwidth chia sẻ → tổng thời gian GIỐNG NHAU!      │
+  │ → CPU chờ TOÀN BỘ tải xong → "Dead Time"!             │
+  │                                                        │
+  │ Tải TUẦN TỰ (sequential) — TỐT HƠN:                  │
+  │ ┌── Script A ──┐                                       │
+  │ CPU: ███████████│── Script B ──┐                       │
+  │                 CPU: ███████████│── Script C ──┐       │
+  │                                 CPU: ███████████       │
+  │ → A tải xong → CPU xử lý A NGAY!                      │
+  │ → Network + CPU hoạt động ĐỒNG THỜI!                   │
+  └────────────────────────────────────────────────────────┘
+
+  ③ THƯ VIỆN BÊN THỨ BA (3P):
+  ┌────────────────────────────────────────────────────────┐
+  │ → 3P = ads, analytics, social widgets, live chat...    │
+  │ → 3P KHÔNG CÓ ĐỘNG LỰC tối ưu cho TRANG CỦA BẠN!    │
+  │ → JS của 3P có thể NẶNG → trì hoãn tương tác!        │
+  │ → Developer thường THÊM 3P BỪA BÃI!                   │
+  │ → Không xem xét ảnh hưởng đến loading sequence!        │
+  └────────────────────────────────────────────────────────┘
+
+  ④ ĐẶC THÙ NỀN TẢNG (Platform Quirks):
+  ┌────────────────────────────────────────────────────────┐
+  │ → Mỗi trình duyệt ưu tiên TÀI NGUYÊN KHÁC NHAU!     │
+  │ → VD: Bug của Chromium với preload:                    │
+  │   → <link rel=preload> LUÔN tải trước các request khác│
+  │     DÙ request kia có priority CAO HƠN!               │
+  │ → → Phá vỡ kế hoạch tối ưu!                           │
+  └────────────────────────────────────────────────────────┘
+
+  ⑤ VẤN ĐỀ HTTP/2 PRIORITIZATION:
+  ┌────────────────────────────────────────────────────────┐
+  │ → HTTP/2 cung cấp ÍT tùy chọn điều chỉnh thứ tự!    │
+  │ → Không dự đoán được server/CDN ưu tiên thế nào!      │
+  │ → Một số CDN sắp xếp LẠI priority!                    │
+  │ → Một số triển khai THIẾU SÓT hoặc KHÔNG priority!    │
+  └────────────────────────────────────────────────────────┘
+
+  ⑥ TỐI ƯU CẤP TÀI NGUYÊN (Resource Level):
+  ┌────────────────────────────────────────────────────────┐
+  │ → Critical CSS cần INLINE hóa!                         │
+  │ → Images cần ĐÚNG KÍCH THƯỚC!                          │
+  │ → JS cần CODE-SPLITTING và tải TĂNG DẦN!              │
+  │ → Framework thiếu cơ chế code-splitting tự động!       │
+  │ → Quá NHIỀU chunks nhỏ → giảm nén + ảnh hưởng perf!   │
+  │ → Quá ÍT chunks → tải thừa code!                      │
+  └────────────────────────────────────────────────────────┘
+```
+
+```
+CODE-SPLITTING — BÀI TOÁN CÂN BẰNG:
+═══════════════════════════════════════════════════════════════
+
+  GRANULARITY cao (nhiều chunks nhỏ):
+  ✅ Giảm JS cần tải cho mỗi route!
+  ✅ Cache tốt hơn (thay đổi 1 thư viện → chỉ tải lại chunk đó!)
+  ❌ Nhiều chunks nhỏ → tỉ lệ nén THẤP!
+  ❌ Ảnh hưởng performance trình duyệt!
+
+  GRANULARITY thấp (ít chunks lớn):
+  ✅ Nén tốt hơn!
+  ✅ Ít HTTP requests!
+  ❌ Tải THỪA code không cần!
+  ❌ Cache kém (thay đổi nhỏ → tải lại cả bundle!)
+
+  → CẦN TÌM ĐIỂM CÂN BẰNG PHÙ HỢP!
+```
+
+---
+
+## §3. Core Web Vitals — Mối liên hệ với tài nguyên
+
+```
+METRIC → TÀI NGUYÊN PHỤ THUỘC:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────┬──────────────────────────────────────────┐
+  │ FCP          │ First Contentful Paint                    │
+  │ (Nội dung    │ → CẦN: Critical CSS + Fonts!             │
+  │ đầu tiên)    │ → CHẶN BỞI: 3P sync script trong <head> │
+  │              │ → CHẶN BỞI: CSS từ domain khác (chậm!)   │
+  │              │ → inline CSS quá nhiều → bloat HTML!      │
+  ├──────────────┼──────────────────────────────────────────┤
+  │ LCP          │ Largest Contentful Paint                  │
+  │ (Nội dung    │ → CẦN: Hero image + Critical text!       │
+  │ lớn nhất)    │ → Hero image phải SẴN SÀNG khi FCP xong! │
+  │              │ → Placeholder ≠ kích thước thực → LCP     │
+  │              │   kích hoạt LẠI!                          │
+  ├──────────────┼──────────────────────────────────────────┤
+  │ FID          │ First Input Delay                         │
+  │ (Độ trễ      │ → CẦN: 1P JS đã parse + hydrate!         │
+  │ tương tác)   │ → BỊ CHẬM NẾU: 3P JS chạy trước 1P JS! │
+  │              │ → BỊ CHẬM NẾU: BTF images tải trước JS!  │
+  │              │ → Font thay đổi → layout task NẶNG!       │
+  ├──────────────┼──────────────────────────────────────────┤
+  │ CLS          │ Cumulative Layout Shift                   │
+  │ (Dịch chuyển │ → CẦN: Images có kích thước SẴN!         │
+  │ bố cục)      │ → Font fallback → nhảy khi font thật tới │
+  │              │ → Placeholder ≠ kích thước → layout shift │
+  └──────────────┴──────────────────────────────────────────┘
+```
+
+```
+SƠ ĐỒ PHỤ THUỘC — TÀI NGUYÊN → METRIC:
+═══════════════════════════════════════════════════════════════
+
+  Tài nguyên              Metric bị ảnh hưởng
+  ─────────────           ──────────────────────
+  Critical CSS ─────────→ FCP ✦
+  Critical Fonts ────────→ FCP ✦
+  3P Sync Script ────────→ FCP ✦ (chặn!)
+  Hero Image ────────────→ LCP ✦
+  ATF Images (unsized) ──→ CLS ✦
+  Font Fallback ─────────→ CLS ✦ + FID ✦
+  1P JavaScript ─────────→ FID ✦
+  3P JavaScript ─────────→ FID ✦ (trì hoãn 1P!)
+  BTF Images ────────────→ FID ✦ (nếu tải trước JS!)
+
+  ✦ = ảnh hưởng TRỰC TIẾP!
+
+  QUY TẮC VÀNG:
+  ┌────────────────────────────────────────────────────────┐
+  │ ❶ Khi FCP kích hoạt → hero image phải SẴN SÀNG       │
+  │    để kích hoạt LCP!                                   │
+  │                                                        │
+  │ ❷ Khi LCP kích hoạt → JS phải đã TẢI XONG,           │
+  │    ĐÃ PARSE và SẴN SÀNG chạy để mở khóa FID!        │
+  │                                                        │
+  │ ❸ Tất cả ATF images phải có KÍCH THƯỚC TRƯỚC          │
+  │    để tránh CLS!                                       │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §4. Phân tích từng loại tài nguyên
+
+### 4.1 Critical CSS
+
+```
+CRITICAL CSS — KHUYẾN NGHỊ & RÀNG BUỘC:
+═══════════════════════════════════════════════════════════════
+
+  ĐỊNH NGHĨA:
+  → CSS TỐI THIỂU cần cho FCP!
+  → Chỉ CSS cho ROUTE HIỆN TẠI!
+
+  ✅ KHUYẾN NGHỊ:
+  → INLINE trong HTML (tốt nhất!)
+  → Nếu không inline → PRELOAD + serve cùng origin!
+  → Tách CSS theo route (code-split CSS!)
+  → Ưu tiên CSS TRƯỚC 1P JS và ATF images trên network!
+
+  ❌ TRÁNH:
+  → KHÔNG serve critical CSS từ NHIỀU DOMAIN!
+  → KHÔNG dùng trực tiếp 3P CSS (VD: Google Fonts CDN!)
+  → → Dùng server riêng làm PROXY cho 3P CSS!
+
+  ⚠️ CẨN THẬN:
+  → Inline CSS QUÁ NHIỀU → HTML phình to → parse chậm!
+  → → Ảnh hưởng FCP!
+  → CSS inline KHÔNG cache được!
+  → → Workaround: request duplicate CSS (cacheable!)
+  → → Nhưng: duplicate CSS → multiple full-page layouts!
+  → → → Ảnh hưởng FID!
+
+  ┌────────────────────────────────────────────────────────┐
+  │ BALANCED APPROACH:                                      │
+  │                                                        │
+  │ <head>                                                 │
+  │   <!-- Inline CHỈ critical CSS -->                     │
+  │   <style>                                              │
+  │     .hero { ... }                                      │
+  │     .nav { ... }                                       │
+  │   </style>                                             │
+  │                                                        │
+  │   <!-- Preload non-critical CSS -->                    │
+  │   <link rel="preload" href="rest.css" as="style">     │
+  │ </head>                                                │
+  └────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Fonts
+
+```
+FONTS — KHUYẾN NGHỊ & RÀNG BUỘC:
+═══════════════════════════════════════════════════════════════
+
+  ✅ KHUYẾN NGHỊ:
+  → INLINE font-CSS nếu có thể!
+  → Nếu từ domain khác → dùng PRECONNECT!
+  → VD: <link rel="preconnect" href="https://fonts.gstatic.com">
+
+  ⚠️ CẨN THẬN:
+  → Inline TOÀN BỘ font (file .woff2) → HTML PHÌNH TO!
+  → Font fallback → giúp FCP nhanh hơn (text hiển thị sớm!)
+    NHƯNG:
+    → Font fallback → CLS (nhảy khi font thật đến!)
+    → Font thật đến → style + layout task NẶNG trên main thread!
+    → → Ảnh hưởng FID!
+
+  CHIẾN LƯỢC:
+  ┌────────────────────────────────────────────────────────┐
+  │ <head>                                                 │
+  │   <!-- Inline font-CSS (KHÔNG phải file font!) -->    │
+  │   <style>                                              │
+  │     @font-face {                                       │
+  │       font-family: 'MyFont';                           │
+  │       src: url('/fonts/myfont.woff2');                 │
+  │       font-display: swap; /* hoặc optional */         │
+  │     }                                                  │
+  │   </style>                                             │
+  │                                                        │
+  │   <!-- Preconnect cho font từ domain khác -->          │
+  │   <link rel="preconnect" href="https://fonts.gstatic.com"│
+  │         crossorigin>                                   │
+  │ </head>                                                │
+  └────────────────────────────────────────────────────────┘
+```
+
+### 4.3 Images — ATF vs BTF
+
+```
+IMAGES — ABOVE THE FOLD (ATF) vs BELOW THE FOLD (BTF):
+═══════════════════════════════════════════════════════════════
+
+  ┌─────────────────────── VIEWPORT ──────────────────────┐
+  │                                                        │
+  │  ┌──────────────────────────────────────────────────┐  │
+  │  │           ATF IMAGES (Above The Fold)             │  │
+  │  │                                                    │  │
+  │  │  → Hiển thị NGAY khi trang tải!                   │  │
+  │  │  → Hero image = LCP candidate!                    │  │
+  │  │  → PHẢI có kích thước (width/height)!             │  │
+  │  │  → Placeholder do SERVER render!                   │  │
+  │  │  → KHÔNG lazy load!                                │  │
+  │  └──────────────────────────────────────────────────┘  │
+  │                                                        │
+  ├────────────────────── ĐƯỜNG GẤP ──────────────────────┤
+  │                                                        │
+  │  ┌──────────────────────────────────────────────────┐  │
+  │  │           BTF IMAGES (Below The Fold)             │  │
+  │  │                                                    │  │
+  │  │  → User CHƯA THẤY khi trang tải!                 │  │
+  │  │  → PHẢI lazy load!                                 │  │
+  │  │  → KHÔNG được cạnh tranh với 1P JS!               │  │
+  │  │  → KHÔNG được cạnh tranh với 3P quan trọng!       │  │
+  │  └──────────────────────────────────────────────────┘  │
+  └────────────────────────────────────────────────────────┘
+
+  ATF IMAGES — ẢNH HƯỞNG METRIC:
+  → Unsized images → CLS! (dịch chuyển khi render xong!)
+  → Hero image chậm / placeholder trống → LCP muộn!
+  → Placeholder ≠ kích thước thật → LCP kích hoạt LẠI!
+
+  BTF IMAGES — ẢNH HƯỞNG METRIC:
+  → Tải TRƯỚC 1P JS hoặc 3P quan trọng → FID bị chậm!
+  → → PHẢI lazy load để nhường bandwidth!
+```
+
+### 4.4 JavaScript — 1P vs 3P
+
+```
+JAVASCRIPT — FIRST-PARTY (1P) vs THIRD-PARTY (3P):
+═══════════════════════════════════════════════════════════════
+
+  ┌─────────────────── 1P JAVASCRIPT ─────────────────────┐
+  │                                                        │
+  │ → Ảnh hưởng: khả năng TƯƠNG TÁC của app!              │
+  │ → Có thể bị CHẬM trên network bởi images & 3P JS!    │
+  │ → Có thể bị CHẬM trên main thread bởi 3P JS!         │
+  │                                                        │
+  │ KHUYẾN NGHỊ:                                           │
+  │ → Bắt đầu tải TRƯỚC ATF images trên network!          │
+  │ → Chạy TRƯỚC 3P JS trên main thread!                  │
+  │ → KHÔNG chặn FCP/LCP nếu trang SSR!                   │
+  └────────────────────────────────────────────────────────┘
+
+  ┌─────────────────── 3P JAVASCRIPT ─────────────────────┐
+  │                                                        │
+  │ → 3P sync script trong <head> → CHẶN CSS & font parse │
+  │   → CHẶN FCP!                                         │
+  │ → 3P sync script → CHẶN HTML body parsing!            │
+  │ → 3P chạy trên main thread → CHẬM 1P execution!      │
+  │ → → Trì hoãn hydration → Trì hoãn FID!               │
+  │                                                        │
+  │ KHUYẾN NGHỊ:                                           │
+  │ → CẦN kiểm soát TỐT HƠN khi tải 3P scripts!         │
+  │ → Dùng async/defer phù hợp!                           │
+  │ → Dùng ScriptLoader (Next.js!) để scheduling!         │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §5. Bảng ưu tiên tài nguyên trong Chrome
+
+```
+CHROME — BẢNG ƯU TIÊN TÀI NGUYÊN:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────────┬──────────┬─────────┬────────────┐
+  │ Loại tài nguyên      │ Priority │ Network │ Ghi chú    │
+  ├──────────────────────┼──────────┼─────────┼────────────┤
+  │ CSS (trong <head>)   │ Highest  │ Highest │ FCP blocking│
+  │ Fonts                │ Highest  │ Highest │ FCP blocking│
+  ├──────────────────────┼──────────┼─────────┼────────────┤
+  │ Script (blocking,    │ High     │ High    │ Trước first│
+  │ trước first image)   │          │         │ image      │
+  │ Script (blocking,    │ Medium   │ Medium  │ Sau first  │
+  │ sau first image)     │          │         │ image      │
+  ├──────────────────────┼──────────┼─────────┼────────────┤
+  │ Script (async/defer) │ Low      │ Lowest  │ Bất kể    │
+  │                      │          │         │ vị trí!    │
+  ├──────────────────────┼──────────┼─────────┼────────────┤
+  │ Images (trong        │ Medium   │ Medium  │ ATF        │
+  │ viewport)            │          │         │            │
+  │ Images (ngoài        │ Low      │ Lowest  │ BTF        │
+  │ viewport)            │          │         │            │
+  └──────────────────────┴──────────┴─────────┴────────────┘
+
+  ĐIỂM QUAN TRỌNG:
+  ① CSS + Fonts = HIGHEST → giúp ưu tiên cho FCP!
+  ② Script BLOCKING trước first image > sau first image!
+  ③ async/defer = LOWEST → dùng để HẠ ưu tiên script!
+  ④ ATF images (Medium) > BTF images (Lowest)!
+  → → Giúp ưu tiên hero image + lazy load BTF!
+```
+
+---
+
+## §6. Trình tự tải lý tưởng — KHÔNG có 3P
+
+```
+TRÌNH TỰ TẢI LÝ TƯỞNG (KHÔNG 3P):
+═══════════════════════════════════════════════════════════════
+
+  SỰ KIỆN TRÊN MAIN THREAD          REQUESTS TRÊN NETWORK
+  ════════════════════════          ═══════════════════════════
+
+  ① Parse HTML                     ❶ Small inline 1P scripts
+  ────────────────────              ────────────────────────
+  ② Chạy small inline              ❷ Critical CSS (inline
+     1P scripts                       hoặc preload)
+  ────────────────────              ❸ Critical Fonts (inline
+  ③ Parse tài nguyên FCP               hoặc preconnect)
+     (critical CSS + fonts)         ────────────────────────
+  ────────────────────              ❹ LCP Image (preconnect
+  ╔═══════════════════╗               nếu domain khác)
+  ║      F C P        ║             ❺ Fonts (từ inline
+  ╚═══════════════════╝               font-css, preconnect)
+  ────────────────────              ────────────────────────
+  ④ Render LCP resources            ❻ Non-critical CSS (async)
+     (hero image + text)            ❼ 1P JS cho interactivity
+  ────────────────────              ❽ ATF images (preconnect)
+  ╔═══════════════════╗             ────────────────────────
+  ║      L C P        ║             ❾ BTF images
+  ╚═══════════════════╝             ────────────────────────
+  ────────────────────
+  ⑤ Render ATF images
+     quan trọng
+  ────────────────────
+  ╔═══════════════════╗
+  ║  Visually Complete║
+  ╚═══════════════════╝
+  ────────────────────
+  ⑥ Parse non-critical
+     CSS (async)
+  ────────────────────
+  ⑦ Chạy 1P JS +                   ❿ Lazy-loaded JS chunks
+     Hydrate
+  ────────────────────
+  ╔═══════════════════╗
+  ║      F I D        ║
+  ╚═══════════════════╝
+```
+
+```
+GIẢI THÍCH TRÌNH TỰ:
+═══════════════════════════════════════════════════════════════
+
+  ① TẠI SAO non-critical CSS tải TRƯỚC FID?
+  → Nếu tải SAU FID → CSS render sau → styling BỊ LỖI!
+  → User thấy giao diện CHƯA HOÀN CHỈNH khi tương tác!
+
+  ② TẠI SAO 1P JS tải TRƯỚC ATF images trên network?
+  → JS cần thời gian DOWNLOAD + PARSE!
+  → Trong lúc parse JS → download ATF images SONG SONG!
+  → → Tận dụng cả Network VÀ CPU!
+
+  ③ TẠI SAO tránh dùng preload quá nhiều?
+  → Preload BUỘC phải thêm vào MỌI resource trước đó!
+  → Gây ra curation THỦ CÔNG phức tạp!
+  → Đặc biệt TRÁNH preload fonts (khó detect critical fonts!)
+
+  ④ PRECONNECT nên dùng cho:
+  → TẤT CẢ resources từ domain KHÁC!
+  → Thiết lập connection TRƯỚC → giảm latency!
+
+  ⑤ TẠI SAO download tuần tự tốt hơn song song (cho scripts)?
+  → Tuần tự: CPU xử lý script A ngay khi tải xong!
+  → Song song: CPU CHỜØ tất cả tải xong → mới xử lý!
+  → → Tuần tự tận dụng CPU + Network ĐỒNG THỜI!
+```
+
+---
+
+## §7. Trình tự tải lý tưởng — CÓ 3P
+
+```
+TRÌNH TỰ TẢI LÝ TƯỞNG (CÓ 3P):
+═══════════════════════════════════════════════════════════════
+
+  #  SỰ KIỆN MAIN THREAD       NETWORK REQUESTS
+  ── ─────────────────────      ──────────────────────────────
+  1  Parse HTML                 3P blocking FCP (preconnect!)
+  2                             (chờ 3P tải...)
+  3                             Small inline 1P scripts
+  4  Chạy small inline 1P      Critical CSS (inline/preload)
+  5  Parse 3P blocking FCP      Critical Fonts (inline/preconn)
+  6  Parse FCP resources        3P ATF image cho LCP(preconn!)
+  ── ╔═══════════════════╗      LCP Image (preconnect!)
+  7  ║      F C P        ║      Fonts (từ inline font-css)
+     ╚═══════════════════╝      ──────────────────────────────
+  8  Render 3P ATF image        Non-critical CSS (async)
+  9                             3P phải chạy TRƯỚC FID
+  10 Render LCP resources       ──────────────────────────────
+  11                            1P JS cho interactivity
+  ── ╔═══════════════════╗      ──────────────────────────────
+  12 ║      L C P        ║      Default 3P JS
+     ╚═══════════════════╝
+  13 Render ATF images          BTF images
+  14 Parse non-critical CSS     Lazy-loaded JS chunks
+  15 Chạy 3P cần cho FID        ──────────────────────────────
+  16 Chạy 1P JS + Hydrate      3P JS ít quan trọng
+  ── ╔═══════════════════╗
+     ║      F I D        ║
+     ╚═══════════════════╝
+
+
+  PRECONNECT CHO CÁC 3P:
+  ┌────────────────────────────────────────────────────────┐
+  │ #1  — 3P blocking FCP (VD: consent management!)       │
+  │ #6  — 3P ATF image cho LCP                            │
+  │ #9  — 3P phải chạy trước tương tác                    │
+  │ #12 — Default 3P JS                                    │
+  └────────────────────────────────────────────────────────┘
+```
+
+```
+SƠ ĐỒ TRỰC QUAN — TIMELINE:
+═══════════════════════════════════════════════════════════════
+
+  Thời gian →
+  ═══════════════════════════════════════════════════════════→
+
+  NETWORK:
+  ▓▓▓▓▓ 3P-FCP   ░░░ CSS  ░░ Font
+  ────────────────▓▓▓▓▓▓▓▓▓ Hero Image
+  ──────────────────────────▓▓▓▓▓▓▓ 1P JS
+  ──────────────────────────────────▒▒▒▒▒ 3P JS
+  ──────────────────────────────────────────░░░ BTF Imgs
+
+  MAIN THREAD:
+  ██ Parse HTML
+  ──██ Inline JS
+  ────██ Parse 3P-FCP
+  ──────██ Parse CSS+Font
+  ─────────║FCP║
+  ──────────██ Render Hero
+  ────────────║LCP║
+  ──────────────██ Parse non-crit CSS
+  ────────────────██ 3P pre-FID
+  ──────────────────████ 1P JS + Hydrate
+  ────────────────────────║FID║
+
+  ▓ = download   █ = CPU processing   ║║ = metric fired
+```
+
+---
+
+## §8. Chiến lược tối ưu từng loại tài nguyên
+
+```
+CHIẾN LƯỢC TỐI ƯU — TỔNG HỢP:
+═══════════════════════════════════════════════════════════════
+
+  ┌────────────────┬───────────────────────────────────────────┐
+  │ TÀI NGUYÊN    │ CHIẾN LƯỢC                                │
+  ├────────────────┼───────────────────────────────────────────┤
+  │ Critical CSS   │ • INLINE trong HTML!                      │
+  │                │ • Tách CSS theo route!                    │
+  │                │ • Serve cùng origin!                      │
+  │                │ • Ưu tiên trước 1P JS + ATF images!      │
+  │                │ • Không inline quá nhiều (bloat HTML!)    │
+  ├────────────────┼───────────────────────────────────────────┤
+  │ Fonts          │ • Inline font-CSS (KHÔNG inline font file)│
+  │                │ • Preconnect cho font domain khác!        │
+  │                │ • font-display: swap hoặc optional!       │
+  │                │ • Cân nhắc font-fallback vs CLS!         │
+  ├────────────────┼───────────────────────────────────────────┤
+  │ Hero Image     │ • Preconnect nếu domain khác!             │
+  │                │ • Luôn set width + height!                │
+  │                │ • Server render placeholder!              │
+  │                │ • Placeholder PHẢI = kích thước thật!     │
+  ├────────────────┼───────────────────────────────────────────┤
+  │ ATF Images     │ • PHẢI có kích thước (tránh CLS!)        │
+  │                │ • KHÔNG lazy load!                        │
+  │                │ • Server render placeholder!              │
+  ├────────────────┼───────────────────────────────────────────┤
+  │ BTF Images     │ • PHẢI lazy load!                         │
+  │                │ • Dùng loading="lazy" hoặc IO!            │
+  │                │ • Không cạnh tranh với 1P JS!             │
+  ├────────────────┼───────────────────────────────────────────┤
+  │ 1P JavaScript  │ • Tải TRƯỚC ATF images trên network!      │
+  │                │ • Chạy TRƯỚC 3P JS trên main thread!      │
+  │                │ • Code-split theo route!                   │
+  │                │ • Lazy load chunks không critical!        │
+  ├────────────────┼───────────────────────────────────────────┤
+  │ 3P JavaScript  │ • KHÔNG sync script trong <head>!         │
+  │                │ • Dùng async/defer phù hợp!              │
+  │                │ • Preconnect cho 3P domain!               │
+  │                │ • Dùng ScriptLoader (Next.js!)            │
+  │                │ • Phân loại: before/after interactive!    │
+  ├────────────────┼───────────────────────────────────────────┤
+  │ Non-critical   │ • Tải ASYNC!                              │
+  │ CSS            │ • Tải TRƯỚC FID (tránh styling lỗi!)     │
+  │                │ • Dùng media queries cho tách CSS!        │
+  └────────────────┴───────────────────────────────────────────┘
+```
+
+---
+
+## §9. Next.js ScriptLoader — Quản lý 3P
+
+```
+NEXT.JS SCRIPT LOADER — 3 MỨC ĐỘ ƯU TIÊN:
+═══════════════════════════════════════════════════════════════
+
+  ┌──────────────────┬─────────────────────────────────────┐
+  │ beforeInteractive│ Tải TRƯỚC hydration!                 │
+  │                  │ → 3P script chạy TRƯỚC 1P JS!       │
+  │                  │ → VD: polyfill.io, bot detection,    │
+  │                  │   bảo mật, xác thực, GDPR consent!  │
+  │                  │ → ⚠️ Cẩn thận: có thể chậm FID!    │
+  ├──────────────────┼─────────────────────────────────────┤
+  │ afterInteractive │ Tải SAU hydration!                   │
+  │ (MẶC ĐỊNH)       │ → 3P script chạy SAU 1P JS!        │
+  │                  │ → VD: Tag Manager, Ads, Analytics!  │
+  │                  │ → ✅ Không ảnh hưởng FID!           │
+  ├──────────────────┼─────────────────────────────────────┤
+  │ lazyOnload       │ Tải KHI NHÀN RỖI!                    │
+  │                  │ → Ưu tiên THẤP NHẤT!                │
+  │                  │ → VD: CRM, Google Feedback,          │
+  │                  │   nút share, bình luận mạng XH!     │
+  │                  │ → ✅ Không ảnh hưởng gì!            │
+  └──────────────────┴─────────────────────────────────────┘
+```
+
+```jsx
+// ═══ NEXT.JS SCRIPT LOADER — VÍ DỤ ═══
+
+import Script from "next/script";
+
+function MyApp() {
+  return (
+    <>
+      {/* ① TRƯỚC hydration — GDPR Consent */}
+      <Script
+        src="https://consent.cookiebot.com/uc.js"
+        strategy="beforeInteractive"
+      />
+
+      {/* ② SAU hydration — Google Analytics */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=GA_ID"
+        strategy="afterInteractive"
+      />
+
+      {/* ③ Khi nhàn rỗi — Facebook SDK */}
+      <Script
+        src="https://connect.facebook.net/en_US/sdk.js"
+        strategy="lazyOnload"
+      />
+    </>
+  );
+}
+
+// KẾT HỢP VỚI PRECONNECT:
+// <Head>
+//   <link rel="preconnect" href="https://consent.cookiebot.com" />
+//   <link rel="preconnect" href="https://www.googletagmanager.com" />
+// </Head>
+```
+
+```
+SƠ ĐỒ SCRIPTLOADER TRÊN TIMELINE:
+═══════════════════════════════════════════════════════════════
+
+  Thời gian →
+
+  HTML Parse ──→ FCP ──→ LCP ──→ Hydration ──→ FID ──→ Idle
+                                     │
+  ┌──────────────────────────────────┤
+  │ beforeInteractive  ▓▓▓▓▓▓▓██████│
+  │ (tải + chạy TRƯỚC hydration!)  │
+  ├──────────────────────────────────┤
+  │ afterInteractive         ▓▓▓▓▓▓▓████████
+  │ (tải + chạy SAU hydration!)
+  ├──────────────────────────────────────────────────┤
+  │ lazyOnload                                ▓▓▓▓▓▓███
+  │ (tải + chạy khi NHÀN RỖI!)
+  └─────────────────────────────────────────────────┘
+
+  ▓ = download   █ = execute
+```
+
+---
+
+## §10. Sai lầm thường gặp & Cách khắc phục
+
+```
+SAI LẦM THƯỜNG GẶP:
+═══════════════════════════════════════════════════════════════
+
+  ❌ SAI LẦM 1: 3P sync script trong <head>
+  ┌────────────────────────────────────────────────────────┐
+  │ <!-- ❌ CHẶN mọi thứ! -->                              │
+  │ <head>                                                 │
+  │   <script src="https://3p.com/script.js"></script>     │
+  │ </head>                                                │
+  │                                                        │
+  │ → CHẶN CSS + font parsing → FCP chậm!                 │
+  │ → CHẶN HTML body parsing!                              │
+  │                                                        │
+  │ ✅ FIX: async/defer hoặc ScriptLoader!                 │
+  │ <script async src="https://3p.com/script.js"></script> │
+  └────────────────────────────────────────────────────────┘
+
+  ❌ SAI LẦM 2: Hero image KHÔNG được ưu tiên
+  ┌────────────────────────────────────────────────────────┐
+  │ → Hero image tải CHUNG với 20 images khác!             │
+  │ → Bandwidth chia sẻ → hero image TẢI CHẬM → LCP chậm!│
+  │                                                        │
+  │ ✅ FIX:                                                │
+  │ → Dùng fetchpriority="high" cho hero image!            │
+  │ → Lazy load TẤT CẢ BTF images!                        │
+  │ <img src="hero.jpg" fetchpriority="high"               │
+  │      width="1200" height="600" alt="Hero">             │
+  └────────────────────────────────────────────────────────┘
+
+  ❌ SAI LẦM 3: CSS từ nhiều domain
+  ┌────────────────────────────────────────────────────────┐
+  │ <!-- ❌ Mỗi domain = 1 DNS + TCP + TLS roundtrip! --> │
+  │ <link href="https://cdn1.com/style.css" rel="stylesheet">│
+  │ <link href="https://cdn2.com/fonts.css" rel="stylesheet">│
+  │ <link href="https://cdn3.com/theme.css" rel="stylesheet">│
+  │                                                        │
+  │ ✅ FIX: Serve từ CÙNG domain hoặc proxy!              │
+  │ ✅ FIX: Preconnect cho domain cần thiết!               │
+  └────────────────────────────────────────────────────────┘
+
+  ❌ SAI LẦM 4: Images KHÔNG có kích thước
+  ┌────────────────────────────────────────────────────────┐
+  │ <!-- ❌ Layout shift khi image tải xong! -->           │
+  │ <img src="product.jpg" alt="Product">                  │
+  │                                                        │
+  │ ✅ FIX: LUÔN set width + height!                       │
+  │ <img src="product.jpg" width="400" height="300"        │
+  │      alt="Product">                                    │
+  │                                                        │
+  │ HOẶC aspect-ratio CSS:                                 │
+  │ .img-wrapper { aspect-ratio: 4/3; }                    │
+  └────────────────────────────────────────────────────────┘
+
+  ❌ SAI LẦM 5: Preload QUÁ NHIỀU tài nguyên
+  ┌────────────────────────────────────────────────────────┐
+  │ <!-- ❌ Preload MỌI THỨ = preload KHÔNG GÌ! -->       │
+  │ <link rel="preload" href="a.js" as="script">          │
+  │ <link rel="preload" href="b.css" as="style">          │
+  │ <link rel="preload" href="c.woff2" as="font">        │
+  │ <link rel="preload" href="d.jpg" as="image">         │
+  │ <link rel="preload" href="e.js" as="script">          │
+  │                                                        │
+  │ → Preload CẠNH TRANH lẫn nhau!                        │
+  │ → Chromium bug: preload luôn tải TRƯỚC → phá ordering!│
+  │                                                        │
+  │ ✅ FIX: Chỉ preload 1-2 tài nguyên THỰC SỰ critical! │
+  │ ✅ FIX: Ưu tiên INLINE hơn preload cho CSS/fonts!     │
+  └────────────────────────────────────────────────────────┘
+
+  ❌ SAI LẦM 6: BTF images tải trước JS
+  ┌────────────────────────────────────────────────────────┐
+  │ → 50 images tải cùng lúc → chiếm hết bandwidth!      │
+  │ → 1P JS phải CHỜ → FID rất chậm!                      │
+  │                                                        │
+  │ ✅ FIX: loading="lazy" cho TẤT CẢ BTF images!        │
+  │ ✅ FIX: IntersectionObserver cho fine-grained control! │
+  └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## §11. Tóm tắt phỏng vấn
+
+```
+PHỎNG VẤN — TRẢ LỜI:
+═══════════════════════════════════════════════════════════════
+
+  Q: "Làm sao tối ưu trình tự tải trang?"
+  A: Sắp xếp tài nguyên theo THỨ TỰ METRIC:
+  → FCP cần: Critical CSS (inline!) + Fonts (preconnect!)
+  → LCP cần: Hero image (fetchpriority="high"!)
+  → FID cần: 1P JS (tải trước images, chạy trước 3P!)
+  → CLS tránh: Images unsized, font fallback nhảy!
+
+  Q: "Tại sao download tuần tự tốt hơn song song cho scripts?"
+  A: Tuần tự: CPU xử lý script A NGAY khi tải xong!
+  Song song: CPU CHỜØ tất cả → "Dead Time"!
+  Tuần tự tận dụng Network + CPU ĐỒNG THỜI!
+
+  Q: "Làm sao xử lý 3P scripts?"
+  A: KHÔNG sync trong <head>! Phân loại 3P:
+  → beforeInteractive: polyfill, consent, bảo mật
+  → afterInteractive: analytics, ads, tag manager
+  → lazyOnload: social widgets, CRM, feedback
+  Preconnect cho TẤT CẢ 3P domains!
+
+  Q: "Preload vs preconnect?"
+  A: Preload = tải tài nguyên CỤ THỂ sớm (cẩn thận Chromium bug!)
+  Preconnect = thiết lập CONNECTION sớm (DNS+TCP+TLS)
+  → Preconnect AN TOÀN hơn, dùng cho cross-origin resources!
+  → Preload chỉ dùng cho 1-2 tài nguyên THỰC SỰ critical!
+
+  Q: "Code-splitting cần cân bằng gì?"
+  A: Nhiều chunks nhỏ: cache tốt, tải ít code, NHƯNG nén kém!
+  Ít chunks lớn: nén tốt, ít requests, NHƯNG tải thừa!
+  → Tìm điểm cân bằng phù hợp cho dự án!
+```
+
+```
+SƠ ĐỒ TỔNG QUAN — TRÌNH TỰ TẢI TỐI ƯU:
+═══════════════════════════════════════════════════════════════
+
+  ┌─────────────────────────────────────────────────────────┐
+  │                                                          │
+  │  ┌──────────┐   ┌──────────┐   ┌──────────┐            │
+  │  │ PHASE 1  │──→│ PHASE 2  │──→│ PHASE 3  │            │
+  │  │ FCP      │   │ LCP      │   │ FID      │            │
+  │  │          │   │          │   │          │            │
+  │  │ Critical │   │ Hero     │   │ 1P JS   │            │
+  │  │ CSS ★    │   │ Image ★  │   │ Hydrate ★│            │
+  │  │ Fonts    │   │ 3P ATF   │   │ 3P pre- │            │
+  │  │ 3P FCP   │   │ image    │   │ interact│            │
+  │  └──────────┘   └──────────┘   └──────────┘            │
+  │       │              │              │                    │
+  │       ▼              ▼              ▼                    │
+  │  ┌─────────────────────────────────────────────┐       │
+  │  │              SAU FID                         │       │
+  │  │                                              │       │
+  │  │  Default 3P JS → BTF images → Lazy chunks  │       │
+  │  │  → Less important 3P JS                     │       │
+  │  └─────────────────────────────────────────────┘       │
+  │                                                          │
+  │  ★ = Critical resource cho metric đó                    │
+  └─────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Checklist
+
+- [ ] **Trình tự metric**: FCP → LCP → FID; tài nguyên phải sẵn sàng ĐÚNG thứ tự này!
+- [ ] **Critical CSS**: INLINE trong HTML; tách theo route; serve cùng origin; ưu tiên trước JS + images!
+- [ ] **Fonts**: Inline font-CSS (KHÔNG file font!); preconnect cho domain khác; cân nhắc swap vs CLS!
+- [ ] **Hero image**: Preconnect nếu cross-origin; fetchpriority="high"; PHẢI có width+height; placeholder = kích thước thật!
+- [ ] **ATF images**: PHẢI có kích thước (tránh CLS!); server render placeholder; KHÔNG lazy load!
+- [ ] **BTF images**: PHẢI lazy load (loading="lazy" hoặc IO!); không cạnh tranh với 1P JS trên network!
+- [ ] **1P JS**: Tải TRƯỚC ATF images; chạy TRƯỚC 3P JS trên main thread; code-split theo route!
+- [ ] **3P JS**: KHÔNG sync trong head; async/defer; ScriptLoader (before/after/lazy); preconnect cho domain!
+- [ ] **Preload**: Chỉ 1-2 resource THẬT critical; cẩn thận Chromium bug; ưu tiên inline hơn preload!
+- [ ] **Preconnect**: Dùng cho TẤT CẢ cross-origin resources; DNS+TCP+TLS trước → giảm latency!
+- [ ] **Network + CPU**: Download tuần tự cho scripts → CPU xử lý ngay khi tải xong → tránh "Dead Time"!
+- [ ] **Code-splitting**: Cân bằng granularity: nhiều chunks nhỏ (cache tốt) vs ít chunks lớn (nén tốt)!
+- [ ] **Non-critical CSS**: Tải ASYNC; tải TRƯỚC FID để tránh styling lỗi khi user tương tác!
+- [ ] **ScriptLoader (Next.js)**: beforeInteractive (polyfill, consent), afterInteractive (analytics), lazyOnload (social, CRM)!
+- [ ] **HTTP/2**: Server/CDN có thể re-prioritize; không hoàn toàn tin tưởng vào protocol priority!
+
+---
+
+_Nguồn: Addy Osmani & đội Aurora (Chrome) — Shubhie Panicker — web.dev — "Optimize your loading sequence"_
+_Cập nhật lần cuối: Tháng 2, 2026_
