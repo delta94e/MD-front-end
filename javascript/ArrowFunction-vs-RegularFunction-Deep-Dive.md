@@ -27,30 +27,30 @@ var sub = function (a, b) {
 // ═══════════════════════════════════════════════════════════
 
 // ① Đầy đủ!
-var mul = function (a, b) {
+const mul = (a, b) => {
   return a * b;
 };
 
 // ② 1 tham số → bỏ ()!
-var square = function (x) {
+const square = (x) => {
   return x * x;
 };
 
 // ③ 1 dòng → bỏ {} và return!
-var double = function (x) {
-  return x * 2;
-};
+const double = (x) => x * 2;
 
 // ═══════════════════════════════════════════════════════════
 // BẪY: Return object literal! ★
 // ═══════════════════════════════════════════════════════════
 
 // ❌ SAI: {} bị hiểu là code block!
-// var getUser = (id) => { id: id, name: 'User' };
-// → return undefined! ❌
+// const getUser = (id) => { id: id, name: 'User' };
+// → SyntaxError! (id: là label, nhưng `name: 'User'` sau dấu phẩy không hợp lệ!)
+// Nếu chỉ 1 field: const getId = (id) => { id: id };
+// → return undefined! (id: là label, id là expression, KHÔNG return!) ❌
 
 // ✅ ĐÚNG: Wrap trong ()! ★
-// var getUser = (id) => ({ id: id, name: 'User' });
+const getUser = (id) => ({ id: id, name: "User" });
 ```
 
 ---
@@ -140,16 +140,11 @@ var obj = {
 
   // ✅ Arrow function trong setTimeout! ★
   sayArrow: function () {
-    setTimeout(
-      function () {
-        console.log("Arrow:", this.name);
-        // ★ this = obj! ✅ (arrow bắt this từ sayArrow!)
-        // → Output: Arrow: JavaScript ✅
-      }.bind(this),
-      100,
-    );
-    // Lưu ý: dùng .bind(this) để minh họa,
-    // arrow function tự làm việc này!
+    setTimeout(() => {
+      console.log("Arrow:", this.name);
+      // ★ this = obj! ✅ (arrow bắt this từ sayArrow!)
+      // → Output: Arrow: JavaScript ✅
+    }, 100);
   },
 };
 
@@ -183,15 +178,12 @@ var objOld = {
 // VÍ DỤ 2: call/apply KHÔNG đổi this của arrow! ★
 // ═══════════════════════════════════════════════════════════
 
-var arrowFn = function () {
-  console.log(this);
-};
-// Giả sử arrow: var arrowFn = () => console.log(this);
+const arrowFn = () => console.log(this);
 
 var target = { id: 1 };
-// arrowFn.call(target);  // ★ VẪN là window! KHÔNG đổi! ★
-// arrowFn.apply(target); // ★ VẪN là window! KHÔNG đổi! ★
-// arrowFn.bind(target)(); // ★ VẪN là window! KHÔNG đổi! ★
+arrowFn.call(target); // ★ VẪN là window! KHÔNG đổi! ★
+arrowFn.apply(target); // ★ VẪN là window! KHÔNG đổi! ★
+arrowFn.bind(target)(); // ★ VẪN là window! KHÔNG đổi! ★
 
 // Regular function → call ĐỔI this! ✅
 function regularFn() {
@@ -222,11 +214,10 @@ var p = new Person("Minh"); // ✅ OK!
 console.log(p.greet()); // "Xin chào, tôi là Minh"
 
 // Arrow function!
-var ArrowPerson = function (name) {
+const ArrowPerson = (name) => {
   this.name = name;
 };
-// Nếu viết: var ArrowPerson = (name) => { this.name = name; };
-// console.log(ArrowPerson.prototype); // ★ undefined! ❌
+console.log(ArrowPerson.prototype); // ★ undefined! ❌
 // new ArrowPerson('Minh'); // ★ TypeError: not a constructor! ❌
 
 // ═══════════════════════════════════════════════════════════
@@ -238,9 +229,12 @@ var ArrowPerson = function (name) {
 // ③ Return object!
 //
 // Arrow function:
-// → KHÔNG có prototype → step ① fail! ❌
-// → KHÔNG có [[Construct]] → step ② fail! ❌
+// → KHÔNG có [[Construct]] → step ② fail! ❌ (TypeError!)
+// → KHÔNG có prototype → new object sẽ kế thừa Object.prototype
 // → Chỉ có [[Call]] → chỉ GỌI được, KHÔNG new! ★
+//
+// Lưu ý: Lỗi thực tế là do [[Construct]] KHÔNG tồn tại,
+// KHÔNG phải do thiếu prototype.
 ```
 
 ---
@@ -264,25 +258,29 @@ function sumRegular() {
 }
 console.log(sumRegular(1, 2, 3)); // 6 ✅
 
-// ② Arrow function — KHÔNG CÓ arguments! ❌
-// var sumArrow = () => {
-//   console.log(arguments); // ★ ReferenceError! ❌
-// };
+// ② Arrow function — KHÔNG CÓ arguments RIÊNG! ❌
+// Arrow kế thừa arguments từ scope cha (nếu có)!
+function outer() {
+  const arrowInside = () => {
+    console.log(arguments); // ★ arguments của outer()! KHÔNG phải của arrow!
+  };
+  arrowInside();
+}
+outer(1, 2, 3); // Arguments [1, 2, 3] ★ (kế thừa từ outer!)
+
+// Nếu arrow ở TOP-LEVEL (không có function cha):
+// const topArrow = () => console.log(arguments);
+// topArrow(); // ★ ReferenceError: arguments is not defined! ❌
 
 // ③ GIẢI PHÁP: Rest parameters! ★
-function sumModern() {
-  // Tự viết rest params concept:
-  var args = [];
-  for (var i = 0; i < arguments.length; i++) {
-    args.push(arguments[i]);
-  }
-  // ES6: var sumModern = (...args) => { ... }
-  var total = 0;
-  for (var j = 0; j < args.length; j++) {
-    total += args[j];
+const sumModern = (...args) => {
+  let total = 0;
+  for (let i = 0; i < args.length; i++) {
+    total += args[i];
   }
   return total;
-}
+};
+console.log(sumModern(1, 2, 3)); // 6 ✅
 
 // ★ arguments là ARRAY-LIKE, KHÔNG phải Array!
 // → arguments.map() → ERROR! ❌
@@ -335,7 +333,8 @@ function sumModern() {
   │  ├──────────────────┼──────────────────────────────────┤    │
   │  │ Object method     │ Regular! ★ (this = object!)      │    │
   │  │ Prototype method  │ Regular! ★ (this = instance!)    │    │
-  │  │ Event handler     │ Regular! ★ (this = element!)     │    │
+  │  │ Event handler     │ Regular nếu cần this = element!     │    │
+  │  │                         │ Arrow OK nếu dùng e.target! ★     │    │
   │  │ Callback (map...) │ Arrow! ★ (giữ this ngoài!)     │    │
   │  │ setTimeout         │ Arrow! ★ (giữ this ngoài!)     │    │
   │  │ Promise .then()   │ Arrow! ★ (giữ this ngoài!)     │    │
