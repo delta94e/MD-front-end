@@ -644,6 +644,491 @@ header.replaceWith(header.cloneNode(true));
 
 ---
 
+### 📖 Accordion I → II → III — Tiến trình xây dựng
+
+> Giống như Tabs, Accordion cũng được xây dựng qua 3 tầng:
+> - **Accordion I**: Functionality cơ bản — click toggle, sections độc lập!
+> - **Accordion II**: Accessibility — ARIA roles, states, properties!
+> - **Accordion III**: Keyboard interactions — Enter/Space, Arrow keys, Home/End!
+
+---
+
+### 🔹 Accordion I — Functionality Cơ Bản
+
+#### Yêu cầu
+
+```
+ACCORDION I — YÊU CẦU:
+═══════════════════════════════════════════════════════════════
+
+  1. Mặc định: TẤT CẢ sections đều collapsed (ẩn)!
+  2. Click vào title → TOGGLE content:
+     • Nếu collapsed → expanded (hiện content!)
+     • Nếu expanded → collapsed (ẩn content!)
+  3. Các sections ĐỘC LẬP: mở/đóng 1 section
+     KHÔNG ảnh hưởng sections khác!
+  4. Focus vào functionality, KHÔNG cần CSS phức tạp!
+```
+
+#### Phân tích: accordion vs tabs
+
+```
+ACCORDION vs TABS — KHÁC NHAU Ở ĐÂU:
+═══════════════════════════════════════════════════════════════
+
+  TABS:
+  → Chỉ 1 panel hiển thị tại một thời điểm!
+  → Chọn tab A → tab B tự đóng!
+  → EXCLUSIVE: mutually exclusive!
+
+  ACCORDION (multi mode):
+  → NHIỀU sections có thể mở cùng lúc!
+  → Mở section A → section B VẪN mở!
+  → INDEPENDENT: các sections độc lập!
+
+  ACCORDION (single mode):
+  → Giống tabs: chỉ 1 section mở!
+  → Mở A → B tự đóng!
+  → Accordion I yêu cầu MULTI mode (independent)!
+```
+
+#### Code tối giản — Accordion I
+
+```javascript
+// ═══ Accordion I — Phiên bản tối giản ═══
+// Chỉ cần: headers, panels, toggle mỗi cái RIÊNG!
+
+function initAccordion(container) {
+  const headers = container.querySelectorAll('.accordion-header');
+
+  headers.forEach((header) => {
+    const panel = header.nextElementSibling;
+    panel.style.display = 'none'; // mặc định: ẩn!
+
+    header.addEventListener('click', () => {
+      // Toggle: nếu đang ẩn → hiện, nếu đang hiện → ẩn!
+      const isHidden = panel.style.display === 'none';
+      panel.style.display = isHidden ? 'block' : 'none';
+
+      // Visual: xoay chevron!
+      const icon = header.querySelector('.accordion-icon');
+      if (icon) icon.textContent = isHidden ? '▼' : '▶';
+    });
+  });
+}
+```
+
+Nhận xét: Accordion I **đơn giản hơn Tabs I** vì không cần track "active index" — mỗi section **tự quản lý** expand/collapse. Không có khái niệm "active" duy nhất.
+
+#### UX Improvements — Điểm cộng trong phỏng vấn!
+
+```
+UX CẢI THIỆN (BONUS POINTS!):
+═══════════════════════════════════════════════════════════════
+
+  1. Smooth animation thay vì nhảy cóc!
+     → max-height + transition (đã giải thích ở Deep Dive!)
+     → KHÔNG dùng display:none (không animate được!)
+
+  2. Chevron icon xoay 90° khi expand!
+     → CSS transform: rotate(90deg) + transition!
+     → Visual feedback cho user biết state!
+
+  3. Hover effect trên header!
+     → background-color thay đổi khi hover!
+     → Cho user biết "cái này clickable!"
+
+  4. Single-open mode (optional)!
+     → Click section A → đóng section B!
+     → Phù hợp cho FAQ, nav menus!
+
+  5. Deep link!
+     → URL hash: /page#section-2 → auto-expand section 2!
+```
+
+---
+
+### 🔹 Accordion II — ARIA Accessibility
+
+#### Yêu cầu — WAI-ARIA Accordion Pattern
+
+> Accordion II nâng cấp từ Accordion I: thêm ARIA roles, states, properties cho screen readers.
+
+```
+ACCORDION II — ARIA REQUIREMENTS:
+═══════════════════════════════════════════════════════════════
+
+  1. Title mỗi header nằm trong <button> element!
+  2. Header button có aria-expanded:
+     → Panel visible: aria-expanded="true"
+     → Panel hidden: aria-expanded="false"
+  3. Header button có aria-controls = ID của panel!
+  4. Mỗi panel container có:
+     → role="region"
+     → aria-labelledby = ID của button header!
+```
+
+#### Giải thích từng ARIA attribute
+
+##### `<button>` — Tại sao bắt buộc?
+
+```
+TẠI SAO HEADER PHẢI LÀ <BUTTON>:
+═══════════════════════════════════════════════════════════════
+
+  <h3 class="accordion-header">Section 1</h3>
+  ❌ <h3> KHÔNG focusable bằng Tab key!
+  ❌ KHÔNG respond Enter/Space!
+  ❌ Screen reader: "heading level 3" — không biết clickable!
+
+  <button class="accordion-header">Section 1</button>
+  ✅ Focusable bằng Tab key!
+  ✅ Enter/Space trigger click tự động!
+  ✅ Screen reader: "Section 1, button" — biết interactive!
+
+  Best practice: <h3> wrap <button>:
+  <h3>
+    <button class="accordion-header"
+      aria-expanded="false"
+      aria-controls="panel-1">
+      Section 1
+    </button>
+  </h3>
+  → Heading structure (cho SEO + outline!)
+  → Button bên trong (cho interaction + a11y!)
+```
+
+##### `aria-expanded` — "Đang mở hay đóng?"
+
+```
+aria-expanded — SO SÁNH VỚI aria-selected (Tabs):
+═══════════════════════════════════════════════════════════════
+
+  ACCORDION: aria-expanded
+  → "Panel này đang MỞ hay ĐÓNG?"
+  → true = content ĐANG HIỆN!
+  → false = content ĐANG ẨN!
+  → Screen reader: "Section 1, button, expanded"
+                 or "Section 1, button, collapsed"
+
+  TABS: aria-selected
+  → "Tab này ĐANG ĐƯỢC CHỌN hay không?"
+  → true = tab này ACTIVE!
+  → false = tab này INACTIVE!
+
+  TẠI SAO KHÁC NHAU?
+  → Accordion: sections MỞ/ĐÓNG (reveal/hide!)
+  → Tabs: tab CHỌN/KHÔNG CHỌN (pick 1 of many!)
+  → Semantic khác nhau dù UI tương tự!
+```
+
+##### `aria-controls` + `aria-labelledby` — Liên kết hai chiều
+
+```
+LIÊN KẾT HAI CHIỀU — header ↔ panel:
+═══════════════════════════════════════════════════════════════
+
+  Header → Panel:  aria-controls="panel-1"
+  Panel → Header:  aria-labelledby="header-1"
+
+  ┌─────────────────────────────────────────┐
+  │  button#header-1                        │
+  │  aria-expanded="true"                   │
+  │  aria-controls="panel-1" ─────────┐     │
+  └───────────────────────────────────│─────┘
+                                      │
+  ┌───────────────────────────────────│─────┐
+  │  div#panel-1                      │     │
+  │  role="region"                    │     │
+  │  aria-labelledby="header-1" ──────┘     │
+  │  Content for Section 1                  │
+  └─────────────────────────────────────────┘
+
+  → Header biết panel nào: aria-controls!
+  → Panel biết header nào: aria-labelledby!
+  → Screen reader: "Region, labelled by Section 1"
+```
+
+##### `role="region"` — Tại sao panel cần role?
+
+```
+role="region" — LANDMARK:
+═══════════════════════════════════════════════════════════════
+
+  KHÔNG CÓ role:
+  <div id="panel-1">Content...</div>
+  → Screen reader: "group" hoặc chỉ đọc content!
+  → Không biết đây là "vùng nội dung" riêng biệt!
+
+  CÓ role="region":
+  <div id="panel-1" role="region" aria-labelledby="header-1">
+    Content...
+  </div>
+  → Screen reader: "Section 1 region, Content..."
+  → User biết: "đây là vùng nội dung CỦA Section 1!"
+
+  region = ARIA landmark!
+  → Screen reader liệt kê landmarks trên page!
+  → User nhảy nhanh giữa các regions!
+  → PHẢI có aria-labelledby hoặc aria-label kèm theo!
+    (region không có label → cảnh báo a11y!)
+```
+
+#### Code — Accordion II (ARIA hoàn chỉnh)
+
+```html
+<!-- Accordion II — HTML chuẩn ARIA -->
+<div class="accordion">
+  <div class="accordion-item">
+    <h3>
+      <button
+        class="accordion-header"
+        aria-expanded="false"
+        aria-controls="panel-1"
+        id="header-1"
+      >
+        <span>Section 1: Giới thiệu</span>
+        <span class="accordion-icon">▶</span>
+      </button>
+    </h3>
+    <div
+      class="accordion-panel"
+      id="panel-1"
+      role="region"
+      aria-labelledby="header-1"
+      hidden
+    >
+      <div class="accordion-content">
+        Nội dung section 1...
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+```javascript
+// Accordion II — Toggle với ARIA!
+function toggle(header, panel) {
+  const isExpanded = header.getAttribute('aria-expanded') === 'true';
+
+  // Toggle aria-expanded!
+  header.setAttribute('aria-expanded', String(!isExpanded));
+
+  // Toggle panel visibility!
+  panel.hidden = isExpanded; // hidden attribute!
+  // hidden = true → ẩn khỏi DOM + screen reader!
+  // hidden = false → hiện!
+}
+```
+
+Mỗi lần toggle:
+- `aria-expanded` flip: `"true"` ↔ `"false"`
+- `hidden` attribute flip: có ↔ không
+- Screen reader đọc state MỚI ngay lập tức!
+
+---
+
+### 🔹 Accordion III — Keyboard Interactions
+
+#### Yêu cầu keyboard
+
+> Accordion III thêm keyboard interactions nâng cao. **Khác với Tabs**: accordion có Enter/Space toggle (không chỉ focus), và Tab key hoạt động bình thường (không skip!).
+
+```
+ACCORDION III — KEYBOARD REQUIREMENTS:
+═══════════════════════════════════════════════════════════════
+
+  ENTER / SPACE (khi focus ở header button):
+  → Panel collapsed → EXPAND!
+  → Panel expanded → COLLAPSE!
+  → Giống click! (button đã handle tự động!)
+
+  TAB / SHIFT+TAB:
+  → Hoạt động BÌNH THƯỜNG!
+  → Di chuyển focus qua TẤT CẢ focusable elements!
+  → KHÔNG skip! (khác tabs: tabs dùng roving tabindex!)
+  → Content trong expanded panel CŨNG focusable!
+
+  ARROW DOWN (khi focus ở header):
+  → Focus đến header TIẾP THEO!
+  → Ở header cuối → KHÔNG di chuyển (hoặc wrap về đầu)!
+
+  ARROW UP (khi focus ở header):
+  → Focus đến header TRƯỚC ĐÓ!
+  → Ở header đầu → KHÔNG di chuyển (hoặc wrap về cuối)!
+
+  HOME (khi focus ở header):
+  → Focus đến header ĐẦU TIÊN!
+
+  END (khi focus ở header):
+  → Focus đến header CUỐI CÙNG!
+```
+
+#### Accordion vs Tabs — Khác biệt keyboard!
+
+```
+KEYBOARD — ACCORDION vs TABS:
+═══════════════════════════════════════════════════════════════
+
+  Feature         │ Accordion            │ Tabs
+  ────────────────┼──────────────────────┼────────────────────
+  Enter/Space     │ Toggle expand/       │ Activate tab
+                  │ collapse!            │ (nếu manual mode!)
+  Tab key         │ BÌNH THƯỜNG!         │ Roving tabindex!
+                  │ Focus mọi element!   │ Skip inactive tabs!
+  Arrow keys      │ CHỈNH giữa headers! │ Switch tabs + chuyển
+                  │ KHÔNG toggle!        │ ACTIVATE!
+  Wrap cuối→đầu   │ TÙY CHỌN!           │ BẮT BUỘC!
+
+  TẠI SAO KHÁC?
+  → Tabs: chỉ 1 active → roving tabindex tối ưu!
+  → Accordion: nhiều mở cùng lúc → Tab key phải
+    đi qua CONTENT bên trong expanded panels!
+  → Arrow keys trong accordion: CHỈ di chuyển focus
+    giữa headers, KHÔNG toggle expand/collapse!
+```
+
+#### Code keyboard handler — Accordion III
+
+```javascript
+// ═══ Accordion III — Keyboard Handler ═══
+
+const headers = container.querySelectorAll('.accordion-header');
+
+headers.forEach((header, index) => {
+  header.addEventListener('keydown', (e) => {
+    let targetIndex = -1; // -1 = không di chuyển!
+
+    switch (e.key) {
+      case 'ArrowDown':
+        // Header tiếp theo! (không wrap hoặc wrap tuỳ chọn)
+        if (index < headers.length - 1) {
+          targetIndex = index + 1;
+        }
+        // Nếu muốn wrap: targetIndex = (index + 1) % headers.length;
+        break;
+
+      case 'ArrowUp':
+        // Header trước đó!
+        if (index > 0) {
+          targetIndex = index - 1;
+        }
+        // Nếu muốn wrap:
+        // targetIndex = (index - 1 + headers.length) % headers.length;
+        break;
+
+      case 'Home':
+        targetIndex = 0; // Header đầu tiên!
+        break;
+
+      case 'End':
+        targetIndex = headers.length - 1; // Header cuối!
+        break;
+
+      default:
+        return; // Enter/Space: button đã handle click event!
+                // Tab/Shift+Tab: để browser handle bình thường!
+    }
+
+    if (targetIndex >= 0) {
+      e.preventDefault(); // Chặn Arrow scroll page!
+      headers[targetIndex].focus(); // Di chuyển focus!
+      // CHÚ Ý: KHÔNG toggle! Chỉ FOCUS!
+      // Toggle chỉ xảy ra khi Enter/Space hoặc click!
+    }
+  });
+});
+```
+
+```
+FOCUS vs TOGGLE — KHÁC NHAU:
+═══════════════════════════════════════════════════════════════
+
+  Arrow keys: FOCUS (di chuyển focus đến header khác!)
+  → KHÔNG mở/đóng section!
+  → Chỉ "nhìn vào" header khác!
+
+  Enter/Space: TOGGLE (mở/đóng section!)
+  → Expand nếu collapsed, collapse nếu expanded!
+
+  Click: TOGGLE (giống Enter/Space!)
+
+  Tab: FOCUS (di chuyển đến element focusable tiếp theo!)
+  → Bao gồm: headers, links trong content, inputs...
+  → KHÔNG skip content! (khác Tabs!)
+
+  Ví dụ flow:
+  1. Tab → focus Header 1
+  2. Enter → expand Section 1 (content hiện!)
+  3. Tab → focus link trong content Section 1
+  4. Tab → focus Header 2
+  5. ArrowDown → focus Header 3 (không toggle!)
+  6. Enter → expand Section 3!
+  7. Home → focus Header 1 (top!)
+```
+
+#### Tại sao Enter/Space không cần code riêng?
+
+```
+ENTER/SPACE — TẠI SAO KHÔNG THẤY TRONG SWITCH:
+═══════════════════════════════════════════════════════════════
+
+  switch (e.key) {
+    case 'ArrowDown': ... break;
+    case 'ArrowUp':   ... break;
+    case 'Home':      ... break;
+    case 'End':       ... break;
+    default: return;  ← Enter/Space ĐI QUA ĐÂY!
+  }
+
+  Tại sao? Vì header là <BUTTON>!
+  → Browser TỰ ĐỘNG handle Enter/Space cho <button>!
+  → Enter → fire click event!
+  → Space → fire click event!
+  → Click event → toggle function (đã gắn sẵn!)
+  → KHÔNG cần code thêm!
+
+  Nếu header là <div> thay vì <button>:
+  → PHẢI thêm case 'Enter' và case ' ' (Space)!
+  → PHẢI gọi toggle() thủ công!
+  → THÊM code không cần thiết!
+  → → ĐÓ LÀ LÝ DO dùng <button>!!! 🎯
+```
+
+#### Tổng kết: Accordion I → II → III
+
+```
+ACCORDION I → II → III — PROGRESSION:
+═══════════════════════════════════════════════════════════════
+
+  ACCORDION I (Functionality):
+  ✅ Click header → toggle content!
+  ✅ Sections INDEPENDENT (multi mode)!
+  ✅ Chevron icon xoay khi expand!
+  ❌ Screen reader không hiểu state!
+  ❌ Keyboard chỉ có Tab + click!
+
+  ACCORDION II (Accessibility): I +
+  ✅ <button> trong header!
+  ✅ aria-expanded="true"/"false"!
+  ✅ aria-controls liên kết header → panel!
+  ✅ role="region" + aria-labelledby trên panel!
+  ✅ Screen reader ĐỌC ĐƯỢC state!
+  ❌ Arrow keys chưa hoạt động!
+
+  ACCORDION III (Keyboard): II +
+  ✅ ArrowDown/Up: navigate giữa headers!
+  ✅ Home/End: đầu/cuối!
+  ✅ Enter/Space: toggle (button handle tự động!)
+  ✅ Tab/Shift+Tab: bình thường (focus mọi element!)
+  ✅ HOÀN CHỈNH! Production-ready! 🎯
+
+  → §1.1 code phía trên = ACCORDION III (đầy đủ nhất!)
+  → Bao gồm: click + ARIA + keyboard!
+```
+
+---
+
 ## §1.2 Accordion — React
 
 ```javascript
@@ -2177,6 +2662,593 @@ const tabs = new Tabs("#myTabs");
 
 ---
 
+### 📖 Giải thích code Tabs từng phần — Tabs I, II, III
+
+> Tabs component nhìn đơn giản nhưng khi xây dựng **đúng chuẩn**, nó đòi hỏi 3 tầng:
+> - **Tabs I**: Functionality cơ bản — click tab, hiển thị panel!
+> - **Tabs II**: Accessibility — ARIA roles, states, properties!
+> - **Tabs III**: Keyboard interactions — Arrow keys, Home/End, Tab key!
+
+---
+
+### 🔹 Tabs I — Functionality Cơ Bản
+
+#### Yêu cầu
+
+```
+TABS I — YÊU CẦU:
+═══════════════════════════════════════════════════════════════
+
+  1. Click vào tab → tab đó trở thành active!
+  2. Active tab phải có visual indication (ví dụ: màu xanh)!
+  3. Luôn chỉ hiển thị MỘT panel — panel tương ứng tab active!
+  4. Focus vào functionality, KHÔNG cần CSS phức tạp!
+```
+
+#### Phân tích: cách tiếp cận đơn giản nhất
+
+Ở mức cơ bản nhất, tabs chỉ cần:
+
+```javascript
+// Logic cốt lõi — CỰC KỲ ĐƠN GIẢN:
+// 1. Track "tab nào đang active" (một con số!)
+// 2. Click tab → update số đó!
+// 3. Hiển thị panel tương ứng số đó!
+
+let activeTab = 0; // index của tab active!
+
+function selectTab(index) {
+  activeTab = index;
+  // Ẩn tất cả panels, hiện panel[index]!
+  // Bỏ highlight tất cả tabs, highlight tab[index]!
+}
+```
+
+Nghe quen không? Logic này **giống y hệt** radio buttons — chỉ có 1 option được chọn tại một thời điểm. Đó là lý do WAI-ARIA dùng pattern tương tự `radiogroup` cho tabs.
+
+#### Code giải thích chi tiết — Tabs I
+
+```javascript
+// ═══ Tabs I — Phiên bản tối giản ═══
+// Chỉ cần 3 thứ: tabs, panels, activeIndex!
+
+function initTabs(container) {
+  const tabButtons = container.querySelectorAll('.tab-btn');
+  const tabPanels = container.querySelectorAll('.tab-panel');
+  let activeIndex = 0;
+
+  tabButtons.forEach((btn, index) => {
+    btn.addEventListener('click', () => {
+      // Bước 1: Bỏ highlight tab cũ!
+      tabButtons[activeIndex].classList.remove('active');
+      tabButtons[activeIndex].style.color = ''; // reset màu!
+
+      // Bước 2: Ẩn panel cũ!
+      tabPanels[activeIndex].style.display = 'none';
+
+      // Bước 3: Cập nhật activeIndex!
+      activeIndex = index;
+
+      // Bước 4: Highlight tab mới!
+      tabButtons[activeIndex].classList.add('active');
+      tabButtons[activeIndex].style.color = 'blue'; // visual indication!
+
+      // Bước 5: Hiện panel mới!
+      tabPanels[activeIndex].style.display = 'block';
+    });
+  });
+}
+```
+
+```
+TẠI SAO VISUAL INDICATION QUAN TRỌNG:
+═══════════════════════════════════════════════════════════════
+
+  KHÔNG có visual indication:
+  ┌──────┬──────┬──────┐
+  │ Tab1 │ Tab2 │ Tab3 │   ← trông như nhau! Tab nào đang active?
+  └──────┴──────┴──────┘
+  │ Content...           │
+  → User BỐI RỐI! Không biết đang xem tab nào!
+
+  CÓ visual indication:
+  ┌──────┬──────┬──────┐
+  │ Tab1 │▉Tab2▉│ Tab3 │   ← Tab2 màu xanh + underline!
+  └──────┴══════┴──────┘
+  │ Content for Tab 2... │
+  → User BIẾT NGAY đang xem Tab 2! ✅
+
+  Cách highlight đơn giản nhất:
+  → Màu chữ xanh (blue) cho active tab!
+  → Hoặc: border-bottom, background, font-weight...
+```
+
+#### UX Improvements — Điểm cộng trong phỏng vấn!
+
+```
+UX CẢI THIỆN (BONUS POINTS!):
+═══════════════════════════════════════════════════════════════
+
+  1. Tab đầu tiên active mặc định khi load!
+     → Không để user thấy page trống!
+
+  2. Smooth transition khi switch panel!
+     → fadeIn animation thay vì nhảy cóc!
+
+  3. Panel height consistent!
+     → Tránh page "nhảy" khi panels có height khác nhau!
+
+  4. URL hash sync!
+     → /page#tab2 → tự activate Tab 2 khi load!
+     → Shareable links! ✅
+
+  5. Remember last tab!
+     → localStorage lưu activeTab!
+     → Quay lại page → tab cuối cùng active!
+```
+
+---
+
+### 🔹 Tabs II — ARIA Accessibility
+
+#### Yêu cầu — WAI-ARIA Tabs Pattern
+
+> Tabs II nâng cấp từ Tabs I: thêm đúng ARIA roles, states, và properties. Đây là **tiêu chuẩn quốc tế** để screen readers (phần mềm đọc màn hình) hiểu được component.
+
+```
+TABS II — ARIA REQUIREMENTS:
+═══════════════════════════════════════════════════════════════
+
+  1. Container chứa tabs → role="tablist"
+  2. Mỗi tab button → role="tab" + NẰM TRONG tablist!
+  3. Mỗi panel → role="tabpanel"
+  4. Tab có aria-controls → trỏ đến id của panel tương ứng!
+  5. Active tab: aria-selected="true"!
+     Inactive tabs: aria-selected="false"!
+  6. Panel có aria-labelledby → trỏ đến id của tab tương ứng!
+  7. Dùng <button> cho tabs (focusable + interactive!)
+```
+
+#### Giải thích từng ARIA attribute
+
+```
+ARIA ATTRIBUTES — TẠI SAO CẦN:
+═══════════════════════════════════════════════════════════════
+
+  KHÔNG CÓ ARIA (screen reader đọc):
+  "button, Tab 1"
+  "button, Tab 2"
+  "div, some content..."
+  → Người khiếm thị: "Đây là gì? Buttons? Content?
+     Nó liên quan nhau thế nào?"
+
+  CÓ ARIA (screen reader đọc):
+  "tablist"
+  "Tab 1, tab, selected, 1 of 3"
+  "Tab 2, tab, not selected, 2 of 3"
+  "Tab 1 content, tabpanel, labelled by Tab 1"
+  → Người khiếm thị: "À! Đây là nhóm tabs,
+     Tab 1 đang active, có 3 tabs, panel bên dưới
+     là content của Tab 1!" ✅
+```
+
+#### `role="tablist"` — Container!
+
+```html
+<!-- TRƯỚC: Chỉ là div bình thường → screen reader không biết! -->
+<div class="tab-list">...</div>
+
+<!-- SAU: role="tablist" → screen reader hiểu! -->
+<div class="tab-list" role="tablist" aria-label="Sample Tabs">...</div>
+```
+
+`role="tablist"` nói cho assistive technology: **"đây là NHÓM TABS, không phải nhóm buttons random."** `aria-label` mô tả nhóm tabs này là gì (ví dụ: "Settings tabs", "Product details tabs").
+
+#### `role="tab"` + `aria-selected` — Mỗi tab!
+
+```html
+<!-- Active tab: -->
+<button
+  role="tab"
+  aria-selected="true"
+  aria-controls="tabpanel-0"
+  id="tab-0"
+>
+  Tab 1
+</button>
+
+<!-- Inactive tab: -->
+<button
+  role="tab"
+  aria-selected="false"
+  aria-controls="tabpanel-1"
+  id="tab-1"
+>
+  Tab 2
+</button>
+```
+
+```
+CHI TIẾT TỪNG ATTRIBUTE:
+═══════════════════════════════════════════════════════════════
+
+  role="tab"
+  → "Tôi là MỘT TAB trong tablist!"
+  → Nếu không có: screen reader chỉ thấy "button"
+
+  aria-selected="true" / "false"
+  → "Tôi ĐANG ĐƯỢC CHỌN!" / "Tôi CHƯA được chọn!"
+  → Screen reader đọc: "Tab 1, selected" hoặc "Tab 2"
+  → KHÁC biệt với aria-expanded (accordion):
+    • aria-expanded: "mở/đóng" (reveal/hide content!)
+    • aria-selected: "chọn/không chọn" (pick 1 of many!)
+
+  aria-controls="tabpanel-0"
+  → "Khi tôi active, panel có id='tabpanel-0' sẽ hiện!"
+  → Tạo LIÊN KẾT ngữ nghĩa giữa tab và panel!
+  → Screen reader có thể nhảy trực tiếp đến panel!
+
+  id="tab-0"
+  → Cần thiết để panel dùng aria-labelledby trỏ ngược lại!
+```
+
+#### `role="tabpanel"` + `aria-labelledby` — Mỗi panel!
+
+```html
+<div
+  role="tabpanel"
+  id="tabpanel-0"
+  aria-labelledby="tab-0"
+>
+  Content for Tab 1
+</div>
+```
+
+```
+LIÊN KẾT HAI CHIỀU — tab ↔ panel:
+═══════════════════════════════════════════════════════════════
+
+  Tab → Panel:  aria-controls="tabpanel-0"
+  Panel → Tab:  aria-labelledby="tab-0"
+
+  ┌─────────────────────────────────────────┐
+  │  button#tab-0                           │
+  │  role="tab"                             │
+  │  aria-controls="tabpanel-0" ─────┐      │
+  │  aria-selected="true"            │      │
+  └──────────────────────────────────│──────┘
+                                     │
+  ┌──────────────────────────────────│──────┐
+  │  div#tabpanel-0                  │      │
+  │  role="tabpanel"                 │      │
+  │  aria-labelledby="tab-0" ────────┘      │
+  │  Content for Tab 1                      │
+  └─────────────────────────────────────────┘
+
+  → Hai chiều! Tab biết panel nào. Panel biết tab nào!
+  → Screen reader: "Panel này được label bởi Tab 1"
+```
+
+#### Tại sao dùng `<button>` chứ không phải `<div>` hay `<span>`?
+
+```
+<BUTTON> vs <DIV> vs <SPAN>:
+═══════════════════════════════════════════════════════════════
+
+  <div> hoặc <span>:
+  ❌ KHÔNG focusable bằng Tab key (trừ khi thêm tabindex!)
+  ❌ KHÔNG handle Enter/Space key tự động!
+  ❌ Screen reader KHÔNG đọc là "button"!
+  → Phải thêm: tabindex="0", role="button",
+    onkeydown handler cho Enter/Space...
+  → NHIỀU code thừa!
+
+  <button>:
+  ✅ Focusable by default!
+  ✅ Enter/Space trigger click tự động!
+  ✅ Screen reader đọc "button"!
+  → KHÔNG cần thêm gì! Browser lo hết!
+
+  Quy tắc: "Nếu nó clickable → dùng <button>!"
+  → Accessibility miễn phí!
+  → Ít code hơn!
+  → Behavioral semantics đúng!
+```
+
+#### Code hoàn chỉnh — Tabs II
+
+Đây chính là code trong §3.1 phía trên — `selectTab()` đã handle cả ARIA:
+
+```javascript
+selectTab(index) {
+  // Deactivate tab cũ:
+  this.tabs[this.activeIndex].setAttribute('aria-selected', 'false');
+  this.panels[this.activeIndex].hidden = true;
+
+  // Activate tab mới:
+  this.activeIndex = index;
+  this.tabs[index].setAttribute('aria-selected', 'true');
+  this.panels[index].hidden = false;
+}
+```
+
+Mỗi lần switch tab:
+- Tab cũ: `aria-selected="false"` → screen reader: "not selected"
+- Tab mới: `aria-selected="true"` → screen reader: "selected"
+- Panel cũ: `hidden` → ẩn khỏi DOM + screen reader!
+- Panel mới: bỏ `hidden` → hiện!
+
+---
+
+### 🔹 Tabs III — Keyboard Interactions
+
+#### Yêu cầu keyboard
+
+> Tabs III là phiên bản nâng cao nhất — thêm keyboard interactions theo WAI-ARIA standard. Component tabs phải **activate ngay** khi focus thay đổi (automatic activation).
+
+```
+TABS III — KEYBOARD REQUIREMENTS:
+═══════════════════════════════════════════════════════════════
+
+  TAB KEY:
+  → Focus vào tablist → đặt focus vào ACTIVE tab!
+  → Từ tablist → Tab lần nữa → nhảy vào tabpanel!
+  → KHÔNG tab qua từng tab button! (đó là việc của Arrow keys!)
+
+  KHI FOCUS ĐANG Ở MỘT TAB:
+  → ArrowLeft: focus tab TRƯỚC! (đầu → cuối = wrap!)
+  → ArrowRight: focus tab SAU! (cuối → đầu = wrap!)
+  → Home: focus tab ĐẦU TIÊN!
+  → End: focus tab CUỐI CÙNG!
+  → Tab content hiển thị NGAY khi focus thay đổi!
+     (automatic activation!)
+```
+
+#### Roving Tabindex — Khái niệm then chốt!
+
+Đây là **kỹ thuật quan trọng nhất** cho keyboard navigation trong tabs. Thay vì cho tất cả tabs có `tabindex="0"` (Tab key dừng ở mỗi tab), chỉ có **active tab** có `tabindex="0"`, còn lại có `tabindex="-1"`.
+
+```
+ROVING TABINDEX — GIẢI THÍCH:
+═══════════════════════════════════════════════════════════════
+
+  KHÔNG CÓ roving tabindex:
+  Tất cả tabs tabindex="0"
+  → User nhấn Tab: focus Tab1 → Tab → Tab2 → Tab → Tab3
+  → PHẢI TAB QUA TỪNG TAB trước khi vào content!
+  → Nếu có 10 tabs → nhấn Tab 10 lần! 😩
+
+  CÓ roving tabindex:
+  Chỉ active tab tabindex="0", còn lại tabindex="-1"
+  → User nhấn Tab: focus Tab1 (active)
+  → Tab lần nữa: NHẢY THẲNG vào panel content!
+  → Muốn đổi tab? Dùng Arrow keys!
+  → 10 tabs? Arrow Left/Right để navigate! Chỉ 1 Tab key vào content! ✅
+
+  tabindex="-1" KHÔNG CÓ NGHĨA "không focusable"!
+  → Tab key SKIP nó!
+  → NHƯNG .focus() bằng JavaScript VẪN WORK!
+  → Arrow keys gọi .focus() → tab NHẬN focus!
+
+  ┌────────────────────────────────────────────┐
+  │ Tab flow bình thường (Tab key):            │
+  │                                            │
+  │   [Other page elements]                    │
+  │         ↓ Tab                              │
+  │   [Active tab] (tabindex="0")              │
+  │         ↓ Tab (skip inactive tabs!)        │
+  │   [Tab panel content]                      │
+  │         ↓ Tab                              │
+  │   [Other page elements]                    │
+  └────────────────────────────────────────────┘
+
+  ┌────────────────────────────────────────────┐
+  │ Arrow key flow (trong tablist):            │
+  │                                            │
+  │   Tab1 ←→ Tab2 ←→ Tab3 ←→ Tab1 (wrap!)   │
+  │    ↑                              ↓        │
+  │    └──────────── circular ────────┘        │
+  └────────────────────────────────────────────┘
+```
+
+#### Code keyboard handler — giải thích từng case
+
+```javascript
+// ═══ Keyboard Handler — Tabs III ═══
+
+// Gắn listener trên TABLIST (không phải từng tab!)
+// → Event delegation: 1 listener cho tất cả tabs!
+tablist.addEventListener('keydown', (e) => {
+  let newIndex = this.activeIndex;
+
+  switch (e.key) {
+    case 'ArrowRight':
+      // Di chuyển sang tab BÊN PHẢI!
+      // Modulo wrap: cuối → đầu!
+      newIndex = (this.activeIndex + 1) % this.tabs.length;
+      break;
+
+    case 'ArrowLeft':
+      // Di chuyển sang tab BÊN TRÁI!
+      // +length trước modulo: tránh index ÂM!
+      newIndex = (this.activeIndex - 1 + this.tabs.length) % this.tabs.length;
+      break;
+
+    case 'Home':
+      // Nhảy đến tab ĐẦU TIÊN!
+      newIndex = 0;
+      break;
+
+    case 'End':
+      // Nhảy đến tab CUỐI CÙNG!
+      newIndex = this.tabs.length - 1;
+      break;
+
+    default:
+      return; // KHÔNG preventDefault cho keys khác!
+      // Đặc biệt QUAN TRỌNG: Tab key phải hoạt động bình thường
+      // để user có thể Tab vào panel content!
+  }
+
+  e.preventDefault();     // Chặn default (ArrowLeft/Right scroll page!)
+  this.selectTab(newIndex); // Switch tab!
+  this.tabs[newIndex].focus(); // Focus programmatically!
+});
+```
+
+```
+TẠI SAO RETURN TRƯỚC PREVENTDEFAULT:
+═══════════════════════════════════════════════════════════════
+
+  switch (e.key) {
+    case 'ArrowRight': ...break;
+    case 'ArrowLeft':  ...break;
+    case 'Home':       ...break;
+    case 'End':        ...break;
+    default: return;  ← RETURN! Thoát khỏi function!
+  }
+  e.preventDefault();  ← CHỈ chạy cho Arrow/Home/End!
+
+  Nếu KHÔNG có "return" trong default:
+  → Tab key → e.preventDefault() → Tab key BỊ CHẶN!
+  → User KHÔNG THỂ Tab ra khỏi tablist! BỊ KẸT! 💀
+
+  Nếu CÓ "return" trong default:
+  → Tab key → return → e.preventDefault() KHÔNG chạy!
+  → Tab key hoạt động bình thường!
+  → User Tab → focus vào panel content! ✅
+```
+
+#### selectTab với roving tabindex — cập nhật tabindex!
+
+```javascript
+selectTab(index) {
+  // 1. Tab cũ: bỏ selected + tabindex = -1!
+  this.tabs[this.activeIndex].setAttribute('aria-selected', 'false');
+  this.tabs[this.activeIndex].setAttribute('tabindex', '-1');
+  //                                          ↑ Tab key SKIP tab này!
+  this.panels[this.activeIndex].hidden = true;
+
+  // 2. Tab mới: set selected + tabindex = 0!
+  this.activeIndex = index;
+  this.tabs[index].setAttribute('aria-selected', 'true');
+  this.tabs[index].setAttribute('tabindex', '0');
+  //                                  ↑ Tab key DỪNG ở tab này!
+  this.panels[index].hidden = false;
+}
+```
+
+```
+ROVING TABINDEX — MÔ PHỎNG:
+═══════════════════════════════════════════════════════════════
+
+  Ban đầu: Tab 1 active
+  ┌──────────┬──────────┬──────────┐
+  │ Tab 1    │ Tab 2    │ Tab 3    │
+  │ index=0  │ index=-1 │ index=-1 │
+  │ selected │          │          │
+  └──────────┴──────────┴──────────┘
+
+  User nhấn ArrowRight → selectTab(1):
+  ┌──────────┬──────────┬──────────┐
+  │ Tab 1    │ Tab 2    │ Tab 3    │
+  │ index=-1 │ index=0  │ index=-1 │
+  │          │ selected │          │
+  └──────────┴──────────┴──────────┘
+  + panels[0].hidden = true
+  + panels[1].hidden = false
+  + tabs[1].focus() → focus chuyển sang Tab 2!
+
+  User nhấn ArrowRight → selectTab(2):
+  ┌──────────┬──────────┬──────────┐
+  │ Tab 1    │ Tab 2    │ Tab 3    │
+  │ index=-1 │ index=-1 │ index=0  │
+  │          │          │ selected │
+  └──────────┴──────────┴──────────┘
+
+  User nhấn ArrowRight → WRAP → selectTab(0):
+  ┌──────────┬──────────┬──────────┐
+  │ Tab 1    │ Tab 2    │ Tab 3    │
+  │ index=0  │ index=-1 │ index=-1 │
+  │ selected │          │          │
+  └──────────┴──────────┴──────────┘
+  → Quay lại đầu! Circular navigation! ✅
+```
+
+#### Automatic Activation vs Manual Activation
+
+Có 2 chế độ activation cho tabs:
+
+```
+2 CHẾ ĐỘ ACTIVATION:
+═══════════════════════════════════════════════════════════════
+
+  AUTOMATIC (chúng ta dùng cái này!):
+  → Arrow key → focus tab MỚI → panel hiển thị NGAY!
+  → User nhấn ArrowRight → Tab 2 active + panel 2 hiện!
+  → Nhanh, ít bước!
+  → Phù hợp khi: tab content nhẹ, load nhanh!
+
+  MANUAL:
+  → Arrow key → focus tab MỚI → nhưng CHƯA active!
+  → User phải nhấn Enter/Space để activate!
+  → Nhiều bước hơn!
+  → Phù hợp khi: tab content nặng (API calls, charts)
+    → Không muốn load until user confirms!
+
+  Code khác biệt:
+  // AUTOMATIC:
+  case 'ArrowRight':
+    newIndex = (activeIndex + 1) % total;
+    selectTab(newIndex);     // ← activate NGAY!
+    tabs[newIndex].focus();  // ← focus!
+    break;
+
+  // MANUAL:
+  case 'ArrowRight':
+    newIndex = (activeIndex + 1) % total;
+    // KHÔNG selectTab! Chỉ focus!
+    tabs[newIndex].focus();  // ← focus ONLY!
+    tabs[newIndex].tabIndex = 0;
+    tabs[activeIndex].tabIndex = -1;
+    break;
+  // User nhấn Enter/Space → selectTab(newIndex)!
+```
+
+#### Tổng kết: Tabs I → II → III
+
+```
+TABS I → II → III — PROGRESSION:
+═══════════════════════════════════════════════════════════════
+
+  TABS I (Functionality):
+  ✅ Click tab → active!
+  ✅ Visual indication (màu xanh)!
+  ✅ 1 panel hiển thị tại một thời điểm!
+  ❌ Screen reader không hiểu!
+  ❌ Keyboard không hoạt động!
+
+  TABS II (Accessibility): Tabs I +
+  ✅ role="tablist", role="tab", role="tabpanel"!
+  ✅ aria-selected, aria-controls, aria-labelledby!
+  ✅ <button> cho focusable + interactive!
+  ✅ Screen reader ĐỌC ĐƯỢC!
+  ❌ Chỉ click, chưa có keyboard!
+
+  TABS III (Keyboard): Tabs II +
+  ✅ ArrowLeft/Right: navigate tabs!
+  ✅ Home/End: đầu/cuối!
+  ✅ Roving tabindex (0 active, -1 inactive)!
+  ✅ Tab key: vào tablist → vào panel (skip inactive!)
+  ✅ Automatic activation!
+  ✅ HOÀN CHỈNH! Production-ready! 🎯
+
+  → §3.1 code phía trên = TABS III (đầy đủ nhất!)
+  → Bao gồm tất cả: click + ARIA + keyboard!
+```
+
+---
+
 ## §3.2 Tabs — React
 
 ```javascript
@@ -2283,6 +3355,114 @@ function Tabs({ tabs }) {
 //   { label: 'Tab 2', content: <p>Content 2</p> },
 //   { label: 'Tab 3', content: <p>Content 3</p> },
 // ]} />
+```
+
+---
+
+### 📖 Giải thích React Tabs — Từng phần
+
+#### 1. `useTabs` hook — Tại sao tách ra?
+
+```javascript
+function useTabs(initialTab = 0) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const select = useCallback((index) => setActiveTab(index), []);
+  return { activeTab, select };
+}
+```
+
+Tách state logic vào custom hook vì:
+- **Reusable**: dùng lại ở bất kỳ tabs component nào!
+- **Testable**: test hook riêng mà không cần render component!
+- **Separation of concerns**: UI tách khỏi logic!
+
+`useCallback` cho `select` — tạo **stable function reference**. Nếu không wrap `useCallback`, mỗi lần component re-render, `select` là function MỚI → tất cả tab buttons re-render (vì prop `onSelect` thay đổi).
+
+#### 2. `tabRefs` — Ref Array cho focus programmatic
+
+```javascript
+const tabRefs = useRef([]);
+// ...
+ref={(el) => (tabRefs.current[i] = el)}
+// ...
+tabRefs.current[newIndex]?.focus();
+```
+
+Tại sao cần ref cho mỗi tab?
+
+```
+REF ARRAY — TẠI SAO CẦN:
+═══════════════════════════════════════════════════════════════
+
+  Khi user nhấn ArrowRight:
+  → Cần gọi .focus() trên tab button MỚI!
+  → .focus() là DOM API → cần DOM element!
+  → React không trực tiếp access DOM → dùng ref!
+
+  ref={(el) => (tabRefs.current[i] = el)}
+  → Mỗi button render → React gọi callback ref!
+  → Lưu DOM element vào tabRefs.current[i]!
+
+  tabRefs.current[newIndex]?.focus()
+  → Lấy DOM element tab mới → gọi .focus()!
+  → ?. (optional chaining): tránh crash nếu ref null!
+```
+
+#### 3. `tabIndex={i === activeTab ? 0 : -1}` — Roving tabindex trong React
+
+```jsx
+<button
+  tabIndex={i === activeTab ? 0 : -1}
+  // Active tab: tabIndex=0 → Tab key DỪNG ở đây!
+  // Inactive tabs: tabIndex=-1 → Tab key SKIP!
+>
+```
+
+Trong React, attribute `tabIndex` (camelCase!) tương đương HTML `tabindex`. Logic giống hệt Vanilla JS nhưng React tự cập nhật DOM khi state thay đổi — không cần `setAttribute` thủ công.
+
+#### 4. `onKeyDown` trên tablist — Event delegation
+
+```jsx
+<div
+  role="tablist"
+  onKeyDown={handleKeyDown} // ← GẮN Ở TABLIST, không phải từng tab!
+>
+```
+
+Tại sao gắn `onKeyDown` ở tablist div thay vì mỗi button?
+
+```
+EVENT DELEGATION:
+═══════════════════════════════════════════════════════════════
+
+  Gắn ở MỖI button (❌ không tối ưu):
+  → 10 tabs = 10 event listeners!
+  → Mỗi listener là closure → giữ reference → memory!
+
+  Gắn ở TABLIST container (✅ event delegation):
+  → 1 event listener cho TẤT CẢ tabs!
+  → Keyboard event bubble UP từ button → tablist!
+  → tablist handler bắt event → xử lý!
+  → Ít memory, ít code, dễ maintain!
+```
+
+#### 5. So sánh Vanilla JS vs React Tabs
+
+```
+VANILLA JS vs REACT — CÙNG LOGIC, KHÁC CÁCH:
+═══════════════════════════════════════════════════════════════
+
+  Feature           │ Vanilla JS              │ React
+  ──────────────────┼─────────────────────────┼──────────────
+  State             │ this.activeIndex        │ useState
+  DOM update        │ setAttribute thủ công   │ React tự update
+  Event binding     │ addEventListener        │ JSX props
+  Focus             │ this.tabs[i].focus()    │ tabRefs.current[i]
+  Roving tabindex   │ setAttribute('tabindex')│ tabIndex prop
+  Re-render         │ Phải tự update DOM!     │ React diff + update!
+
+  → Cùng concepts! Chỉ khác cách triển khai!
+  → Hiểu Vanilla JS trước = hiểu React dễ hơn!
 ```
 
 ---
