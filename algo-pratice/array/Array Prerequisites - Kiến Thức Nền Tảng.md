@@ -2869,18 +2869,33 @@ intervals.sort((a, b) => a[1] - b[1]); // sort theo end time
 
 ```mermaid
 graph TD
-    A["Hashing O(1) lookup"] --> B["Map: key → value"]
+    A["📚 Hashing — O(n²) → O(n)"] --> B["Map: key → value"]
     A --> C["Set: unique values"]
 
-    B --> B1["Two Sum"]
-    B --> B2["Frequency Counter"]
-    B --> B3["Group Anagrams"]
-    B --> B4["Subarray Sum = K"]
+    B --> B1["Two Sum: lưu complement"]
+    B1 --> B1a["target-num đã có? → Tìm thấy!"]
+    B --> B2["Frequency Counter: Map val→count"]
+    B --> B3["Group Anagrams: sort char làm key"]
+    B3 --> B3a["Hoặc frequency 26 chars làm key — nhanh hơn!"]
+    B --> B4["Subarray Sum = K: Prefix Sum + Map"]
+    B4 --> B4a["⚠️ Khởi tạo Map 0:1"]
+    B --> B5["Product Except Self: left×right prefix"]
 
-    C --> C1["Find Duplicates"]
-    C --> C2["Longest Consecutive"]
+    C --> C1["Find Duplicates: seen.has?"]
+    C --> C2["Longest Consecutive Sequence"]
+    C2 --> C2a["Chỉ bắt đầu từ ĐẦU dãy: !set.has num-1"]
+    C --> C3["Contains Nearby Duplicate k"]
+    C3 --> C3a["Sliding Window Set size ≤ k"]
+
+    A --> D{"Map vs Set vs Object?"}
+    D --> D1["Map: key là number/object"]
+    D --> D2["Set: chỉ cần check TỒN TẠI"]
+    D --> D3["Object: key là string đơn giản"]
+    D --> D4["⚠️ Object key luôn convert STRING!"]
 
     style A fill:#4CAF50,color:white
+    style B4 fill:#FF9800,color:white
+    style C2a fill:#2196F3,color:white
 ```
 
 ### Hashing là gì?
@@ -3271,24 +3286,34 @@ function subarraySum(nums, k) {
 ## 1️⃣1️⃣ Subarray vs Subsequence vs Subset
 
 ```mermaid
-graph LR
-    subgraph "Subarray"
-        SA["LIÊN TIẾP + giữ thứ tự"]
-        SA1["n×n+1÷2"]
-        SA2["2 vòng for"]
-    end
+graph TD
+    A["🔍 Phân biệt 3 khái niệm"] --> B["Subarray"]
+    A --> C["Subsequence"]
+    A --> D["Subset"]
 
-    subgraph "Subsequence"
-        SQ["KHÔNG liên tiếp + giữ thứ tự"]
-        SQ1["2ⁿ"]
-        SQ2["Backtracking"]
-    end
+    B --> B1["✅ LIÊN TIẾP + giữ thứ tự"]
+    B --> B2["Số lượng: n× n+1 ÷2"]
+    B --> B3["Thuật toán: 2 vòng for O(n²)"]
+    B --> B4["LeetCode: #53 Kadane, #560 Subarray Sum, #209 Min Size"]
 
-    subgraph "Subset"
-        SS["KHÔNG liên tiếp + KHÔNG thứ tự"]
-        SS1["2ⁿ"]
-        SS2["Bitmask"]
-    end
+    C --> C1["❌ Không cần liên tiếp, ✅ GIỮ thứ tự"]
+    C --> C2["Số lượng: 2ⁿ - 1"]
+    C --> C3["Thuật toán: Backtracking CHỌN/BỎ mỗi phần tử"]
+    C --> C4["LeetCode: #300 LIS, #1143 LCS"]
+
+    D --> D1["❌ Không liên tiếp, ❌ KHÔNG thứ tự"]
+    D --> D2["Số lượng: 2ⁿ"]
+    D --> D3["Thuật toán: Bitmask 000..111"]
+    D --> D4["LeetCode: #78 Subsets, #90 Subsets II"]
+
+    A --> E["⚠️ HAY NHẦM!"]
+    E --> E1["Substring = Subarray cho strings"]
+    E --> E2["Subsequence ≠ Substring!"]
+
+    style B fill:#4CAF50,color:white
+    style C fill:#2196F3,color:white
+    style D fill:#FF9800,color:white
+    style E fill:#F44336,color:white
 ```
 
 ### Phân biệt 3 khái niệm
@@ -3505,20 +3530,35 @@ function allSubsets(arr) {
 
 ```mermaid
 graph TD
-    A["Monotonic Stack"] --> B{"Tìm gì?"}
-    B --> C["Next Greater → Decreasing Stack"]
-    B --> D["Next Smaller → Increasing Stack"]
+    A["📚 Monotonic Stack / Queue"] --> B["📚 Monotonic Stack"]
+    A --> F["📚 Monotonic Queue"]
 
-    A --> E["Bài kinh điển"]
-    E --> E1["Daily Temperatures"]
-    E --> E2["Largest Rectangle"]
+    B --> B0{"Tìm gì?"}
+    B0 --> C["Next GREATER → Decreasing Stack ↘"]
+    C --> C1["arr[i] > stack.top → pop, result[top]=arr[i]"]
+    B0 --> D["Next SMALLER → Increasing Stack ↗"]
+    D --> D1["Đảo dấu so sánh: arr[i] < stack.top"]
 
-    F["Monotonic Queue"] --> G["Sliding Window Max/Min"]
-    G --> G1["Deque giảm dần"]
+    B --> E["💡 4 biến thể: đổi dấu + đổi hướng duyệt"]
+    E --> E1["Next Greater Right, Next Smaller Right"]
+    E --> E2["Next Greater Left, Next Smaller Left"]
+
+    B --> G["Bài kinh điển"]
+    G --> G1["Daily Temperatures #739: số ngày đợi = index gap"]
+    G --> G2["Largest Rectangle #84: NSE trái+phải → width"]
+    G2 --> G2a["⚠️ Sentinel h=0 cuối mảng"]
+
+    F --> F0["Sliding Window Maximum #239"]
+    F0 --> F1["Deque giữ GIẢM DẦN: front = max"]
+    F1 --> F2["1. Xóa ngoài cửa sổ: deque[0] <= i-k"]
+    F2 --> F3["2. Pop nhỏ hơn: KHÔNG BAO GIỊ là max"]
+    F3 --> F4["3. Push i, result = nums[deque[0]]"]
+
+    B --> H["⚡ Mỗi phần tử push/pop TỐI ĐA 1 lần → O(n)"]
 
     style C fill:#4CAF50,color:white
     style D fill:#2196F3,color:white
-    style G fill:#FF9800,color:white
+    style F0 fill:#FF9800,color:white
 ```
 
 ### Monotonic Stack là gì?
@@ -3833,13 +3873,25 @@ Trace: [2, 1, 5, 6, 2, 3]
 
 ```mermaid
 graph TD
-    A["Quick Select"] --> B["Partition"]
-    B --> C{"pivot ở vị trí k?"}
-    C -->|Yes| D["✅ Found!"]
-    C -->|pivot < k| E["Recurse bên PHẢI"]
-    C -->|pivot > k| F["Recurse bên TRÁI"]
+    A["⚡ Quick Select — O(n) avg"] --> B["Partition giống Quick Sort"]
+    B --> C{"pivot ở đúng vị trí k?"}
+    C -->|"Yes"| D["✅ Found! return nums[pivot]"]
+    C -->|"❌ pivot < k"| E["Chỉ recurse bên PHẢI"]
+    C -->|"❌ pivot > k"| F["Chỉ recurse bên TRÁI"]
+
+    A --> G["So sánh cách tìm Kth"]
+    G --> G1["Sort: O(n log n) — đơn giản"]
+    G --> G2["Heap: O(n log k) — cho stream"]
+    G --> G3["Quick Select: O(n) avg ⭐"]
+    G3 --> G3a["Worst: O(n²) — random pivot giảm thiểu"]
+
+    A --> H["💡 Trick"]
+    H --> H1["Kth largest = n-k th smallest"]
+    H --> H2["targetIdx = n - k"]
+    H --> H3["Random pivot: swap random với cuối"]
 
     style D fill:#4CAF50,color:white
+    style G3 fill:#FF9800,color:white
 ```
 
 ### Bài toán
@@ -3953,16 +4005,26 @@ function partition(arr, lo, hi) {
 ## 1️⃣5️⃣ Sqrt Decomposition — Chia √n block
 
 ```mermaid
-graph LR
-    subgraph "Chia √n blocks"
-        B1["Block 0"] --> B2["Block 1"] --> B3["Block 2"] --> B4["..."]
-    end
+graph TD
+    A["🧱 Sqrt Decomposition"] --> B["Chia mảng thành √n blocks"]
+    B --> B1["Mỗi block √n phần tử"]
+    B1 --> B2["Tiền xử lý: sum/min/max mỗi block"]
 
-    subgraph "Complexity"
-        C1["Build: O(n)"]
-        C2["Query: O(√n)"]
-        C3["Update: O(1)"]
-    end
+    A --> C["Query sum L..R"]
+    C --> C1["Partial block đầu: cộng thủ công"]
+    C --> C2["Full blocks giữa: dùng pre-computed"]
+    C --> C3["Partial block cuối: cộng thủ công"]
+    C --> C4["Tổng: O(√n) ⭐"]
+
+    A --> D["Update: O(1)"]
+    D --> D1["Cập nhật block chứa idx"]
+
+    A --> E["So sánh"]
+    E --> E1["Prefix Sum: query O(1), update O(n) ❌"]
+    E --> E2["Sqrt Decomp: query O(√n), update O(1) ✅"]
+    E --> E3["Segment Tree: query O(log n), update O(log n) ⭐"]
+
+    style C4 fill:#4CAF50,color:white
 ```
 
 ### Ý tưởng
@@ -4060,14 +4122,24 @@ Complexity:
 
 ```mermaid
 graph TD
-    A["Sparse Table"] --> B["Build: O(n log n)"]
-    B --> C["Query min/max: O(1) ⭐"]
-    C --> C1["2 đoạn overlap cover L..R"]
+    A["📊 Sparse Table — Query O(1)"] --> B["Build: O(n log n)"]
+    B --> B1["table[i][j] = min đoạn [i, i+2^j-1]"]
+    B1 --> B2["Base: table[i][0] = arr[i]"]
+    B2 --> B3["Build: min nửa trái, nửa phải"]
 
-    A --> D["⚠️ Hạn chế"]
-    D --> D1["Chỉ cho min/max/gcd"]
-    D --> D2["KHÔNG cho sum"]
-    D --> D3["KHÔNG update"]
+    A --> C["Query min L..R: O(1) ⭐"]
+    C --> C1["k = log2 R-L+1"]
+    C1 --> C2["min table[L][k], table[R-2^k+1][k]"]
+    C2 --> C3["2 đoạn OVERLAP cover toàn bộ!"]
+
+    A --> D["⚠️ Hạn chế quan trọng"]
+    D --> D1["✅ min, max, gcd: IDEMPOTENT — overlap OK"]
+    D --> D2["❌ sum: overlap = đếm TRÙNG!"]
+    D --> D3["❌ KHÔNG hỗ trợ update — chỉ IMMUTABLE"]
+
+    A --> E["So với Segment Tree"]
+    E --> E1["Sparse: query O(1), KHÔNG update"]
+    E --> E2["SegTree: query O(log n), CÓ update"]
 
     style C fill:#4CAF50,color:white
     style D fill:#F44336,color:white
@@ -4185,19 +4257,37 @@ Query min(2, 6):
 
 ```mermaid
 graph TD
-    A["Segment Tree"] --> B["Build: O(n)"]
-    B --> C["Query: O(log n)"]
-    B --> D["Update: O(log n)"]
+    A["🌲 Segment Tree — Universal Range Query"] --> B["Build: O(n)"]
+    B --> B1["Cây nhị phân: mỗi node lưu đoạn"]
+    B1 --> B2["Leaf = mảng gốc"]
+    B2 --> B3["Parent = merge 2 con"]
 
-    A --> E["Mở rộng"]
-    E --> E1["Lazy Propagation"]
-    E --> E2["Fenwick Tree / BIT"]
+    A --> C["Query [L,R]: O(log n)"]
+    C --> C1["Node TRỌN trong [L,R] → lấy"]
+    C --> C2["Node NGOÀI [L,R] → bỏ"]
+    C --> C3["Node GIAO → chia đôi"]
 
-    E1 --> F["Range Update O(log n)"]
-    E2 --> G["Code ngắn, chỉ SUM"]
+    A --> D["Update idx: O(log n)"]
+    D --> D1["Đi từ root → leaf, recalc các cha"]
+
+    A --> E["💤 Lazy Propagation"]
+    E --> E1["Range Update [L,R] += val: O(log n)"]
+    E1 --> E2["Ghi nhớ lazy ở cha, CHƯ push xuống"]
+    E2 --> E3["Push down KHI cần query/update con"]
+
+    A --> F["🌳 Fenwick Tree / BIT"]
+    F --> F1["Code ~10 dòng, hằng số nhỏ"]
+    F --> F2["Chỉ hỗ trợ SUM — KHÔNG min/max"]
+    F --> F3["i and -i = lowbit"]
+    F --> F4["Update: i += lowbit → đi lên"]
+    F --> F5["Query: i -= lowbit → cộng dồn"]
+
+    A --> G["Hỗ trợ: sum, min, max, gcd, xor — BẤT KỲ!"]
 
     style C fill:#4CAF50,color:white
     style D fill:#4CAF50,color:white
+    style E fill:#FF9800,color:white
+    style F fill:#2196F3,color:white
 ```
 
 ### Tại sao cần Segment Tree?
@@ -4551,12 +4641,29 @@ function buildFenwick(arr) {
 
 ```mermaid
 graph TD
-    A["MO's Algorithm"] --> B["Sort queries: block L → R"]
-    B --> C["Trưƣt L, R từ query trước"]
-    C --> D["add/remove O(1) mỗi bước"]
-    D --> E["✅ O(n+Q × √n)"]
+    A["📊 MO's Algorithm — Offline Range Queries"] --> B["OFFLINE: biết TẤT CẢ queries trước"]
 
-    style E fill:#4CAF50,color:white
+    B --> C["Bước 1: Chia mảng thành √n blocks"]
+    C --> D["Bước 2: Sort queries theo block L, rồi R"]
+    D --> E["Bước 3: Trượt L, R từ query trước → sau"]
+    E --> E1["Thêm/xóa 1 phần tử mỗi bước"]
+    E1 --> E2["⚠️ add/remove PHẢI O(1)!"]
+
+    A --> F["Tại sao sort giúp nhanh?"]
+    F --> F1["L di chuyển TRONG cùng block ≤ √n bước"]
+    F --> F2["R tăng dần khi cùng block"]
+    F --> F3["Tổng di chuyển: O n+Q × √n"]
+
+    A --> G["❌ KHÔNG dùng khi"]
+    G --> G1["Online queries đến từng cái"]
+    G --> G2["Có update"]
+
+    A --> H["Ví dụ: đếm distinct [L,R]"]
+    H --> H1["add: freq++ → nếu freq=1 → distinct++"]
+    H --> H2["remove: freq-- → nếu freq=0 → distinct--"]
+
+    style F3 fill:#4CAF50,color:white
+    style G fill:#F44336,color:white
 ```
 
 ### Ý tưởng
@@ -4673,11 +4780,31 @@ function mosAlgorithm(arr, queries) {
 
 ```mermaid
 graph TD
-    A["Array Mastery"] --> L1["Level 1: Basics"]
-    A --> L2["Level 2: Two Pointers, Sliding Window, Prefix Sum, Binary Search"]
-    A --> L3["Level 3: Kadane's, Hashing, Sorting"]
-    A --> L4["Level 4: BS on Answer, Monotonic Stack, Quick Select"]
-    A --> L5["Level 5: MO's, Sqrt Decomp, Sparse Table, Segment Tree"]
+    A["🏆 ARRAY MASTERY PATH"] --> L1["Level 1: Basics"]
+    L1 --> L1a["Array operations, Linear Search"]
+    L1 --> L1b["Selection Sort, Insertion Sort"]
+
+    A --> L2["🟢 Level 2: Essential — GIẢI 80% bài!"]
+    L2 --> L2a["Two Pointers: pair matching, in-place"]
+    L2 --> L2b["Sliding Window: subarray liên tiếp"]
+    L2 --> L2c["Prefix Sum: range query O(1)"]
+    L2 --> L2d["Binary Search: O(log n)"]
+
+    A --> L3["🟡 Level 3: Intermediate"]
+    L3 --> L3a["Kadane's: max subarray sum"]
+    L3 --> L3b["Hashing: Two Sum, frequency, dedup"]
+    L3 --> L3c["Merge Sort, Quick Sort"]
+
+    A --> L4["🟠 Level 4: Advanced"]
+    L4 --> L4a["BS on Answer: minimize max"]
+    L4 --> L4b["Monotonic Stack: NGE, histogram"]
+    L4 --> L4c["Quick Select: kth element O(n)"]
+
+    A --> L5["🟣 Level 5: Expert"]
+    L5 --> L5a["Segment Tree + Lazy Propagation"]
+    L5 --> L5b["Fenwick Tree / BIT"]
+    L5 --> L5c["Sparse Table, Sqrt Decomposition"]
+    L5 --> L5d["MO's Algorithm"]
 
     style L2 fill:#4CAF50,color:white
     style L3 fill:#2196F3,color:white
