@@ -384,6 +384,94 @@ function reverseArrayLoop(arr) {
 }
 ```
 
+### Tại sao chỉ duyệt NỬA ĐẦU? (`i < Math.floor(n/2)`)
+
+```
+  Vì mỗi lần swap = ĐỔI CHỖ 2 phần tử cùng lúc!
+
+  arr = [1, 2, 3, 4, 5, 6]    n=6
+
+  Nếu duyệt HẾT (i = 0 → 5):
+    i=0: swap(arr[0], arr[5]) → [6, 2, 3, 4, 5, 1]  ← swap lần 1
+    i=1: swap(arr[1], arr[4]) → [6, 5, 3, 4, 2, 1]
+    i=2: swap(arr[2], arr[3]) → [6, 5, 4, 3, 2, 1]  ← OK đến đây!
+    i=3: swap(arr[3], arr[2]) → [6, 5, 3, 4, 2, 1]  ← ĐỔI LẠI! 💀
+    i=4: swap(arr[4], arr[1]) → [6, 2, 3, 4, 5, 1]  ← ĐỔI LẠI! 💀
+    i=5: swap(arr[5], arr[0]) → [1, 2, 3, 4, 5, 6]  ← VỀ GỐC! 💀
+
+  → Duyệt hết = swap 2 LẦN = mảng KHÔNG ĐỔI! Sai hoàn toàn!
+
+  Nếu duyệt NỬA ĐẦU (i = 0 → 2):
+    i=0: swap(arr[0], arr[5]) → đổi cặp (0, 5) ✅
+    i=1: swap(arr[1], arr[4]) → đổi cặp (1, 4) ✅
+    i=2: swap(arr[2], arr[3]) → đổi cặp (2, 3) ✅
+    → DỪNG! Mỗi cặp chỉ swap 1 lần!
+
+  📐 Hình dung:
+    [1,  2,  3,  4,  5,  6]
+     ╰──────────────────╯  i=0 swap cặp (0, 5)
+         ╰──────────╯      i=1 swap cặp (1, 4)
+             ╰──╯          i=2 swap cặp (2, 3)
+     ← NỬA TRÁI →|← NỬA PHẢI →
+     i=0, 1, 2    |  được swap TỰ ĐỘNG bởi arr[n-1-i]!
+
+  → Duyệt nửa trái = nửa phải được xử lý CÙNG LÚC qua mirror!
+
+  ⚠️ Mảng LẺ (n=5):
+    Math.floor(5/2) = 2 → i = 0, 1
+    [1, 2, 3, 4, 5]
+     ╰──────────╯  i=0 → swap (0, 4)
+         ╰──╯      i=1 → swap (1, 3)
+            3       ← phần tử GIỮA → không ai swap → GIỮ NGUYÊN! ✅
+```
+
+### Tại sao `arr[n - 1 - i]`? — Suy ra từ đầu!
+
+```
+  Câu hỏi: "Phần tử ở index i sau khi reverse sẽ nằm ở đâu?"
+
+  Reverse = phần tử ĐẦU → CUỐI, phần tử CUỐI → ĐẦU
+
+  Quan sát:
+    arr = [A, B, C, D, E]     n=5
+    index: 0  1  2  3  4
+
+  Sau reverse:
+    arr = [E, D, C, B, A]
+    index: 0  1  2  3  4
+
+  Phần tử ở index 0 → đi đến index 4 (cuối)     0 → 4 = n-1
+  Phần tử ở index 1 → đi đến index 3             1 → 3 = n-2
+  Phần tử ở index 2 → đi đến index 2 (giữa)     2 → 2 = n-3
+  Phần tử ở index i → đi đến index ???           i → ?
+
+  Tìm PATTERN:
+    0 → n-1 = n - 1 - 0
+    1 → n-2 = n - 1 - 1
+    2 → n-3 = n - 1 - 2
+    i → ???  = n - 1 - i  ← CÔNG THỨC!
+
+  KIỂM TRA: i + mirror(i) luôn = n - 1
+    0 + 4 = 4 = n-1 ✅
+    1 + 3 = 4 = n-1 ✅
+    2 + 2 = 4 = n-1 ✅
+    → mirror(i) = n - 1 - i ✅
+
+  ⚠️ Tại sao n - 1 mà không phải n?
+    Vì array 0-INDEXED!
+    n phần tử → index từ 0 → n-1
+    Index cuối = n - 1 (KHÔNG PHẢI n!)
+
+    arr = [A, B, C]  →  n = 3
+                         index cuối = 2 = n - 1
+
+    Nếu dùng n - i (SAI!):
+      i=0: n - 0 = 3 → arr[3] = UNDEFINED! 💀 (out of bounds!)
+
+    Dùng n - 1 - i (ĐÚNG!):
+      i=0: n - 1 - 0 = 2 → arr[2] = C ✅ (phần tử cuối!)
+```
+
 ### So sánh Two Pointers vs For loop
 
 ```
