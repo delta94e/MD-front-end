@@ -789,6 +789,62 @@ thay vì dùng 2 vòng for lồng nhau!
     0  1  2  3  4  5  6  7
 ```
 
+### 🧭 Khi nào dùng Two Pointers?
+
+```mermaid
+graph TD
+    A["🧭 Khi nào dùng Two Pointers?"] --> B{"Dữ liệu đặc điểm gì?"}
+
+    B --> C["📊 Sorted Input"]
+    C --> C1["Mảng/list ĐÃ SẮP XẾP hoặc CÓ THỂ sort"]
+    C1 --> C2["VD: Two Sum Sorted, Closest Two Sum"]
+
+    B --> D["👫 Pairs / Subarrays"]
+    D --> D1["Bài hỏi về 2 phần tử, dải con, ranges"]
+    D1 --> D2["VD: Longest Substr No Repeat, Palindrome Check"]
+
+    B --> E["🖲️ Sliding Window"]
+    E --> E1["Duy trì cửa sổ co giãn theo điều kiện"]
+    E1 --> E2["VD: Min Subarray Sum ≥ K, Move Zeroes"]
+
+    B --> F["🔗 Linked List — Fast/Slow"]
+    F --> F1["Detect cycle, tìm giữa, check palindrome"]
+    F1 --> F2["VD: Floyd's Cycle Detection (Tortoise & Hare)"]
+
+    style C fill:#4CAF50,color:white
+    style D fill:#2196F3,color:white
+    style E fill:#FF9800,color:white
+    style F fill:#9C27B0,color:white
+```
+
+```
+KHI NÀO DÙNG TWO POINTERS?
+
+  1️⃣  Sorted Input — mảng ĐÃ SORTED (hoặc có thể sort)
+      → Tìm pair thỏa điều kiện: Two Sum, Closest Sum, Three Sum
+      → 2 pointers từ 2 đầu, tiến vào giữa
+
+  2️⃣  Pairs / Subarrays — bài hỏi về CẶP hoặc DẢI CON
+      → Longest substring without repeating characters
+      → Maximum consecutive ones, check palindrome
+      → 2 pointers đánh dấu ĐẦU và CUỐI dải
+
+  3️⃣  Sliding Window — cửa sổ CO GIÃN theo điều kiện
+      → Min subarray sum ≥ K
+      → Move all zeros to end while maintaining order
+      → Right mở rộng, Left thu nhỏ khi vi phạm
+
+  4️⃣  Linked List — Slow & Fast pointers
+      → Detect cycle: Floyd's Tortoise and Hare
+      → Tìm middle node: slow đi 1, fast đi 2
+      → Check palindrome linked list
+
+  ⚠️ KHÔNG dùng khi:
+      → Dữ liệu cần truy cập NGẪU NHIÊN (không theo thứ tự)
+      → Subsequence KHÔNG liên tiếp (cần Backtracking/DP)
+      → Bài cần SORT trước mới dùng được
+```
+
 ### Pattern 1: Opposite Direction (đi ngược chiều)
 
 ```
@@ -797,10 +853,74 @@ thay vì dùng 2 vòng for lồng nhau!
   Dùng khi: mảng ĐÃ SẮP XẾP + tìm pair
 ```
 
-### Ví dụ: Two Sum trên mảng sorted
+### Ví dụ bài toán: Sum of Pair Equal to Target
+
+```
+Cho mảng sorted, tìm xem có pair nào tổng = target?
+
+  Input:  arr = [10, 20, 35, 50], target = 70
+  Output: true → pair (20, 50) ✅
+
+  Input:  arr = [10, 20, 30], target = 70
+  Output: false → không có pair nào ❌
+
+  Input:  arr = [-8, 1, 4, 6, 10, 45], target = 16
+  Output: true → pair (6, 10) ✅
+```
+
+### Cách Naive — O(n²) Time, O(1) Space
+
+```
+Cách ĐƠN GIẢN NHẤT: thử TẤT CẢ các cặp!
+  → 2 vòng for lồng nhau
+  → Mỗi phần tử i, ghép với MỌI phần tử j > i
+  → Kiểm tra arr[i] + arr[j] === target?
+```
 
 ```javascript
-// Cho mảng SORTED, tìm 2 số có tổng = target
+// Naive: thử tất cả các cặp
+function twoSumNaive(arr, target) {
+  const n = arr.length;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (arr[i] + arr[j] === target) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+// Time: O(n²) — thử n×(n-1)/2 cặp!
+// Space: O(1)
+```
+
+```
+Trace Naive: arr = [0, -1, 2, -3, 1], target = -2
+
+  i=0: (0,-1)=-1, (0,2)=2, (0,-3)=-3, (0,1)=1
+  i=1: (-1,2)=1, (-1,-3)=-4, (-1,1)=0
+  i=2: (2,-3)=-1, (2,1)=3
+  i=3: (-3,1)=-2 = target → return true ✅
+
+  Phải thử 10 cặp! → O(n²) 🐢
+  → Two Pointers giảm còn O(n)!
+```
+
+### Cách Two Pointers — O(n) Time, O(1) Space
+
+```
+Với mảng ĐÃ SORTED:
+  1. Đặt left = 0 (đầu), right = n-1 (cuối)
+  2. Tính sum = arr[left] + arr[right]
+  3. sum === target → TÌM THẤY!
+  4. sum < target → left++ (tăng sum)
+  5. sum > target → right-- (giảm sum)
+  6. Lặp cho đến left >= right
+```
+
+```javascript
+// Two Pointers: O(n) trên mảng sorted!
 function twoSumSorted(arr, target) {
   let left = 0,
     right = arr.length - 1;
@@ -830,20 +950,101 @@ function twoSumSorted(arr, target) {
   Time: O(n) thay vì O(n²)!
 ```
 
-### Tại sao Two Pointers đúng?
+### Trace: arr = [-8, 1, 4, 6, 10, 45], target = 16
 
 ```
-CHỨNG MINH tại sao KHÔNG BỎ SÓT đáp án:
+  L=0, R=5:  -8+45 = 37 > 16  → R--
+  L=0, R=4:  -8+10 = 2  < 16  → L++
+  L=1, R=4:  1+10  = 11 < 16  → L++
+  L=2, R=4:  4+10  = 14 < 16  → L++
+  L=3, R=4:  6+10  = 16 = target → FOUND! ✅
 
-  Mảng sorted: [a₀ ≤ a₁ ≤ ... ≤ aₙ]
+  [-8, 1, 4, 6, 10, 45]
+   L              R      → -8+45=37 > 16 → R--
+   L          R          → -8+10=2  < 16 → L++
+       L      R          → 1+10=11  < 16 → L++
+          L   R          → 4+10=14  < 16 → L++
+             LR          → 6+10=16 ✅
 
-  Khi sum > target → giảm R:
-    Vì aL + aR > target
-    → aL + a(R-1) sẽ NHỎ HƠN (gần target hơn)
-    → aL + a(R+1) sẽ CÒN LỚN HƠN → CHẮC CHẮN sai!
-    → Loại bỏ CỘT R trong ma trận → KHÔNG MẤT đáp án!
+  Chỉ 5 bước thay vì 15 cặp (brute force)!
+```
 
-  Khi sum < target → tăng L: lý luận tương tự!
+### Tại sao Two Pointers đúng? — CHỨNG MINH chi tiết
+
+```
+Cần chứng minh: ta KHÔNG BAO GIỜ bỏ sót 1 valid pair!
+
+Mảng sorted: [a₀ ≤ a₁ ≤ ... ≤ aₙ]
+
+══════════════════════════════════════════════════════
+Case 1: Khi sum < target → ta tăng left (left++)
+══════════════════════════════════════════════════════
+
+  Hiện tại: arr[left] + arr[right] < target
+
+  Ta bỏ qua arr[left] — tại sao AN TOÀN?
+
+  → arr[left] + arr[right] đã < target
+  → arr[left] + arr[right-1] sẽ CÒN NHỎ HƠN (vì right-1 < right, mảng sorted)
+  → arr[left] + arr[right-2] sẽ CÒN NHỎ HƠN NỮA
+  → ... tất cả phần tử TRƯỚC right ĐỀU cho sum < target!
+
+  Còn phần tử SAU right thì sao?
+  → Ta đã giảm R trước đó vì chúng quá LỚN (sum > target)
+  → arr[left] ghép với chúng cũng không thỏa mãn!
+
+  → arr[left] KHÔNG THỂ tạo valid pair với BẤT KỲ ai → BỎ AN TOÀN! ✅
+
+══════════════════════════════════════════════════════
+Case 2: Khi sum > target → ta giảm right (right--)
+══════════════════════════════════════════════════════
+
+  Hiện tại: arr[left] + arr[right] > target
+
+  Ta bỏ qua arr[right] — tại sao AN TOÀN?
+
+  → arr[left] + arr[right] đã > target
+  → arr[left+1] + arr[right] sẽ CÒN LỚN HƠN (vì left+1 > left, mảng sorted)
+  → ... tất cả phần tử SAU left ĐỀU cho sum > target!
+
+  Còn phần tử TRƯỚC left?
+  → Ta đã tăng L trước đó vì chúng quá NHỎ
+  → arr[right] ghép với chúng cũng không thỏa mãn!
+
+  → arr[right] KHÔNG THỂ tạo valid pair với BẤT KỲ ai → BỎ AN TOÀN! ✅
+
+══════════════════════════════════════════════════════
+KẾT LUẬN:
+══════════════════════════════════════════════════════
+  Mỗi bước ta loại bỏ 1 phần tử mà CHẮC CHẮN không thuộc đáp án
+  → Không bao giờ bỏ sót valid pair!
+  → Algorithm luôn tìm được nếu tồn tại!
+```
+
+```
+MINH HỌA bằng ma trận:
+
+  Mảng sorted: [1, 3, 5, 7, 9], target = 8
+
+  Ma trận tất cả các cặp (i, j):
+       1   3   5   7   9
+  1  [ -   4   6   8  10]
+  3  [ -   -   8  10  12]
+  5  [ -   -   -  12  14]
+  7  [ -   -   -   -  16]
+
+  L=0, R=4: 1+9=10 > 8
+    → LOẠI cột R=4 (tất cả value ở cột R ≥ 10)
+       1   3   5   7   ✕
+  1  [ -   4   6   8  ███]
+  3  [ -   -   8  10  ███]
+  5  [ -   -   -  12  ███]
+  7  [ -   -   -   -  ███]
+
+  L=0, R=3: 1+7=8 = target → FOUND! ✅
+
+  → Two Pointers = đi theo ĐƯỜNG CHÉO trong ma trận!
+  → Mỗi bước loại 1 HÀNG hoặc 1 CỘT → O(n)!
 ```
 
 ### Pattern 2: Same Direction (cùng chiều) — Fast & Slow
@@ -1667,6 +1868,79 @@ function rangeSum(prefix, L, R) {
 }
 ```
 
+### Cách cài đặt khác — Prefix Sum CÙNG SIZE
+
+```
+Có 2 cách xây dựng prefix sum phổ biến:
+
+  Cách 1 (ở trên): prefix[i] = tổng arr[0..i-1], thêm 0 ở đầu
+    arr:    [10, 20, 10,  5, 15]
+    prefix: [ 0, 10, 30, 40, 45, 60]    ← size n+1
+    Query: sum(L, R) = prefix[R+1] - prefix[L]
+
+  Cách 2: prefixSum[i] = tổng arr[0..i], CÙNG size
+    arr:       [10, 20, 10,  5, 15]
+    prefixSum: [10, 30, 40, 45, 60]      ← size n
+    Query: sum(L, R) = prefixSum[R] - (L > 0 ? prefixSum[L-1] : 0)
+
+  ⚠️ Cách 2 phải xử lý EDGE CASE khi L = 0!
+  → Cách 1 an toàn hơn (không cần if), KHUYÊN DÙNG cho phỏng vấn ✅
+```
+
+```javascript
+// Cách 2: Prefix Sum CÙNG SIZE — không thêm 0 ở đầu
+function prefSum(arr) {
+  const n = arr.length;
+  const prefixSum = new Array(n);
+
+  // Initialize phần tử đầu
+  prefixSum[0] = arr[0];
+
+  // Cộng dồn: phần tử hiện tại + tổng trước đó
+  for (let i = 1; i < n; i++) {
+    prefixSum[i] = prefixSum[i - 1] + arr[i];
+  }
+  return prefixSum;
+}
+
+// Query: sum(L, R)
+function rangeSumV2(prefixSum, L, R) {
+  if (L === 0) return prefixSum[R];           // edge case!
+  return prefixSum[R] - prefixSum[L - 1];
+}
+```
+
+### Trace cách 2: arr = [10, 20, 10, 5, 15]
+
+```
+  prefixSum[0] = 10
+  prefixSum[1] = 10 + 20 = 30
+  prefixSum[2] = 30 + 10 = 40
+  prefixSum[3] = 40 + 5  = 45
+  prefixSum[4] = 45 + 15 = 60
+
+  prefixSum = [10, 30, 40, 45, 60] ✅
+
+  Query sum(1, 3) = prefixSum[3] - prefixSum[0] = 45 - 10 = 35
+  Kiểm tra: 20 + 10 + 5 = 35 ✅
+
+  Query sum(0, 2) = prefixSum[2] = 40   ← L=0, trả trực tiếp!
+  Kiểm tra: 10 + 20 + 10 = 40 ✅
+```
+
+### So sánh 2 cách
+
+```
+                    Cách 1 (size n+1)          Cách 2 (size n)
+  ──────────────────────────────────────────────────────────────
+  Mảng prefix      [0, 10, 30, 40, 45, 60]    [10, 30, 40, 45, 60]
+  Size              n + 1                      n
+  Query formula     prefix[R+1] - prefix[L]    prefixSum[R] - prefixSum[L-1]
+  Edge case L=0     ✅ Tự xử lý (prefix[0]=0)  ⚠️ Phải check L>0!
+  Phỏng vấn         ⭐ KHUYÊN DÙNG             Đơn giản hơn để nhớ
+  Dùng khi           Range query nhiều lần      Chỉ cần prefix sum cơ bản
+```
+
 ### Trace chi tiết
 
 ```
@@ -2482,10 +2756,241 @@ KEYWORD trong đề bài:
   → Luôn TEST với ví dụ nhỏ (2-3 phần tử) trước!
 ```
 
+### Recursive Binary Search — O(log n) Time, O(log n) Space
+
+```
+Iterative: dùng while loop → O(1) space ✅
+Recursive: dùng function gọi chính mình → O(log n) stack space ⚠️
+
+  Khi nào dùng Recursive?
+    → Code ngắn gọn, dễ hiểu hơn cho bài phức tạp
+    → Khi cần kết hợp với Divide & Conquer
+    → ⚠️ Nhược điểm: tốn stack space O(log n)!
+```
+
+```javascript
+// Recursive Binary Search
+function binarySearchRecursive(arr, target, lo = 0, hi = arr.length - 1) {
+  // Base case: search space exhausted
+  if (lo > hi) return -1;
+
+  const mid = lo + Math.floor((hi - lo) / 2);
+
+  if (arr[mid] === target) return mid;           // TÌM THẤY!
+  if (arr[mid] > target)
+    return binarySearchRecursive(arr, target, lo, mid - 1);  // bên TRÁI
+  return binarySearchRecursive(arr, target, mid + 1, hi);    // bên PHẢI
+}
+
+// Driver Code
+const arr = [2, 3, 4, 10, 40];
+const result = binarySearchRecursive(arr, 10);
+console.log(result); // 3 ✅
+```
+
+### Trace Recursive: arr = [2, 3, 4, 10, 40], target = 10
+
+```
+  binarySearchRecursive(arr, 10, lo=0, hi=4)
+    mid = 0 + Math.floor((4-0)/2) = 2
+    arr[2] = 4 < 10 → gọi lại với lo=3, hi=4
+
+    binarySearchRecursive(arr, 10, lo=3, hi=4)
+      mid = 3 + Math.floor((4-3)/2) = 3
+      arr[3] = 10 === target → return 3 ✅
+
+  Call Stack:
+    binarySearchRecursive(0, 4)
+    └── binarySearchRecursive(3, 4)   ← tìm thấy!
+        └── return 3
+
+  Chỉ 2 lần gọi đệ quy! (log₂5 ≈ 2.3)
+```
+
+### So sánh Iterative vs Recursive
+
+```
+                Iterative              Recursive
+  ──────────────────────────────────────────────────────
+  Time          O(log n) ✅             O(log n) ✅
+  Space         O(1) ✅                 O(log n) ⚠️ (call stack)
+  Code style    while loop              function gọi chính mình
+  Dễ hiểu       Trung bình             Dễ hơn cho D&C
+  Performance   Nhanh hơn (no stack)    Chậm hơn chút (overhead)
+  Stack risk    Không                   ⚠️ Stack overflow nếu n RẤT lớn
+
+  → Phỏng vấn: dùng Iterative (tiết kiệm space, an toàn hơn)
+  → Thực tế: Iterative cho production, Recursive cho prototype
+```
+
+### Phân tích Complexity CHI TIẾT: Tại sao O(log n)?
+
+```mermaid
+graph TD
+    A["🔬 Complexity Analysis"] --> B["⏱️ Time Complexity"]
+    A --> C["💾 Space Complexity"]
+
+    B --> B1["Best Case: O(1)"]
+    B1 --> B1a["Target ở ĐÚNG giữa mảng"]
+    B1a --> B1b["Chỉ 1 lần so sánh!"]
+
+    B --> B2["Average Case: O(log N)"]
+    B2 --> B2a["N*logN / N+1 ≈ logN"]
+
+    B --> B3["Worst Case: O(log N)"]
+    B3 --> B3a["Target ở ĐẦU hoặc KHÔNG tồn tại"]
+    B3a --> B3b["Mỗi bước chia đôi → log₂N bước"]
+
+    C --> C1["Iterative: O(1) — chỉ lo, hi, mid"]
+    C --> C2["Recursive: O(log N) — call stack depth"]
+
+    style B1 fill:#4CAF50,color:white
+    style B2 fill:#2196F3,color:white
+    style B3 fill:#FF9800,color:white
+```
+
+```
+CHỨNG MINH tại sao O(log n):
+
+  Mỗi bước, search space giảm CÒN NỬA:
+    Bước 1: n phần tử
+    Bước 2: n/2 phần tử
+    Bước 3: n/4 phần tử
+    ...
+    Bước k: n/2^k phần tử
+
+  Dừng khi search space = 1 phần tử:
+    n / 2^k = 1
+    → 2^k = n
+    → k = log₂(n)
+
+  Vậy: TỐI ĐA log₂(n) bước! → O(log n) ✅
+
+  ──────────────────────────────────────────────────
+  n = 1,000        → log₂ ≈ 10 bước
+  n = 1,000,000    → log₂ ≈ 20 bước
+  n = 1,000,000,000 → log₂ ≈ 30 bước
+
+  → 1 TỶ phần tử chỉ cần 30 lần so sánh! ⚡
+  → Linear Search cần 1,000,000,000 lần! 🐢
+```
+
+### Average Case — Phân tích CHI TIẾT
+
+```
+Giả sử mảng có N phần tử. Có N+1 trường hợp:
+  N trường hợp: target = từng phần tử
+  1 trường hợp: target KHÔNG tồn tại
+
+Số lần so sánh để tìm phần tử ở vị trí cụ thể:
+  Phần tử ở N/2 (giữa)           → 1 comparison
+  Phần tử ở N/4 hoặc 3N/4        → 2 comparisons
+  Phần tử ở N/8, 3N/8, 5N/8, 7N/8 → 3 comparisons
+  ...
+  Phần tử cần x comparisons      → 2^(x-1) phần tử
+
+  Tổng comparisons:
+  = 1×1 + 2×2 + 3×4 + ... + logN × 2^(logN-1)
+  = 2^logN × (logN - 1) + 1
+  = N × (logN - 1) + 1
+
+  Average = (N×(logN - 1) + 1) / (N + 1) ≈ O(log N) ✅
+```
+
+### Bảng Complexity tổng hợp
+
+```
+  Aspect              Complexity
+  ──────────────────────────────────────
+  Time (Best)         O(1) — target ở giữa
+  Time (Average)      O(log n)
+  Time (Worst)        O(log n) — target ở đầu/cuối/không có
+  Space (Iterative)   O(1) — chỉ 3 biến: lo, hi, mid
+  Space (Recursive)   O(log n) — call stack depth
+
+  So với Linear Search:
+  ──────────────────────────────────────
+  Linear Search       O(n) time, O(1) space — KHÔNG cần sorted
+  Binary Search       O(log n) time — CẦN sorted!
+
+  ⚠️ Trade-off:
+    Binary Search nhanh hơn, nhưng CẦN mảng sorted!
+    Nếu mảng chưa sorted → sort O(n log n) + BS O(log n)
+    → Chỉ lợi khi tìm NHIỀU LẦN trên CÙNG mảng!
+```
+
+### 🌍 Ứng dụng thực tế của Binary Search
+
+```
+1️⃣  Tìm kiếm trong mảng sorted
+    → Bài toán kinh điển: tìm phần tử, tìm biên first/last occurrence
+
+2️⃣  Database Indexing — B-trees
+    → Database dùng B-tree (dựa trên Binary Search logic)
+    → Tìm record trong hàng triệu dòng: O(log n)!
+
+3️⃣  Git Bisect — Debug version control
+    → git bisect dùng Binary Search tìm commit gây bug!
+    → 1000 commits → chỉ cần test ~10 commits!
+
+4️⃣  Network Routing & IP Lookup
+    → Tìm routing entry trong bảng sorted by IP range
+
+5️⃣  File Systems & Libraries
+    → Tìm kiếm nhanh trong sorted directories, symbol tables
+
+6️⃣  Gaming / Graphics
+    → Collision detection, ray tracing dùng sorted spatial data
+
+7️⃣  Machine Learning Tuning
+    → Tìm hyperparameter tối ưu (learning rate, threshold)
+    → Binary Search trên khoảng giá trị liên tục
+
+8️⃣  Optimization & Competitive Programming
+    → "Minimize the maximum" / "Maximize the minimum"
+    → Binary Search on Answer — pattern CỰC KỲ phổ biến!
+
+9️⃣  Advanced Data Structures
+    → BST, AVL Tree, Red-Black Tree, Segment Tree
+    → ĐỀU dựa trên tư tưởng chia đôi search space
+```
+
+### 📋 Bài tập Binary Search — Từ cơ bản đến nâng cao
+
+```
+  ✅ CƠ BẢN:
+  ──────────────────────────────────────────────────────
+  Square Root of Integer      → BS trên [1, x], check mid*mid
+  Count 1's in sorted binary  → Lower Bound vị trí đầu tiên = 1
+  First and Last Position     → Lower Bound + Upper Bound
+
+  🔶 TRUNG BÌNH:
+  ──────────────────────────────────────────────────────
+  Search in Rotated Sorted    → Xác định nửa sorted, BS trên đó
+  Minimum in Rotated Sorted   → BS tìm inflection point
+  Unbounded Binary Search     → Tìm range trước, rồi BS
+
+  🔴 NÂNG CAO:
+  ──────────────────────────────────────────────────────
+  Aggressive Cows             → BS on Answer (maximize min distance)
+  Split Array Largest Sum     → BS on Answer (minimize max sum)
+  Koko Eating Bananas         → BS on Answer (minimize speed)
+  Median of Two Sorted Arrays → BS trên partition point
+
+  💡 Quy tắc chọn approach:
+    Exact value → Standard BS (lo <= hi)
+    First/Last occurrence → Lower/Upper Bound (lo < hi)
+    "Minimize max" / "Maximize min" → BS on Answer!
+```
+
 ```
 💡 TÓM TẮT:
   Binary Search: chia đôi → O(log n)!
   Điều kiện: mảng SORTED (hoặc monotonic property)
+
+  2 cách cài đặt:
+    Iterative: O(1) space — dùng cho production ✅
+    Recursive: O(log n) space — gọn cho D&C
 
   3 biến thể:
     1. Exact Match: lo <= hi, return mid khi tìm thấy
@@ -2496,7 +3001,12 @@ KEYWORD trong đề bài:
     → "Minimize max" / "Maximize min" → BS!
     → lo=min, hi=max, check feasible(mid)
 
+  Complexity:
+    1 tỷ phần tử → chỉ ~30 lần so sánh! ⚡
+    Mỗi bước chia đôi: n → n/2 → n/4 → ... → 1
+
   ⚠️ NHẦM lo<=hi vs lo<hi = BUG KINH ĐIỂN!
+  ⚠️ Overflow: dùng lo + (hi-lo)/2 thay vì (lo+hi)/2!
 ```
 
 ---

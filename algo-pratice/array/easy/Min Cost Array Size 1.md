@@ -37,43 +37,214 @@ graph LR
 
 > 🎙️ *"Given an array, repeatedly pick a pair and remove the larger one. Cost of each operation = the smaller value. Find minimum total cost to reduce array to size 1."*
 
+```mermaid
+graph TD
+    subgraph RULES["📋 Quy tắc bài toán"]
+        R1["Chọn 2 phần tử\nbất kỳ trong mảng"] --> R2["So sánh 2 phần tử"]
+        R2 --> R3["XÓA phần tử LỚN HƠN"]
+        R2 --> R4["COST = phần tử NHỎ HƠN"]
+        R3 --> R5["Mảng giảm 1 phần tử"]
+        R5 --> R6{"Size = 1?"}
+        R6 -->|"Chưa"| R1
+        R6 -->|"Rồi"| R7["✅ Trả về tổng cost"]
+    end
+
+    style R3 fill:#F44336,color:white
+    style R4 fill:#FF9800,color:white
+    style R7 fill:#4CAF50,color:white
+```
+
 ### Clarification Questions
 
 ```
 Q: Xóa phần tử nào?
-A: Xóa phần tử LỚN HƠN trong pair
+A: Xóa phần tử LỚN HƠN trong pair.
+   Nếu 2 phần tử bằng nhau → xóa 1 cái bất kỳ.
 
 Q: Cost = gì?
-A: Cost = phần tử NHỎ HƠN trong pair
+A: Cost = phần tử NHỎ HƠN trong pair (phần tử SỐNG SÓT).
+
+Q: Chọn pair NHƯ THẾ NÀO?
+A: Bất kỳ pair nào! Tùy ta chọn → tìm chiến thuật TỐI ƯU.
+
+Q: Bao nhiêu operations?
+A: ĐÚNG n-1 operations (mỗi lần xóa 1, từ n xuống 1).
+
+Q: Input constraints?
+A: n ≥ 1, arr[i] ≥ 1 (positive integers)
 
 Q: Tại sao greedy?
 A: Luôn dùng MIN toàn cục làm "vũ khí" → cost mỗi lần bé nhất!
+   Greedy proof: cost mỗi lần ≥ min → lower bound = (n-1) × min.
+```
+
+### Phân tích Input/Output
+
+```
+  ┌──────────────────────────────────────────────────────────────┐
+  │  INPUT                                                       │
+  │  • arr: mảng các số nguyên dương, n ≥ 1                     │
+  │  • Không cần sorted                                          │
+  │  • Có thể có phần tử trùng lặp                              │
+  │                                                              │
+  │  OUTPUT                                                      │
+  │  • Một số nguyên: tổng chi phí TỐI THIỂU                   │
+  │  • Luôn ≥ 0 (không có case impossible)                      │
+  │  • Khi n = 1 → output = 0                                   │
+  │                                                              │
+  │  CONSTRAINTS QUAN TRỌNG                                      │
+  │  • Mỗi op: chọn 2 phần tử BẤT KỲ (tự do chọn)             │
+  │  • Xóa LARGER, cost = SMALLER                               │
+  │  • Phần tử bị xóa KHÔNG dùng lại được                      │
+  │  • Phần tử sống sót VẪN ở trong mảng                       │
+  └──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## E — Examples
 
+### VÍ DỤ 1: arr = [4, 3, 2] — Cơ bản
+
+```mermaid
+flowchart LR
+    subgraph GREEDY["✅ Chiến thuật ĐÚNG: luôn dùng min=2"]
+        direction LR
+        G0["[4, 3, 2]\nmin=2"] -->|"(2,4)→xóa 4\ncost=2"| G1["[3, 2]"]
+        G1 -->|"(2,3)→xóa 3\ncost=2"| G2["[2]\ntotal=4 ✅"]
+    end
+
+    subgraph WRONG["❌ Chiến thuật SAI: dùng 3 trước"]
+        direction LR
+        W0["[4, 3, 2]"] -->|"(3,4)→xóa 4\ncost=3"| W1["[3, 2]"]
+        W1 -->|"(2,3)→xóa 3\ncost=2"| W2["[2]\ntotal=5 ❌"]
+    end
+
+    style G2 fill:#4CAF50,color:white
+    style W2 fill:#F44336,color:white
+```
+
 ```
 VÍ DỤ 1: arr = [4, 3, 2]
 
-  Greedy: luôn chọn min = 2!
-    Pair (2, 4): xóa 4, cost = 2 → arr = [3, 2]
-    Pair (2, 3): xóa 3, cost = 2 → arr = [2]
-  Total = 2 + 2 = 4 ✅
+  ✅ Chiến thuật ĐÚNG — Luôn dùng min = 2:
+    Trận 1: Pair (2, 4) → xóa 4, cost = 2 → arr = [3, 2]
+    Trận 2: Pair (2, 3) → xóa 3, cost = 2 → arr = [2]
+    Total = 2 + 2 = 4 ✅
+    → Công thức: (3-1) × 2 = 4 ✅ KHỚP!
 
-  SAI nếu: Pair (3, 4): xóa 4, cost = 3 → arr = [3, 2]
-           Pair (2, 3): xóa 3, cost = 2 → arr = [2]
-           Total = 3 + 2 = 5 > 4 ❌
+  ❌ Chiến thuật SAI — Dùng 3 trước:
+    Trận 1: Pair (3, 4) → xóa 4, cost = 3 → arr = [3, 2]
+    Trận 2: Pair (2, 3) → xóa 3, cost = 2 → arr = [2]
+    Total = 3 + 2 = 5 > 4 ❌ ĐẮT HƠN 1!
 
-VÍ DỤ 2: arr = [3, 4]
-  Pair (3, 4): xóa 4, cost = 3 → arr = [3]
-  Total = 3 ✅
+  💡 Vì sao SAI đắt hơn?
+    Trận 1 dùng cost=3 thay vì cost=2 → lãng phí thêm 1!
+```
+
+### VÍ DỤ 2: arr = [3, 4] — Mảng 2 phần tử
+
+```
+  min = 3, n = 2
+  Chỉ có 1 cách: Pair (3, 4) → xóa 4, cost = 3
+  Total = 3
+  → Công thức: (2-1) × 3 = 3 ✅
+
+  📌 Với n=2, không có lựa chọn chiến thuật!
+     Chỉ có 1 pair → cost = min(pair) = min(arr)
+```
+
+### VÍ DỤ 3: arr = [1, 5, 7, 3] — Mảng 4 phần tử
+
+```mermaid
+flowchart LR
+    subgraph SIM["✅ Simulation: luôn dùng min=1"]
+        direction LR
+        S0["[1,5,7,3]\nn=4"] -->|"(1,7)→xóa 7\ncost=1"| S1["[1,5,3]"]
+        S1 -->|"(1,5)→xóa 5\ncost=1"| S2["[1,3]"]
+        S2 -->|"(1,3)→xóa 3\ncost=1"| S3["[1]\ntotal=3"]
+    end
+
+    style S0 fill:#E3F2FD,stroke:#1976D2
+    style S3 fill:#4CAF50,color:white
+```
+
+```
+  min = 1, n = 4
+  Trận 1: (1,7) → xóa 7, cost=1 → [1,5,3]
+  Trận 2: (1,5) → xóa 5, cost=1 → [1,3]
+  Trận 3: (1,3) → xóa 3, cost=1 → [1]
+  Total = 1+1+1 = 3
+  → Công thức: (4-1) × 1 = 3 ✅
+
+  🧠 Khi min=1, total cost = n-1! (đẹp nhất có thể)
+```
+
+### VÍ DỤ 4: arr = [5, 5, 5, 5] — Tất cả bằng nhau
+
+```
+  min = 5, n = 4
+  Trận 1: (5,5) → xóa 1 cái, cost=5 → [5,5,5]
+  Trận 2: (5,5) → xóa 1 cái, cost=5 → [5,5]
+  Trận 3: (5,5) → xóa 1 cái, cost=5 → [5]
+  Total = 5+5+5 = 15
+  → Công thức: (4-1) × 5 = 15 ✅
+
+  📌 Khi tất cả bằng nhau: không có cách nào rẻ hơn!
+     Mọi chiến thuật đều cho cùng kết quả.
+```
+
+### VÍ DỤ 5: arr = [10] — Edge case: mảng 1 phần tử
+
+```
+  min = 10, n = 1
+  Đã là size 1! Không cần operation nào.
+  → Công thức: (1-1) × 10 = 0 ✅
+```
+
+### So sánh TẤT CẢ chiến thuật cho arr = [4, 3, 2]
+
+```
+  ┌────────────────────────────────────────────────────────────────────┐
+  │  Chiến thuật          │ Trận 1        │ Trận 2        │ Total    │
+  ├────────────────────────────────────────────────────────────────────┤
+  │  ✅ min trước (2→4,   │ (2,4) cost=2  │ (2,3) cost=2  │ 4 ✅    │
+  │     2→3)              │ xóa 4         │ xóa 3         │ TỐI ƯU! │
+  ├────────────────────────────────────────────────────────────────────┤
+  │  ❌ 3 trước (3→4,     │ (3,4) cost=3  │ (2,3) cost=2  │ 5       │
+  │     2→3)              │ xóa 4         │ xóa 3         │         │
+  ├────────────────────────────────────────────────────────────────────┤
+  │  ❌ 2→3 trước (2→3,   │ (2,3) cost=2  │ (2,4) cost=2  │ 4       │
+  │     2→4)              │ xóa 3         │ xóa 4         │ = ✅    │
+  ├────────────────────────────────────────────────────────────────────┤
+  │                                                                    │
+  │  📌 Bất kỳ thứ tự nào mà LUÔN dùng min đều cho kết quả TỐI ƯU! │
+  │     Thứ tự loại KHÔNG quan trọng, miễn min luôn là 1 trong pair! │
+  └────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## A — Approach
+
+```mermaid
+graph TD
+    subgraph INSIGHT["💡 3 Key Insights"]
+        direction TB
+        I1["🥇 Insight 1\nMIN sống sót cuối cùng"] --> I1a["Vì min ≤ mọi phần tử\n→ min KHÔNG BAO GIỜ bị loại"]
+        I2["🎯 Insight 2\nMIN = cost mọi operation"] --> I2a["Luôn pair min với ai đó\n→ cost = min mỗi lần"]
+        I3["🔢 Insight 3\nCần đúng n-1 operations"] --> I3a["n phần tử → 1 phần tử\n= loại n-1 phần tử"]
+    end
+
+    I1a --> FORMULA["✅ Total = (n-1) × min"]
+    I2a --> FORMULA
+    I3a --> FORMULA
+
+    style I1 fill:#E3F2FD,stroke:#1976D2
+    style I2 fill:#E8F5E9,stroke:#388E3C
+    style I3 fill:#FFF3E0,stroke:#F57C00
+    style FORMULA fill:#4CAF50,color:white,stroke:#2E7D32,stroke-width:3px
+```
 
 ```
 💡 KEY INSIGHT:
@@ -81,20 +252,53 @@ VÍ DỤ 2: arr = [3, 4]
   1. Phần tử MIN sẽ sống sót cuối cùng!
      (vì nó luôn NHỎ hơn → không bao giờ bị xóa)
 
+     Ví dụ: arr = [8, 3, 5, 1, 9]
+       1 ≤ 3? ✅ → 1 sống khi pair với 3
+       1 ≤ 5? ✅ → 1 sống khi pair với 5
+       1 ≤ 8? ✅ → 1 sống khi pair với 8
+       1 ≤ 9? ✅ → 1 sống khi pair với 9
+       → 1 LUÔN sống! Không ai "giết" được 1!
+
   2. MIN được dùng trong MỌI operation!
      → n-1 operations, mỗi lần cost = min
      → Total = (n - 1) × min
 
-  CHỨNG MINH:
-    min luôn nhỏ hơn mọi phần tử khác
-    → mỗi lần pair min với bất kỳ ai, min sống, ai đó chết
-    → cost = min mỗi lần
-    → cần n-1 lần xóa → (n-1) × min
+  3. CHỨNG MINH TỐI ƯU (Exchange Argument):
+     Giả sử có chiến thuật S* tốt hơn:
+       → S* phải có ít nhất 1 trận KHÔNG dùng min
+       → Trận đó cost = x > min (vì x ≥ min luôn đúng, = chỉ khi x = min)
+       → Nếu thay x bằng min: cost giảm (hoặc bằng)
+       → S* KHÔNG thể tốt hơn chiến thuật luôn dùng min!
+       → Mâu thuẫn! → Greedy là TỐI ƯU!
+
+  📌 Công thức cuối: Total = (n - 1) × min
+     Chỉ cần tìm min và nhân — XONG!
+```
+
+### Tại sao bài này là "trick question"?
+
+```
+  Bề ngoài: Bài hỏi about pairwise elimination → tưởng cần DP hoặc simulation
+  Thực tế:  Chỉ cần 1 PHÉP TÍNH → (n-1) × min
+
+  ┌───────────────────────────────────────────────────────┐
+  │  Cách TƯỞNG phải làm    │  Cách THỰC SỰ cần làm     │
+  ├───────────────────────────────────────────────────────┤
+  │  Simulate từng bước     │  Tìm min → nhân (n-1)     │
+  │  DP tối ưu thứ tự       │  KHÔNG cần DP!             │
+  │  Heap / Priority Queue  │  KHÔNG cần sorted!         │
+  │  Thử mọi permutation    │  1 dòng code!              │
+  └───────────────────────────────────────────────────────┘
+
+  🧠 Interviewer muốn test: Bạn có NHÌN THẤY insight không?
+     Hay bạn nhảy vào code ngay mà không phân tích?
 ```
 
 ---
 
 ## C — Code
+
+### Version 1: Ngắn gọn nhất (phỏng vấn)
 
 ```javascript
 function minCost(arr) {
@@ -103,12 +307,59 @@ function minCost(arr) {
 }
 ```
 
-### Trace: arr = [4, 3, 2]
+### Version 2: An toàn cho mảng lớn (production)
+
+```javascript
+function minCost(arr) {
+  // Dùng for loop thay Math.min(...arr) để tránh stack overflow
+  let min = arr[0];
+  for (let i = 1; i < arr.length; i++) {
+    if (arr[i] < min) min = arr[i];
+  }
+  return (arr.length - 1) * min;
+}
+```
+
+### Version 3: Edge-case aware (defensive)
+
+```javascript
+function minCost(arr) {
+  if (!arr || arr.length <= 1) return 0;
+
+  let min = arr[0];
+  for (let i = 1; i < arr.length; i++) {
+    if (arr[i] < min) min = arr[i];
+  }
+  return (arr.length - 1) * min;
+}
+```
 
 ```
-  min = 2
-  n = 3
-  cost = (3 - 1) × 2 = 2 × 2 = 4 ✅
+  📌 Khi nào dùng version nào?
+
+  Version 1: Phỏng vấn (ngắn nhất, rõ ý nhất)
+  Version 2: Production (an toàn với n > 100k)
+  Version 3: Defensive (handle null, undefined, empty array)
+
+  ⚠️ Mention cả 3 trong phỏng vấn để impress:
+  "I'll write the concise version first, but in production
+   I'd use a for loop to avoid stack overflow with large arrays."
+```
+
+### Trace nhiều test cases
+
+```
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  Input              │ min   │ n    │ (n-1)×min     │ Output     │
+  ├──────────────────────────────────────────────────────────────────┤
+  │  [4, 3, 2]          │ 2     │ 3    │ (3-1)×2 = 4   │ 4 ✅       │
+  │  [3, 4]             │ 3     │ 2    │ (2-1)×3 = 3   │ 3 ✅       │
+  │  [1, 5, 7, 3]       │ 1     │ 4    │ (4-1)×1 = 3   │ 3 ✅       │
+  │  [10]               │ 10    │ 1    │ (1-1)×10 = 0  │ 0 ✅       │
+  │  [5, 5, 5, 5]       │ 5     │ 4    │ (4-1)×5 = 15  │ 15 ✅      │
+  │  [1, 1, 1]          │ 1     │ 3    │ (3-1)×1 = 2   │ 2 ✅       │
+  │  [100, 1, 100, 100] │ 1     │ 4    │ (4-1)×1 = 3   │ 3 ✅       │
+  └──────────────────────────────────────────────────────────────────┘
 ```
 
 > 🎙️ *"The minimum element always survives since it's never the larger one. It's used in every removal, so total cost is simply (n-1) × min. O(n) to find min, O(1) space."*
@@ -117,12 +368,49 @@ function minCost(arr) {
 
 ## O — Optimize
 
-```
-  Time:  O(n) — chỉ cần tìm min
-  Space: O(1)
+```mermaid
+graph LR
+    subgraph COMPLEXITY["📊 Complexity Analysis"]
+        direction TB
+        T["⏱️ Time: O(n)"] --> T1["Tìm min: O(n)"]
+        T --> T2["Tính (n-1)×min: O(1)"]
+        T --> T3["Total: O(n) + O(1) = O(n)"]
 
-  ⚠️ Đây là bài "trick" — nhìn phức tạp nhưng chỉ 1 dòng!
+        S["💾 Space: O(1)"] --> S1["Chỉ lưu 1 biến min"]
+        S --> S2["Không dùng mảng phụ"]
+    end
+
+    subgraph OPTIMAL["🏆 Đã tối ưu?"]
+        O1["Lower bound: Ω(n)"] --> O2["Phải đọc MỌI phần tử\nđể tìm min"]
+        O2 --> O3["Không thuật toán nào\n< O(n) cho bài này"]
+        O3 --> O4["✅ O(n) = OPTIMAL!"]
+    end
+
+    style T3 fill:#2196F3,color:white
+    style S1 fill:#4CAF50,color:white
+    style O4 fill:#4CAF50,color:white
+```
+
+```
+  Time:  O(n) — chỉ cần tìm min (1 pass)
+  Space: O(1) — chỉ lưu biến min và kết quả
+
+  ĐÃ TỐI ƯU NHẤT vì:
+    → Phải đọc MỌI phần tử ít nhất 1 lần (để biết min)
+    → Ω(n) là lower bound → O(n) đã đạt!
+    → Không có thuật toán nào < O(n) cho bài này!
+
+  ⚠️ Đây là bài "trick" — nhìn phức tạp nhưng chỉ 1-2 dòng!
   Interview: giải thích CHỨNG MINH greedy quan trọng hơn code!
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  Comparison với các cách khác:                           │
+  ├──────────────────────────────────────────────────────────┤
+  │  Simulate while loop:  O(n²)  → thừa!                  │
+  │  Sort + formula:       O(n log n)  → sort thừa!         │
+  │  Formula trực tiếp:    O(n)   → TỐI ƯU! ✅              │
+  │  Brute force all:      O(n!)  → cực chậm!               │
+  └──────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -130,11 +418,56 @@ function minCost(arr) {
 ## T — Test
 
 ```
-  [4, 3, 2]    → (3-1)×2 = 4     ✅
-  [3, 4]       → (2-1)×3 = 3     ✅
-  [1, 5, 7, 3] → (4-1)×1 = 3     ✅
-  [10]         → (1-1)×10 = 0    ✅ Already size 1
-  [1, 1, 1]    → (3-1)×1 = 2     ✅ All same
+  [4, 3, 2]    → (3-1)×2 = 4     ✅  Basic
+  [3, 4]       → (2-1)×3 = 3     ✅  Two elements
+  [1, 5, 7, 3] → (4-1)×1 = 3     ✅  Min = 1
+  [10]         → (1-1)×10 = 0    ✅  Already size 1
+  [1, 1, 1]    → (3-1)×1 = 2     ✅  All same
+  [5, 5, 5, 5] → (4-1)×5 = 15    ✅  All same (large)
+  [2, 2, 7, 2] → (4-1)×2 = 6     ✅  Duplicate mins
+  [9, 8, 7, 1] → (4-1)×1 = 3     ✅  Min ở cuối
+  [1, 100000]  → (2-1)×1 = 1     ✅  Extreme diff
+```
+
+### Edge Cases Chi Tiết
+
+```mermaid
+graph TD
+    subgraph EDGE["🧪 Edge Cases"]
+        E1["n = 1"] -->|"0 operations"| R1["return 0"]
+        E2["n = 2"] -->|"1 operation"| R2["return min"]
+        E3["All equal"] -->|"min = any"| R3["return (n-1) × val"]
+        E4["Min duplicates"] -->|"nhiều min"| R4["Vẫn = (n-1) × min"]
+        E5["Sorted asc"] -->|"min = arr[0]"| R5["(n-1) × arr[0]"]
+        E6["Sorted desc"] -->|"min = arr[n-1]"| R6["(n-1) × arr[n-1]"]
+    end
+
+    style R1 fill:#4CAF50,color:white
+    style R2 fill:#4CAF50,color:white
+    style R3 fill:#2196F3,color:white
+    style R4 fill:#2196F3,color:white
+```
+
+```
+  ┌───────────────────────────────────────────────────────────────────────┐
+  │  Edge Case            │ Input           │ Output │ Tại sao?          │
+  ├───────────────────────────────────────────────────────────────────────┤
+  │  Mảng 1 phần tử       │ [10]            │ 0      │ 0 operations!     │
+  │  Mảng 2 phần tử       │ [3, 7]          │ 3      │ 1 op, cost=min    │
+  │  Tất cả bằng nhau     │ [5, 5, 5, 5]    │ 15     │ min=5, (4-1)×5    │
+  │  Min trùng lặp        │ [2, 2, 7, 2]    │ 6      │ min=2, (4-1)×2    │
+  │  Min ở cuối           │ [9, 8, 7, 1]    │ 3      │ Vị trí ko ảnh     │
+  │                       │                 │        │ hưởng!            │
+  │  Chênh lệch cực lớn   │ [1, 10⁶]       │ 1      │ (2-1)×1           │
+  │  Mảng rất lớn         │ n=10⁶, min=1    │ 999999 │ O(n) vẫn ok       │
+  └───────────────────────────────────────────────────────────────────────┘
+
+  ⚠️ CHÚ Ý QUAN TRỌNG:
+     • Bài này KHÔNG có case return -1 (impossible)
+     • Luôn có lời giải miễn n ≥ 1
+     • Kết quả = 0 khi và chỉ khi n = 1
+     • Thứ tự phần tử KHÔNG ảnh hưởng kết quả
+     • Vị trí của min KHÔNG ảnh hưởng kết quả
 ```
 
 ---
@@ -142,6 +475,39 @@ function minCost(arr) {
 ## 🗣️ Interview Script
 
 > 🎙️ *"The key insight is that the minimum element never gets removed — it's always the smaller in any pair. So it's used as the cost in every single operation. We need n-1 operations to reduce to size 1, giving total cost = (n-1) × min. The proof is: any other strategy uses a larger value as cost at least once, which is strictly worse."*
+
+### Script chi tiết cho từng câu hỏi
+
+```
+  Q: "Walk me through your approach."
+  A: "Đầu tiên, tôi nhận ra rằng mỗi operation xóa phần tử lớn hơn,
+      nên phần tử nhỏ nhất sẽ KHÔNG BAO GIỜ bị xóa — nó luôn sống sót.
+      Vì min sống sót, ta có thể dùng nó trong MỌI operation.
+      Cost mỗi lần = min. Cần n-1 operations.
+      → Total = (n-1) × min."
+
+  Q: "Prove this is optimal."
+  A: "Mỗi operation cost = min(pair) ≥ min(arr).
+      Cần n-1 ops → Total ≥ (n-1) × min.
+      Chiến thuật luôn dùng min đạt ĐÚNG (n-1) × min.
+      Lower bound = upper bound → OPTIMAL."
+
+  Q: "What if both elements are equal?"
+  A: "Xóa cái nào cũng được, cost vẫn = giá trị đó.
+      Công thức vẫn đúng vì min = giá trị chung."
+
+  Q: "Time/space complexity?"
+  A: "O(n) time: 1 pass tìm min. O(1) space.
+      Đã optimal vì phải đọc mọi phần tử."
+
+  Q: "What about Math.min(...arr) risks?"
+  A: "Stack overflow với n > ~100k do spread operator.
+      Production code nên dùng for loop."
+
+  Q: "If we remove the SMALLER instead?"
+  A: "Bài khác hẳn! MAX sống sót, nhưng min bị loại dần
+      → cost thay đổi mỗi lần → cần greedy/DP phức tạp hơn."
+```
 
 ### Pattern
 
@@ -161,6 +527,21 @@ function minCost(arr) {
 ## 🧠 Bản chất bài toán — Hiểu để NHỚ, không chỉ để GIẢI
 
 ### Hình dung bằng TRẬN ĐẤU
+
+```mermaid
+flowchart LR
+    subgraph ARENA["🏟️ Đấu trường — arr = [4, 3, 2]"]
+        direction LR
+        T0["⚔️ 3 Võ sĩ\n🟥 Tướng 4\n🟨 Tướng 3\n🟩 Tướng 2"] -->|"Trận 1\n🟩 vs 🟥"| T1["🟩 Tướng 2 THẮNG!\n🟥 Tướng 4 bị loại\ncost = 2"]
+        T1 -->|"Trận 2\n🟩 vs 🟨"| T2["🟩 Tướng 2 THẮNG!\n🟨 Tướng 3 bị loại\ncost = 2"]
+        T2 --> T3["🏆 Nhà vô địch:\nTướng 2 (MIN)\nTotal cost = 4"]
+    end
+
+    style T0 fill:#E3F2FD,stroke:#1976D2
+    style T1 fill:#FFF3E0,stroke:#F57C00
+    style T2 fill:#FFF3E0,stroke:#F57C00
+    style T3 fill:#4CAF50,color:white
+```
 
 ```
   Tưởng tượng mỗi phần tử là 1 VÕ SĨ trên đấu trường.
@@ -182,6 +563,23 @@ function minCost(arr) {
 ```
 
 ### Tại sao LUÔN dùng MIN? — Chứng minh bằng PHẢN CHỨNG
+
+```mermaid
+graph TD
+    subgraph PROOF["📐 Chứng minh bằng Phản Chứng"]
+        A["Giả sử: Tồn tại\nchiến thuật S' TỐT HƠN"] --> B["S' có ít nhất 1 trận\nKHÔNG dùng min"]
+        B --> C["Trận đó: cost = x > min"]
+        C --> D["Thay x bằng min:\ncost GIẢM!"]
+        D --> E["S' sau khi thay\n≤ S' ban đầu"]
+        E --> F{"S' vẫn tốt hơn\nGreedy?"}
+        F -->|"KHÔNG!"| G["❌ MÂU THUẪN!"]
+        G --> H["✅ Greedy là TỐI ƯU!"]
+    end
+
+    style A fill:#FFCDD2,stroke:#F44336
+    style G fill:#F44336,color:white
+    style H fill:#4CAF50,color:white
+```
 
 ```
   📐 CHỨNG MINH GREEDY là TỐI ƯU:
@@ -206,6 +604,23 @@ function minCost(arr) {
 
 ### Tại sao cần đúng n-1 operations?
 
+```mermaid
+flowchart LR
+    subgraph TOURNAMENT["🏆 Single Elimination Tournament"]
+        direction LR
+        N5["n=5\n5 đội"] -->|"Trận 1\nloại 1"| N4["n=4"]
+        N4 -->|"Trận 2\nloại 1"| N3["n=3"]
+        N3 -->|"Trận 3\nloại 1"| N2["n=2"]
+        N2 -->|"Trận 4\nloại 1"| N1["n=1\n🏆 VÔ ĐỊCH!"]
+    end
+
+    N5 -.- F["n-1 = 4 trận\n= 4 operations"]
+
+    style N5 fill:#E3F2FD,stroke:#1976D2
+    style N1 fill:#4CAF50,color:white
+    style F fill:#FFF3E0,stroke:#F57C00
+```
+
 ```
   Ban đầu: n phần tử
   Mỗi operation: xóa 1 phần tử → giảm 1
@@ -224,6 +639,27 @@ function minCost(arr) {
 ```
 
 ### Mối liên hệ với các bài khác
+
+```mermaid
+graph TD
+    subgraph VARIANTS["🔄 Pairwise Elimination Variants"]
+        CENTER["Pairwise\nElimination"] --> V1["Cost = smaller\nXóa larger"]
+        CENTER --> V2["Cost = larger\nXóa smaller"]
+        CENTER --> V3["Cost = |diff|\nXóa 1 bất kỳ"]
+        CENTER --> V4["Cost = sum\nMerge 2→1"]
+
+        V1 --> R1["(n-1)×min\n⭐ BÀI NÀY"]
+        V2 --> R2["(n-1)×max"]
+        V3 --> R3["Sort + Greedy"]
+        V4 --> R4["Huffman\nMin-Heap"]
+    end
+
+    style R1 fill:#4CAF50,color:white,stroke:#2E7D32,stroke-width:3px
+    style R2 fill:#2196F3,color:white
+    style R3 fill:#FF9800,color:white
+    style R4 fill:#9C27B0,color:white
+    style CENTER fill:#E3F2FD,stroke:#1976D2
+```
 
 ```
   ┌───────────────────────────────────────────────────────────────┐
@@ -249,6 +685,32 @@ function minCost(arr) {
 > 💡 Phần này dạy bạn **CÁCH TƯ DUY** để tự giải bài, không chỉ biết đáp án.
 
 ### Bước 1: Đọc đề → Gạch chân KEYWORDS
+
+```mermaid
+graph TD
+    subgraph KEYWORDS["🔍 Keyword Parsing"]
+        READ["Đọc đề bài"] --> KW1["pick a pair"]
+        READ --> KW2["remove the larger"]
+        READ --> KW3["cost = smaller"]
+        READ --> KW4["minimum total cost"]
+        READ --> KW5["size 1"]
+
+        KW1 --> D1["🔄 Pairwise operation"]
+        KW2 --> D2["🎯 MIN sống sót!"]
+        KW3 --> D3["💰 Cost = min mỗi lần"]
+        KW4 --> D4["🧠 Greedy approach"]
+        KW5 --> D5["🔢 n-1 operations"]
+    end
+
+    D2 --> FORMULA["✅ Total = (n-1) × min"]
+    D3 --> FORMULA
+    D5 --> FORMULA
+
+    style READ fill:#9C27B0,color:white
+    style D2 fill:#4CAF50,color:white
+    style D3 fill:#FF9800,color:white
+    style FORMULA fill:#4CAF50,color:white,stroke:#2E7D32,stroke-width:3px
+```
 
 ```
   Đề bài: "Pick a pair, remove the larger. Cost = the smaller.
@@ -513,6 +975,22 @@ graph TD
 
 ### Khi nào min BẰNG phần tử kia trong pair?
 
+```mermaid
+flowchart LR
+    subgraph EQUAL["🤝 Trường hợp: arr = [2, 2, 5, 2]"]
+        direction LR
+        E0["[2,2,5,2]\nmin=2"] -->|"(2,5)→xóa 5\ncost=2"| E1["[2,2,2]"]
+        E1 -->|"(2,2)→xóa 1 cái\ncost=2"| E2["[2,2]"]
+        E2 -->|"(2,2)→xóa 1 cái\ncost=2"| E3["[2]\ntotal=6"]
+    end
+
+    E3 -.- F["(4-1)×2 = 6 ✅\nCông thức VẪN đúng!"]
+
+    style E0 fill:#E3F2FD,stroke:#1976D2
+    style E3 fill:#4CAF50,color:white
+    style F fill:#C8E6C9,stroke:#4CAF50
+```
+
 ```
   Trường hợp đặc biệt: mảng có NHIỀU min!
     arr = [2, 2, 5, 2]  →  min = 2
@@ -637,6 +1115,33 @@ graph TD
 ```
 
 ### Approach 1: Brute Force — Thử TẤT CẢ combinations
+
+```mermaid
+graph TD
+    subgraph BRUTE["❌ Brute Force: arr = [4, 3, 2]"]
+        START["[4, 3, 2]"] --> P1["Pair (4,3)\ncost=3, xóa 4"]
+        START --> P2["Pair (4,2)\ncost=2, xóa 4"]
+        START --> P3["Pair (3,2)\ncost=2, xóa 3"]
+
+        P1 --> P1a["[3,2]\n→ (2,3) cost=2\nTotal=5"]
+        P2 --> P2a["[3,2]\n→ (2,3) cost=2\nTotal=4"]
+        P3 --> P3a["[4,2]\n→ (2,4) cost=2\nTotal=4"]
+
+        P1a --> RESULT["min(5,4,4) = 4 ✅"]
+        P2a --> RESULT
+        P3a --> RESULT
+    end
+
+    subgraph OPTIMAL["✅ Optimal"]
+        O1["min=2, n=3"] --> O2["(3-1)×2 = 4 ✅"]
+    end
+
+    BRUTE -->|"Cùng kết quả\nnhưng O(n!) vs O(n)!"| OPTIMAL
+
+    style RESULT fill:#FF9800,color:white
+    style O2 fill:#4CAF50,color:white
+    style START fill:#FFCDD2,stroke:#F44336
+```
 
 ```javascript
 // ❌ RẤT CHẬM — O(n! × n) — chỉ để hiểu bài
@@ -785,6 +1290,27 @@ flowchart LR
 ```
 
 ### Phase 2: Vẽ ví dụ — 1 phút
+
+```mermaid
+flowchart LR
+    subgraph COMPARE["✏️ So sánh 2 chiến thuật — arr = [5, 1, 3]"]
+        direction TB
+        subgraph A["✅ Chiến thuật A: dùng min=1"]
+            A1["(1,5)→xóa 5\ncost=1"] --> A2["(1,3)→xóa 3\ncost=1"]
+            A2 --> AT["Total = 2"]
+        end
+        subgraph B["❌ Chiến thuật B: dùng 3 trước"]
+            B1["(3,5)→xóa 5\ncost=3"] --> B2["(1,3)→xóa 3\ncost=1"]
+            B2 --> BT["Total = 4"]
+        end
+    end
+
+    AT -.- WIN["✅ A thắng!\n2 < 4"]
+
+    style AT fill:#4CAF50,color:white
+    style BT fill:#F44336,color:white
+    style WIN fill:#C8E6C9,stroke:#4CAF50
+```
 
 ```
   Tự tạo ví dụ: arr = [5, 1, 3]
