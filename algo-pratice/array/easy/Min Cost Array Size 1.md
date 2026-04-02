@@ -474,55 +474,809 @@ graph TD
 
 ## 🗣️ Interview Script
 
-> 🎙️ *"The key insight is that the minimum element never gets removed — it's always the smaller in any pair. So it's used as the cost in every single operation. We need n-1 operations to reduce to size 1, giving total cost = (n-1) × min. The proof is: any other strategy uses a larger value as cost at least once, which is strictly worse."*
+### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
-### Script chi tiết cho từng câu hỏi
-
-```
-  Q: "Walk me through your approach."
-  A: "Đầu tiên, tôi nhận ra rằng mỗi operation xóa phần tử lớn hơn,
-      nên phần tử nhỏ nhất sẽ KHÔNG BAO GIỜ bị xóa — nó luôn sống sót.
-      Vì min sống sót, ta có thể dùng nó trong MỌI operation.
-      Cost mỗi lần = min. Cần n-1 operations.
-      → Total = (n-1) × min."
-
-  Q: "Prove this is optimal."
-  A: "Mỗi operation cost = min(pair) ≥ min(arr).
-      Cần n-1 ops → Total ≥ (n-1) × min.
-      Chiến thuật luôn dùng min đạt ĐÚNG (n-1) × min.
-      Lower bound = upper bound → OPTIMAL."
-
-  Q: "What if both elements are equal?"
-  A: "Xóa cái nào cũng được, cost vẫn = giá trị đó.
-      Công thức vẫn đúng vì min = giá trị chung."
-
-  Q: "Time/space complexity?"
-  A: "O(n) time: 1 pass tìm min. O(1) space.
-      Đã optimal vì phải đọc mọi phần tử."
-
-  Q: "What about Math.min(...arr) risks?"
-  A: "Stack overflow với n > ~100k do spread operator.
-      Production code nên dùng for loop."
-
-  Q: "If we remove the SMALLER instead?"
-  A: "Bài khác hẳn! MAX sống sót, nhưng min bị loại dần
-      → cost thay đổi mỗi lần → cần greedy/DP phức tạp hơn."
-```
-
-### Pattern
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
 
 ```
-  GREEDY — "MIN survives" pattern!
-
-  Khi chỉ xóa phần tử LỚN HƠN:
-    → Min LUÔN sống sót
-    → Min LUÔN là cost
-    → Total = (n-1) × min
-
-  Liên kết: tương tự Huffman Coding greedy principle
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
 ```
 
----
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Tell me about yourself and a time you found
+      a dramatically simpler solution than expected."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I was working on a cloud resource
+      decommissioning pipeline. We had n virtual machines
+      that needed to be consolidated down to 1, and each
+      merge operation had a cost — the smaller of the
+      two resource allocations being combined.
+
+      My team initially built a simulation engine that
+      tried different merge orderings using a priority queue.
+      It was O of n log n with significant bookkeeping.
+
+      Then I realized something: the VM with the SMALLEST
+      allocation never gets removed — it's always the
+      smaller in any pair. So it participates in EVERY merge.
+      That means every single operation costs exactly
+      the minimum allocation, and there are exactly n minus 1
+      operations.
+
+      Total cost: n minus 1 times the minimum.
+      The entire simulation was replaced by ONE line:
+      find the min and multiply.
+
+      That's the same insight needed for this problem."
+
+  👤 "That's a great example of resisting complexity.
+      Let's see it in action."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 05:00 — Clarify (5 phút) ────────────────
+
+  👤 "Given an array, repeatedly pick any pair, remove the
+      larger element. The cost of each operation is the
+      smaller element. Find the minimum total cost to
+      reduce the array to size 1."
+
+  🧑 "Let me make sure I understand the mechanics precisely.
+
+      I pick ANY two elements from the array.
+      I compare them: the LARGER one gets removed.
+      The cost I pay for this operation is the SMALLER one
+      — which is also the one that SURVIVES.
+
+      If two elements are equal, I remove either one,
+      and the cost is that shared value.
+
+      I repeat until only one element remains.
+
+      Key observations right away:
+
+      Starting with n elements and removing one per operation,
+      I need EXACTLY n minus 1 operations. This is like a
+      single-elimination tournament: n teams, n minus 1 games,
+      one champion.
+
+      The output is the TOTAL cost across all n minus 1 operations.
+      I need to MINIMIZE this total.
+
+      Edge case: if n is 1, the array is already size 1.
+      Zero operations needed, total cost is 0.
+
+      The array has positive integers, n is at least 1."
+
+  ──────────────── 10:00 — First Instinct Trap (3 phút) ────────────
+
+  🧑 "Before I jump to a solution, let me note what this
+      problem LOOKS like versus what it IS.
+
+      It LOOKS like it needs:
+      Simulation — model each step, track the array.
+      Dynamic Programming — optimize the pairing order.
+      Priority Queue — always pick the optimal pair.
+      Permutation search — try all possible orderings.
+
+      But I want to pause and think about what element
+      survives at the end, and what that implies for the cost."
+
+  ──────────────── 13:00 — The Key Insight (5 phút) ────────────────
+
+  🧑 "Here's the critical observation.
+
+      Which element survives all n minus 1 operations?
+      The MINIMUM element.
+
+      Why? In any pair involving the minimum, the minimum
+      is ALWAYS the smaller value — by definition.
+      So the minimum is never removed. It always survives.
+
+      Now, CAN I always pair the minimum with someone else?
+      Yes! At every step, the minimum is still in the array.
+      I'm free to choose any pair, so I can ALWAYS pick
+      the minimum as one of the two elements.
+
+      What's the cost when I pair the minimum with any
+      other element x? The cost is min of the pair, which
+      is the minimum of the array — since the array minimum
+      is at most x for any x.
+
+      So every single operation costs exactly the minimum
+      of the original array.
+
+      How many operations? n minus 1.
+
+      Total cost: n minus 1 times the minimum.
+
+      That's it. No simulation. No DP. No heap.
+      Just find the min and multiply.
+
+      Think of it like a CHAMPION gladiator in an arena.
+      The weakest fighter — with the lowest cost to hire —
+      CAN'T lose any fight because the loser is always
+      the one with HIGHER value. So this champion fights
+      in EVERY round, and I pay the champion's fee
+      each time. n minus 1 rounds, same fee each round."
+
+  ──────────────── 18:00 — Greedy Proof (5 phút) ────────────────
+
+  👤 "Can you prove this is optimal?"
+
+  🧑 "Yes — two arguments, one intuitive and one formal.
+
+      INTUITIVE — Lower Bound:
+      In ANY operation, I pick two elements and pay
+      the SMALLER of the two. The smallest possible cost
+      per operation is the global minimum — because every
+      element is at least the minimum.
+      So each operation costs at least min.
+      I need n minus 1 operations.
+      Total cost is AT LEAST n minus 1 times min.
+
+      My strategy achieves EXACTLY n minus 1 times min.
+      My strategy matches the lower bound.
+      Therefore, it's OPTIMAL.
+
+      FORMAL — Exchange Argument:
+      Suppose there exists a strategy S star that's
+      strictly better — total cost less than n minus 1 times min.
+      S star performs n minus 1 operations.
+      In at least one operation, S star must NOT use the minimum
+      as one of the pair — otherwise, all operations cost min,
+      giving total n minus 1 times min, contradicting
+      S star being strictly better.
+
+      But if S star doesn't use min in some operation,
+      the cost of that operation is min of some pair
+      that doesn't include the global min. That cost is
+      at least min — because every element is at least min.
+      It's possibly HIGHER.
+
+      Replacing that operation with one that uses the global min
+      gives cost equal to min — EQUAL to or LESS than the
+      original cost. So S star can't beat our strategy.
+
+      Contradiction. Our greedy is optimal."
+
+  ──────────────── 23:00 — Trace bằng LỜI (4 phút) ────────────────
+
+  🧑 "Let me trace with arr equal [4, 3, 2].
+      n equal 3. min equal 2.
+
+      Strategy: always pair min equal 2 with another element.
+
+      Operation 1: pair (2, 4). 4 is larger, remove it.
+      Cost equal 2. Array becomes [3, 2].
+
+      Operation 2: pair (2, 3). 3 is larger, remove it.
+      Cost equal 2. Array becomes [2].
+
+      Total: 2 plus 2 equal 4.
+      Formula: n minus 1 times min equal 2 times 2 equal 4. Matches!
+
+      Let me verify with a WRONG strategy to show it's worse.
+      What if I pair 3 and 4 first?
+
+      Operation 1: pair (3, 4). Remove 4. Cost equal 3.
+      Array becomes [3, 2].
+      Operation 2: pair (2, 3). Remove 3. Cost equal 2.
+      Array becomes [2].
+      Total: 3 plus 2 equal 5. That's WORSE — 5 vs 4.
+
+      The wrong strategy paid 3 in the first round instead
+      of 2. That extra 1 is wasted because I COULD have
+      used the min for the same effect."
+
+  🧑 "Another trace: arr equal [1, 5, 7, 3]. n equal 4. min equal 1.
+
+      Operations 1-3: pair 1 with 7, then 5, then 3.
+      Each costs 1 because 1 is always the smaller.
+      Total: 1 plus 1 plus 1 equal 3.
+      Formula: 3 times 1 equal 3. Correct!
+
+      When min is 1, the total cost is always n minus 1.
+      Beautiful."
+
+  ──────────────── 27:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code is almost embarrassingly simple.
+
+      [Vừa viết vừa nói:]
+
+      Find the minimum of the array.
+      Return n minus 1 times the minimum.
+
+      That's two lines of actual logic.
+
+      For the interview version, I'd write:
+      const min equal Math dot min spread arr.
+      return arr dot length minus 1 times min.
+
+      But I should mention: Math dot min with the spread
+      operator converts the array into function arguments.
+      JavaScript engines have a limit on argument count —
+      typically around 100,000. For very large arrays,
+      this causes a stack overflow.
+
+      For production, I'd use a simple for loop:
+      start with min equal arr at 0, then iterate from index 1,
+      updating min whenever I find a smaller element.
+
+      Same O of n time, but the for loop version is safe
+      for arrays of any size."
+
+  ──────────────── 30:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      Single element: [10]. n minus 1 equal 0 operations.
+      Total cost: 0. Correct — nothing to do.
+
+      Two elements: [3, 7]. One operation: pair (3, 7),
+      remove 7, cost 3. Formula: 1 times 3 equal 3.
+
+      All equal: [5, 5, 5, 5]. min equal 5.
+      Every pair costs 5 regardless of choices.
+      Total: 3 times 5 equal 15. No strategy can do better
+      because every operation costs exactly 5.
+
+      Duplicate minimums: [2, 2, 7, 2]. min equal 2.
+      Total: 3 times 2 equal 6. The duplicates don't matter —
+      we still use 2 as the cost every round.
+
+      Large spread: [1, 1000000]. Total: 1 times 1 equal 1.
+      The huge gap doesn't affect the cost — only the min matters."
+
+  ──────────────── 33:00 — Does order matter? (3 phút) ────────────
+
+  👤 "Does the ORDER in which you pair elements matter?"
+
+  🧑 "No! As long as I always include the minimum in every pair,
+      the order of WHICH other element I pair with doesn't matter.
+
+      In arr equal [4, 3, 2]:
+      Order A: remove 4 first, then 3. Cost: 2 plus 2 equal 4.
+      Order B: remove 3 first, then 4. Cost: 2 plus 2 equal 4.
+      Same total!
+
+      This is because each operation has the same cost —
+      the minimum. n minus 1 operations at cost min each
+      gives the same total regardless of sequence.
+
+      This is different from problems like Huffman Coding
+      where the merge order DOES matter because the cost
+      of each merge changes based on what you've already merged."
+
+  ──────────────── 36:00 — Why this is a 'trick question' (3 phút) ──
+
+  👤 "This seems too simple. What's the interviewer
+      really testing?"
+
+  🧑 "Great question. This is a TRICK QUESTION in disguise.
+
+      The interviewer tests whether I RESIST the urge
+      to immediately simulate or code a complex solution.
+
+      Many candidates see 'pairwise elimination' and jump to:
+      Priority Queue with O of n log n.
+      DP over subsets with exponential time.
+      While loop simulation with O of n squared.
+
+      But the CORRECT response is to PAUSE, analyze the
+      problem structure, and recognize that one line suffices.
+
+      What the interviewer values:
+      1. Can you identify when a problem collapses to a formula?
+      2. Can you PROVE the formula is correct — not just guess?
+      3. Can you articulate WHY simpler is better?
+
+      I always say: 'Before coding, let me think about what
+      element survives and what that implies for the cost.'
+      That statement alone shows problem-solving maturity."
+
+  ──────────────── 39:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n. I need one pass to find the minimum.
+      The multiplication is O of 1. Total: O of n.
+
+      Space: O of 1. One variable for the minimum.
+      No extra arrays, no heap, no recursion stack.
+
+      Is this optimal? Yes — I must read every element
+      at least once to find the minimum. There's no way
+      to determine the answer without looking at all values.
+      Omega of n is the lower bound. My algorithm meets it.
+
+      Compare this to alternatives:
+      Simulation while loop: O of n squared — finds the pair,
+      removes, repeats. Completely unnecessary.
+      Sort then formula: O of n log n — sorting just to find
+      the min is overkill.
+      All permutations: O of n factorial — absurd.
+      Direct formula: O of n — optimal."
+
+  ──────────────── 42:00 — Math.min pitfall (3 phút) ────────────────
+
+  👤 "Tell me more about the Math.min stack overflow."
+
+  🧑 "Math dot min accepts individual ARGUMENTS, not an array.
+      When I write Math dot min spread arr, the spread operator
+      expands the array into function arguments:
+      Math dot min of arr at 0 comma arr at 1 comma dot dot dot.
+
+      JavaScript engines allocate stack frames for arguments.
+      The maximum varies by engine, but V8 and SpiderMonkey
+      typically cap around 65,536 to 125,000 arguments.
+
+      For an array of 200,000 elements, spread causes
+      a RangeError: Maximum call stack size exceeded.
+
+      The fix is trivial — a manual for loop:
+      let min equal arr at 0.
+      for i from 1 to n minus 1:
+      if arr at i is less than min, update min.
+
+      Same result, same time complexity, but no stack risk.
+
+      In an interview, mentioning this unprompted shows
+      production awareness. I'd say: 'I'll use the concise
+      version for clarity, but in production I'd use a for loop
+      to handle arrays of any size.'"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Tournament analogy (4 phút) ────────────────
+
+  👤 "You mentioned a tournament. Elaborate."
+
+  🧑 "This problem is a SINGLE-ELIMINATION TOURNAMENT.
+
+      n players enter. Each round, two players compete.
+      The loser — the larger value — is eliminated.
+      The winner — the smaller value — continues.
+      After n minus 1 matches, one champion remains.
+
+      My strategy is: always have the CHAMPION — the minimum —
+      fight in every match. The champion never loses
+      because they're the smallest.
+
+      The cost of each match is the winner's value —
+      always the minimum. So total tournament cost
+      equals n minus 1 times the minimum.
+
+      This maps to: in a single-elimination bracket with
+      n teams, exactly n minus 1 games are played.
+      This is a fundamental combinatorial fact —
+      each game eliminates exactly one team,
+      and n minus 1 teams must be eliminated."
+
+  ──────────────── 49:00 — What if min appears multiple times? (3 phút)
+
+  👤 "What if the minimum appears more than once?"
+
+  🧑 "Doesn't change the answer!
+
+      If arr equal [2, 5, 2, 8], min equal 2.
+      n equal 4, so total equal 3 times 2 equal 6.
+
+      I can use EITHER copy of 2 as the champion.
+      Or I can alternate — use the first 2 for one match,
+      the second 2 for another. The cost is still 2 per match.
+
+      Actually, something interesting happens when two copies
+      of min are paired with EACH OTHER.
+      Pair (2, 2): both are 'min value.' One gets removed.
+      Cost equal 2. The surviving 2 continues as champion.
+
+      The formula still holds because the cost per operation
+      is still min equal 2, and we still need n minus 1 operations."
+
+  ──────────────── 52:00 — Formal lower bound argument (4 phút) ────
+
+  👤 "Walk me through the lower bound proof more carefully."
+
+  🧑 "I want to show that ANY strategy — not just ours —
+      must pay at least n minus 1 times min.
+
+      Claim: every operation costs at least min.
+      Proof: in each operation, I pick two elements a and b.
+      The cost is min of a and b. Since both a and b are
+      elements of the array, both are at least the global
+      minimum. So min of a and b is at least the global minimum.
+
+      Since I need exactly n minus 1 operations, and each
+      costs at least min, the total is at least n minus 1 times min.
+
+      Our strategy achieves EXACTLY n minus 1 times min.
+
+      Lower bound equal upper bound implies our strategy is optimal.
+
+      This is the DUAL BOUND technique: establish a lower bound
+      on any solution, then exhibit a strategy that matches it.
+      When they meet, optimality is proven.
+
+      This technique appears everywhere in algorithm design:
+      information-theoretic lower bounds for sorting,
+      adversarial arguments for comparison-based algorithms,
+      and LP relaxation bounds for combinatorial optimization."
+
+  ──────────────── 56:00 — What if I can't choose freely? (4 phút) ──
+
+  👤 "What if you can only pair ADJACENT elements?"
+
+  🧑 "That changes the problem completely!
+
+      If I can only pair adjacent elements, the minimum
+      might not be able to reach every other element directly.
+      It can only fight its immediate neighbors.
+
+      For example, arr equal [3, 1, 5]. With free choice,
+      I pair 1 with 3, then 1 with 5. Total: 2.
+
+      With adjacency constraint:
+      Option A: pair (3, 1), remove 3, cost 1. arr equal [1, 5].
+      Then pair (1, 5), remove 5, cost 1. Total: 2.
+      Same! Because 1 is adjacent to 3, and after removing 3,
+      1 becomes adjacent to 5.
+
+      But consider arr equal [3, 5, 1].
+      Option A: pair (3, 5), remove 5, cost 3. arr equal [3, 1].
+      Then pair (3, 1), remove 3, cost 1. Total: 4.
+      Option B: pair (5, 1), remove 5, cost 1. arr equal [3, 1].
+      Then pair (3, 1), remove 3, cost 1. Total: 2.
+
+      So with adjacency, the ORDER matters! I should work
+      toward bringing the minimum adjacent to the elements
+      I want to remove. This becomes a DP or greedy problem
+      on intervals — much harder."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Remove SMALLER instead (4 phút) ────────────
+
+  👤 "What if the rule is reversed — remove the SMALLER
+      element, cost is the LARGER?"
+
+  🧑 "Completely different problem!
+
+      Now the MAXIMUM survives — because the larger always wins.
+      And the cost of each operation is the LARGER of the pair.
+
+      But here's the twist: the cost CHANGES between operations.
+      When the maximum pairs with someone and eliminates them,
+      the maximum's value stays the same, but the element it
+      fights NEXT might be different.
+
+      Actually, wait — by the same logic, I can always pair
+      the maximum with any element. The cost is always max.
+      n minus 1 operations at cost max each.
+      Total: n minus 1 times max.
+
+      Hmm — but that seems too high. Can I do better?
+      No! Because every operation costs at least the smaller
+      of the pair... wait, the cost is the LARGER.
+
+      Let me reconsider. The cost is the LARGER of the pair.
+      If I pair the two smallest elements, the cost is their max —
+      which is small. By removing small elements first
+      and keeping them away from the maximum, I might get
+      a lower total.
+
+      Actually, regardless of strategy, each of the n minus 1
+      operations has cost equal to the larger of its pair.
+      To minimize the sum, I should pair the max with
+      all others — cost is always max. Total: n minus 1 times max.
+
+      Wait — or I should pair SMALL elements together to get
+      smaller costs? Let me think with an example.
+
+      arr equal [1, 2, 3]. Pair max with others:
+      pair (3, 1), remove 1, cost 3. pair (3, 2), remove 2, cost 3.
+      Total: 6.
+
+      Pair small together first:
+      pair (1, 2), remove 1, cost 2. pair (2, 3), remove 2, cost 3.
+      Total: 5. That's BETTER!
+
+      So the reversed version is NOT n minus 1 times max.
+      It's more complex — the order DOES matter.
+      This would need a greedy or DP approach.
+
+      This contrast highlights why the original problem is
+      special: the 'remove larger, cost is smaller' rule
+      makes one element a permanent champion, collapsing
+      the problem to a formula."
+
+  ──────────────── 64:00 — Cost equals sum / Huffman (4 phút) ────────
+
+  👤 "What if we MERGE two elements — replacing both with
+      their sum — and the cost is their sum?"
+
+  🧑 "That's HUFFMAN CODING!
+
+      The problem becomes: repeatedly merge two elements,
+      cost equals their sum, minimize total cost.
+
+      Here the order matters tremendously.
+      The greedy strategy is: always merge the two SMALLEST
+      elements first. This is because merged elements
+      participate in FUTURE merges, accumulating cost.
+      Merging small elements first means they accumulate
+      at lower rates.
+
+      Implementation: Min-Heap. Extract two minima,
+      merge them, push the sum back. Repeat until one
+      element remains.
+
+      Time: O of n log n. The heap operations dominate.
+
+      Our problem — cost equals the smaller — is a DEGENERATE
+      case of pairwise merging. Because the smaller element
+      SURVIVES unchanged — it doesn't grow. So future costs
+      aren't affected by past choices. That's why the order
+      doesn't matter and we can compute the answer directly."
+
+  ──────────────── 68:00 — Cost equals absolute difference (3 phút) ──
+
+  👤 "What if the cost is the absolute difference?"
+
+  🧑 "Cost equals absolute difference of the pair,
+      and we remove either element.
+
+      This is related to the MINIMUM COST TO MAKE EQUAL
+      family of problems.
+
+      The strategy depends on what we're removing.
+      If we remove the larger: cost equals larger minus smaller,
+      which means we pay MORE for more distant pairs.
+      To minimize total cost, pair elements that are CLOSE
+      in value. This suggests SORTING first, then pairing
+      adjacent elements.
+
+      The structure changes significantly — it's no longer
+      a one-line formula. It needs sorting and careful analysis.
+
+      This shows how a small change in the cost function
+      completely alters the problem's difficulty."
+
+  ──────────────── 71:00 — Multiple concurrent operations (4 phút) ──
+
+  👤 "What if you can do operations in PARALLEL?"
+
+  🧑 "Interesting! If I can pair and remove multiple elements
+      simultaneously — like a tournament bracket with
+      parallel rounds.
+
+      In the original problem, since min participates
+      in every operation, operations must be SEQUENTIAL.
+      I can't use min in two pairs at once.
+
+      But if I relax the constraint — say multiple copies
+      of min or multiple 'fighters' — the problem becomes:
+      how many round of parallel operations to reach size 1?
+
+      With fully parallel rounds: each round halves the
+      remaining elements. So ceil of log base 2 of n rounds.
+
+      But the COST doesn't change — each operation still
+      costs min. The number of operations is still n minus 1.
+      Parallelism affects LATENCY — how many rounds —
+      but not TOTAL COST.
+
+      Total cost: still n minus 1 times min.
+      Rounds: ceil of log 2 of n.
+      This distinction between work and span is important
+      in parallel algorithm design."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Resource consolidation (5 phút) ────────────
+
+  👤 "Where does this pattern appear in system design?"
+
+  🧑 "Several places!
+
+      First — CLOUD RESOURCE DECOMMISSIONING.
+      When shutting down a cluster of n VMs, each VM
+      takes time to migrate its workload. If the migration
+      cost is proportional to the destination VM's capacity,
+      and I migrate TO the smallest VM repeatedly,
+      the total migration cost is minimized.
+      That's n minus 1 times the minimum capacity.
+
+      Second — DATABASE SHARD CONSOLIDATION.
+      When reducing n shards to 1, I merge data between pairs.
+      If the merge cost is the size of the smaller shard —
+      because the smaller shard's data moves to the larger —
+      then always merging the smallest shard is optimal.
+
+      Third — TOURNAMENT SCHEDULING.
+      In single-elimination brackets, the number of games
+      is always n minus 1. This is used in sports scheduling
+      and elimination-based voting systems.
+
+      Fourth — COST ESTIMATION for pairwise operations.
+      In any system where you repeatedly reduce a collection
+      by one element with a cost function, the minimum-based
+      formula gives an instant lower bound for planning."
+
+  ──────────────── 80:00 — Recognition skill (5 phút) ────────────────
+
+  👤 "How do you RECOGNIZE when a complex-looking problem
+      reduces to a simple formula?"
+
+  🧑 "I use a mental checklist.
+
+      Step 1: IDENTIFY THE INVARIANT.
+      What stays constant across all operations?
+      In this problem, the min never gets removed.
+      That's a powerful invariant.
+
+      Step 2: CHECK IF THE COST IS FIXED.
+      If the invariant means the cost per operation
+      is constant, the total is just count times cost.
+      Here: n minus 1 times min.
+
+      Step 3: VERIFY WITH LOWER BOUND.
+      Can any strategy beat this? If the per-operation
+      lower bound matches my strategy's per-operation cost,
+      the strategy is optimal.
+
+      Step 4: ENUMERATE COUNTEREXAMPLES.
+      Try a small input — say 3 or 4 elements — with
+      different strategies. If they all give the same or
+      worse result, the formula is likely correct.
+
+      This checklist works for many 'trick questions':
+      problems that look like simulation or DP but reduce
+      to O of 1 formulas. Examples include:
+      Josephus problem with k equal 2,
+      Nim game with binary XOR,
+      Minimum number of moves to sort a specific pattern."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, RESIST PREMATURE COMPLEXITY.
+      This problem tempts you with simulation, DP, heaps.
+      But 30 seconds of analysis reveals a one-line formula.
+      In interviews, I always spend the first few minutes
+      understanding the STRUCTURE before touching code.
+      'What survives? What's fixed? What's free?'
+
+      Second, the EXCHANGE ARGUMENT for greedy proofs.
+      'Assume a better strategy exists. Show it can't beat
+      the greedy.' This proof technique is universal —
+      I use it for Huffman Coding, Activity Selection,
+      Fractional Knapsack. For this problem, the lower bound
+      argument is even simpler: cost per operation is at least min,
+      and our strategy matches the bound.
+
+      Third, PRODUCTION AWARENESS in simple problems.
+      Even a two-line solution has a potential bug:
+      Math dot min with spread can overflow the call stack.
+      Mentioning this in an interview says: 'I write code
+      that works in production, not just on LeetCode.'
+      Small details like these differentiate senior candidates."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — when you encounter 'trick questions' in interviews,
+      do you find that candidates who recognize the formula
+      immediately tend to rush and miss the proof?
+      I'm curious whether you value the insight or the
+      justification more.
+
+      Second — the pairwise elimination pattern appears
+      in problems from tournaments to Huffman Coding.
+      In your codebase, do you have any systems that
+      do pairwise reduction — like shard consolidation
+      or resource merging?
+
+      Third — this problem is technically 'easy,' but
+      the ability to prove greedy optimality is a 'medium'
+      to 'hard' skill. Do you calibrate difficulty based on
+      the algorithm or the proof requirement?"
+
+  👤 "Those are insightful questions! Your progression
+      from the trap of simulation to the formula, backed
+      by the exchange argument, was textbook perfect.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Min Cost)          ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Name the trap before solving
+     ✅ "This LOOKS like it needs simulation or DP,
+         but let me first analyze what element survives
+         and what that implies for the cost structure."
+
+  📌 MẸO #2: State the three observations explicitly
+     ✅ "Observation 1: min never gets removed.
+         Observation 2: min is used in every operation.
+         Observation 3: there are exactly n minus 1 operations.
+         Therefore: total cost is n minus 1 times min."
+
+  📌 MẸO #3: Prove with lower bound equals upper bound
+     ✅ "Every operation costs at least min. That's the lower bound.
+         My strategy costs exactly min per operation. That matches.
+         Lower bound equals upper bound implies optimality."
+
+  📌 MẸO #4: Use the tournament analogy
+     ✅ "Like a single-elimination tournament: n teams,
+         n minus 1 games, one champion. The champion
+         — the minimum — fights every game and never loses."
+
+  📌 MẸO #5: Show why the wrong strategy is worse
+     ✅ "With [4, 3, 2]: using 3 first costs 3 plus 2 equal 5.
+         Using 2 first costs 2 plus 2 equal 4. The wrong strategy
+         wastes 1 unit by not using the cheapest fighter."
+
+  📌 MẸO #6: Mention Math.min stack overflow
+     ✅ "Math dot min with spread works for interviews,
+         but in production with arrays over 100k elements,
+         I'd use a for loop to avoid stack overflow."
+
+  📌 MẸO #7: Connect to pairwise elimination family
+     ✅ "Cost equal smaller, remove larger: formula — this problem.
+         Cost equal larger, remove smaller: order matters, harder.
+         Cost equal sum, merge both: Huffman Coding, needs heap.
+         The cost function determines whether order matters."
+
+  📌 MẸO #8: Emphasize problem-solving maturity
+     ✅ "The interviewer doesn't test coding here — it's two lines.
+         They test INSIGHT: can I see through the complexity
+         to find the formula? And PROOF: can I explain WHY?"
+```
 
 ## 🧠 Bản chất bài toán — Hiểu để NHỚ, không chỉ để GIẢI
 

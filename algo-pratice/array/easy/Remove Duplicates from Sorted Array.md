@@ -942,86 +942,675 @@ Test Cases:
 
 ## 🗣️ Interview Script
 
-> 🎙️ *"This is a classic two-pointer problem. Since the array is sorted, all duplicates are adjacent. I use a slow pointer to track the end of the unique section and a fast pointer to scan forward. When fast discovers a new value different from slow, I increment slow and copy the value. This gives us O(n) time and O(1) space, which is optimal since we must examine every element at least once."*
+### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
-### Think Out Loud — Quá trình suy nghĩ
-
-```
-  🧠 BƯỚC 1: Đọc đề → phát hiện keywords
-    "sorted" → duplicates LIỀN KỀ → không cần hash!
-    "in-place" → O(1) space → không tạo array mới!
-    "return k" → đếm unique + sắp xếp vào đầu mảng
-
-  🧠 BƯỚC 2: Nhận dạng Pattern
-    sorted + in-place + remove → TWO POINTERS (cùng hướng)!
-    slow = write pointer, fast = read pointer
-
-  🧠 BƯỚC 3: Xác định logic core
-    So sánh nums[fast] với nums[slow]:
-      SAME → fast++ (skip duplicate)
-      DIFF → slow++, ghi, fast++
-
-  🧠 BƯỚC 4: Xác định khởi tạo
-    slow = 0 (phần tử đầu luôn unique)
-    fast = 1 (bắt đầu so sánh từ phần tử thứ 2)
-
-  🧠 BƯỚC 5: Xác định kết quả
-    return slow + 1 (index → count)
-```
-
-### Biến thể & Mở rộng
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
 
 ```
-  Biến thể phổ biến:
-
-  1. Remove Duplicates II (#80) — cho phép MỖI phần tử xuất hiện TỐI ĐA 2 LẦN
-     → Thêm counter hoặc so sánh nums[fast] với nums[slow - 1]
-     [1, 1, 1, 2, 2, 3] → [1, 1, 2, 2, 3]
-
-  2. Remove Element (#27) — xóa TẤT CẢ occurrences của 1 giá trị
-     → Tương tự two pointers, nhưng so sánh với val thay vì nums[slow]
-     [3, 2, 2, 3], val=3 → [2, 2]
-
-  3. Move Zeroes (#283) — di chuyển tất cả 0 về cuối
-     → Two pointers: slow = vị trí non-zero tiếp theo
-     [0, 1, 0, 3, 12] → [1, 3, 12, 0, 0]
-
-  4. Remove Duplicates from Sorted List (#83) — Linked List version
-     → Tương tự nhưng trên Linked List
-     1→1→2→3→3 → 1→2→3
-
-  5. Unsorted array — cần dùng Set/HashMap
-     → O(n) time, O(n) space
-     [4, 1, 2, 1, 4] → [4, 1, 2]
-
-  Pattern: TWO POINTERS (CÙNG HƯỚNG)
-    Bất cứ khi nào "sorted" + "in-place" + "remove/filter":
-      → slow = ghi, fast = đọc
-      → Fast quét, slow chỉ tiến khi tìm thấy giá trị hợp lệ
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
 ```
 
-### Kiến thức liên quan
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Tell me about yourself and a time you used
+      a reader-writer pointer pattern."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I was processing a stream of
+      analytics events where duplicate events arrived
+      consecutively due to retry logic.
+
+      I needed to compact the log in-place — keep only
+      the first occurrence of each consecutive duplicate.
+      The log was already timestamp-sorted, so duplicates
+      were always adjacent.
+
+      I used two pointers: a 'writer' marking where to place
+      the next unique event, and a 'reader' scanning forward.
+      Whenever the reader found a new event different from
+      the last written one, I wrote it and advanced the writer.
+
+      One pass, O of n time, O of 1 space.
+      That's the exact two-pointer pattern for Remove
+      Duplicates from Sorted Array."
+
+  👤 "Great real-world connection. Let's formalize."
+```
 
 ```
-  Bài này là nền tảng cho:
-  ┌────────────────────────────────────────────────────────────┐
-  │  Remove Duplicates     →  Two Pointers (slow/fast)        │
-  │         ↓                                                  │
-  │  Remove Element        →  Same pattern, different filter   │
-  │  Move Zeroes           →  Same pattern, partition          │
-  │  Remove Dups II        →  Same pattern, count constraint   │
-  │  Merge Sorted Arrays   →  Two Pointers (different arrays)  │
-  │  Dutch National Flag   →  Three Pointers (partition)       │
-  │  Container With Water  →  Two Pointers (opposite ends)     │
-  └────────────────────────────────────────────────────────────┘
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  📐 Two Pointer Template:
-    let slow = 0;
-    for (let fast = 0; fast < n; fast++) {
-      if (condition(nums[fast])) {
-        nums[slow] = nums[fast];
-        slow++;
-      }
-    }
-    return slow;
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
+
+  👤 "Given a sorted integer array, remove duplicates in-place.
+      Each element should appear only once. Return the count
+      of unique elements k. The first k elements should
+      contain the unique values."
+
+  🧑 "Let me clarify the requirements.
+
+      The array is SORTED in ascending order.
+      This is the KEY constraint — it means all duplicates
+      are ADJACENT. I don't need a hash set to find them.
+      I just compare consecutive elements.
+
+      'In-place' means I modify the original array.
+      No new array allowed. O of 1 extra space.
+
+      I return k — the count of unique elements.
+      The first k positions of the array hold the unique values.
+      What's beyond position k doesn't matter.
+
+      Edge cases: empty array returns 0.
+      Single element returns 1.
+      Array with all identical values returns 1."
+
+  ──────────────── 09:00 — Bookshelf Analogy (3 phút) ────────────
+
+  🧑 "I think of this as curating a BOOKSHELF.
+
+      I have a shelf of sorted books — some titles repeated.
+      I walk along the shelf with two hands.
+
+      My LEFT hand (slow pointer) marks the last unique book
+      I've accepted. My RIGHT hand (fast pointer) scans forward.
+
+      When my right hand finds a book with a NEW title —
+      different from the last accepted one — I slide it
+      next to the last accepted book.
+
+      When it's the SAME title, I skip it.
+
+      After one pass, the left section of the shelf
+      contains one copy of each title, in order."
+
+  ──────────────── 12:00 — Approach: Two Pointers (5 phút) ────────
+
+  🧑 "The core idea: reader-writer two pointers.
+
+      slow starts at 0 — the first element is always unique.
+      fast starts at 1 — scanning the rest.
+
+      At each step, I compare nums at fast with nums at slow.
+
+      If they're EQUAL — duplicate. I just advance fast.
+      The slow pointer stays put.
+
+      If they're DIFFERENT — new unique value found!
+      I increment slow to open a new slot,
+      then copy nums at fast into nums at slow.
+      Then advance fast.
+
+      After fast reaches the end, return slow plus 1
+      — that's the count of unique elements.
+
+      Let me trace with [0, 0, 1, 1, 1, 2, 2, 3, 3, 4]:
+
+      slow equals 0, fast equals 1.
+      fast equals 1: nums at 1 equals 0, same as nums at 0. Skip.
+      fast equals 2: nums at 2 equals 1, different! slow becomes 1.
+      Write nums at 1 equals 1.
+      fast equals 3: 1 same as 1. Skip.
+      fast equals 4: 1 same as 1. Skip.
+      fast equals 5: 2 different! slow becomes 2. Write nums at 2 equals 2.
+      fast equals 6: 2 same. Skip.
+      fast equals 7: 3 different! slow becomes 3. Write nums at 3 equals 3.
+      fast equals 8: 3 same. Skip.
+      fast equals 9: 4 different! slow becomes 4. Write nums at 4 equals 4.
+
+      Result: [0, 1, 2, 3, 4, ...]. k equals 5.
+
+      Time: O of n — one pass.
+      Space: O of 1 — just two pointers."
+
+  ──────────────── 17:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code is minimal.
+
+      [Vừa viết vừa nói:]
+
+      function removeDuplicates of nums.
+      If nums dot length equals 0, return 0.
+
+      let slow equal 0.
+
+      for let fast equal 1, fast less than nums dot length,
+      fast plus plus:
+      if nums at fast not equal nums at slow:
+      slow plus plus.
+      nums at slow equal nums at fast.
+
+      return slow plus 1.
+
+      Five lines of core logic. The slow pointer advances
+      only when we find a new unique value.
+      The fast pointer always advances."
+
+  ──────────────── 20:00 — Alternative variant (3 phút) ────────────
+
+  🧑 "There's an equivalent variant — the GfG style.
+
+      Instead of comparing fast with slow,
+      I compare arr at i with arr at i minus 1.
+
+      idx starts at 1. i scans from 1 to n minus 1.
+      When arr at i differs from arr at i minus 1,
+      I write arr at idx equals arr at i, then idx plus plus.
+
+      The difference: slow tracks the last unique ELEMENT,
+      while idx tracks the next WRITE POSITION.
+      Both are O of n, O of 1. Just different bookkeeping.
+
+      I prefer the slow/fast variant for interviews
+      because the LeetCode problem statement matches it."
+
+  ──────────────── 23:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      Empty array: return 0. The for loop doesn't execute.
+
+      Single element: [5]. slow stays at 0.
+      fast starts at 1, which is not less than length 1.
+      Loop doesn't execute. Return slow plus 1 equals 1.
+
+      All same: [2, 2, 2, 2, 2]. fast scans 1 through 4.
+      Every comparison: nums at fast equals 2 equals nums at slow.
+      slow never advances. Return 1.
+
+      No duplicates: [1, 2, 3, 4, 5]. Every comparison
+      finds a different value. slow advances every time.
+      Return 5 — the entire array is unique.
+
+      Negative numbers: [-3, -1, -1, 0, 0, 2].
+      Works identically — the comparison is just not-equal.
+      Return 4: [-3, -1, 0, 2]."
+
+  ──────────────── 26:00 — Why sorted matters (3 phút) ────────────
+
+  👤 "What if the array weren't sorted?"
+
+  🧑 "If unsorted, duplicates could be ANYWHERE —
+      not necessarily adjacent.
+
+      Comparing consecutive elements would miss duplicates
+      that are far apart. I'd need a hash set to track
+      which values I've already seen.
+
+      For example, [3, 1, 2, 1, 3] — the two 1s are
+      at indices 1 and 3, not adjacent.
+      Consecutive comparison would keep both.
+
+      With a hash set: O of n time, O of n space.
+      I lose the O of 1 space advantage.
+
+      The SORTED constraint is what makes O of 1 space
+      possible. It guarantees duplicates cluster together.
+      The two-pointer technique exploits this clustering."
+
+  ──────────────── 29:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n. One pass through the array.
+      Each element is compared exactly once.
+      The number of writes — when slow advances —
+      equals the number of unique elements, which is at most n.
+
+      Space: O of 1 extra. Two integer variables: slow and fast.
+
+      Is O of n optimal? Yes. I must read every element
+      at least once to determine if it's a duplicate.
+      That's Omega of n. We match it.
+
+      Interesting note: the number of WRITES is exactly
+      k minus 1, where k is the number of uniques.
+      If there are few uniques relative to n,
+      most iterations just advance fast — very efficient."
+
+  ──────────────── 32:00 — The write count insight (3 phút) ────────
+
+  👤 "How many writes does the algorithm perform?"
+
+  🧑 "Exactly k minus 1 writes, where k is the number
+      of unique elements.
+
+      The first unique element is already at position 0.
+      Each subsequent unique triggers one write: slow advances,
+      then I copy the value.
+
+      For [0, 0, 1, 1, 1, 2, 2, 3, 3, 4]:
+      k equals 5 uniques. Writes: 4.
+      fast runs 9 comparisons, but only 4 cause writes.
+
+      This is very efficient for arrays with many duplicates.
+      An array of 1 million elements with only 100 uniques
+      would do 99 writes and 999,999 comparisons.
+
+      Compare with splice: each removal shifts all subsequent
+      elements. That's O of n per removal, O of n squared total."
+
+  ──────────────── 35:00 — Why slow plus 1? (3 phút) ────────────
+
+  👤 "Why return slow plus 1 instead of slow?"
+
+  🧑 "Because slow is a 0-based INDEX, not a COUNT.
+
+      slow points to the last unique element's position.
+      Position 0 means 1 element. Position 4 means 5 elements.
+      So the count is always slow plus 1.
+
+      In the idx variant, idx starts at 1 and represents
+      the NEXT write position. So idx IS the count directly.
+      No plus 1 needed.
+
+      This is a common off-by-one source.
+      My rule: if the pointer points TO the last element,
+      add 1. If it points PAST the last element,
+      return it directly."
+
+  ──────────────── 38:00 — Post-increment trick (3 phút) ────────
+
+  👤 "Explain the arr[idx++] = arr[i] idiom."
+
+  🧑 "In the GfG variant, the write is:
+      arr at idx plus plus equals arr at i.
+
+      This does TWO things in one expression:
+      1. Write arr at i into arr at idx (using current idx).
+      2. Increment idx (post-increment — happens AFTER the write).
+
+      It's equivalent to:
+      arr at idx equals arr at i.
+      idx plus plus.
+
+      Two lines compressed into one.
+      Common in C-style code. In interviews, I use it
+      if the interviewer seems comfortable with it,
+      otherwise I write it as two lines for clarity."
 ```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Connection to Move Zeros (4 phút) ────────
+
+  👤 "How does this relate to Move Zeros?"
+
+  🧑 "Same TWO-POINTER pattern — reader and writer!
+
+      Remove Duplicates: the FILTER condition is
+      'value differs from the last unique.'
+      Writer advances when a new unique is found.
+
+      Move Zeros: the filter condition is
+      'value is not zero.'
+      Writer advances when a non-zero is found.
+
+      Remove Element: the filter condition is
+      'value is not equal to the target.'
+
+      All three follow the SAME template:
+      slow equals 0.
+      for fast from 0 to n minus 1:
+      if condition of nums at fast:
+      nums at slow equals nums at fast.
+      slow plus plus.
+      return slow.
+
+      The ONLY difference is the condition.
+      Learn one, you've learned the entire family."
+
+  ──────────────── 49:00 — Remove Duplicates II (4 phút) ────────────
+
+  👤 "What about allowing each element to appear at most twice?"
+
+  🧑 "That's LeetCode 80 — Remove Duplicates II.
+
+      The trick: instead of comparing nums at fast with
+      nums at slow, I compare nums at fast with
+      nums at slow minus 1.
+
+      Why? If nums at fast equals nums at slow minus 1,
+      that means there are already TWO copies of this value
+      in the unique zone. A third would violate the constraint.
+
+      If nums at fast differs from nums at slow minus 1,
+      there's room for another copy.
+
+      For [1, 1, 1, 2, 2, 3]:
+      Slow at 0 (value 1), slow at 1 (value 1).
+      fast equals 2: nums at 2 equals 1 equals nums at slow minus 1.
+      Already two 1s. Skip.
+      fast equals 3: nums at 3 equals 2 differs from nums at 0 equals 1.
+      Write. And so on.
+
+      Result: [1, 1, 2, 2, 3]. k equals 5.
+
+      Generalizing: for 'at most K occurrences,' compare
+      nums at fast with nums at slow minus K plus 1."
+
+  ──────────────── 53:00 — Sorted List version (3 phút) ────────────
+
+  👤 "What about the Linked List version?"
+
+  🧑 "LeetCode 83 — Remove Duplicates from Sorted List.
+
+      Same logic, different data structure.
+      Instead of two index pointers, I use node pointers.
+
+      current equals head.
+      While current AND current dot next:
+      If current dot val equals current dot next dot val:
+      current dot next equals current dot next dot next.
+      (Skip the duplicate node.)
+      Else: current equals current dot next.
+
+      The key difference: in an array, I copy values.
+      In a linked list, I rewire pointers.
+      Rewiring is O of 1 — no shifting needed.
+
+      Both are O of n time, O of 1 space."
+
+  ──────────────── 56:00 — Stability and order preservation (4 phút)
+
+  👤 "Does this maintain the relative order of elements?"
+
+  🧑 "Yes! The algorithm is STABLE.
+
+      I only copy elements FORWARD — from higher index
+      to lower index. I never swap or reorder.
+      The unique elements appear in the result array
+      in the SAME ORDER as their FIRST OCCURRENCE
+      in the original.
+
+      For sorted input, that means the uniques remain sorted.
+
+      This stability is important for the problem's requirement
+      that 'the first k elements should contain the unique
+      elements in the original order.'
+
+      Contrast with a hash set approach on unsorted data:
+      Set preserves insertion order in JavaScript,
+      but not in all languages. The two-pointer approach
+      is inherently stable and language-agnostic."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Remove Element (#27) (3 phút) ────────────
+
+  👤 "How about removing all occurrences of a value?"
+
+  🧑 "LeetCode 27 — Remove Element.
+
+      Same two-pointer template. The filter condition
+      is: nums at fast not equal val.
+
+      When fast finds a value that's NOT the target,
+      copy it to slow and advance slow.
+      Skip all occurrences of val.
+
+      Works on UNSORTED arrays too — no sorting required.
+      Order preservation isn't guaranteed for elements
+      after position slow, but the first slow elements
+      are all non-val values.
+
+      Time: O of n. Space: O of 1.
+      Identical pattern, different filter."
+
+  ──────────────── 63:00 — Move Zeros (#283) (3 phút) ────────────
+
+  👤 "And Move Zeros to End?"
+
+  🧑 "LeetCode 283. Two variants:
+
+      Variant 1 — Overwrite + fill:
+      Use the reader-writer pattern to copy all non-zeros
+      to the front. Then fill remaining positions with 0.
+
+      Variant 2 — Swap:
+      When fast finds a non-zero, swap with slow position.
+      This preserves zeros — they naturally migrate to the end.
+
+      The swap variant is better for this problem because
+      it maintains the relative order of non-zero elements
+      AND places zeros at the end in one pass.
+
+      All three — Remove Duplicates, Remove Element,
+      Move Zeros — are the SAME algorithm with different
+      filter conditions."
+
+  ──────────────── 66:00 — Unsorted dedup (4 phút) ────────────────
+
+  👤 "What if the array is unsorted and I need unique values?"
+
+  🧑 "Two options:
+
+      Option 1: Sort first, then use two pointers.
+      O of n log n time, O of 1 space.
+      But sorting changes the order!
+
+      Option 2: Use a hash set.
+      O of n time, O of n space.
+      Preserves the order of first occurrences.
+
+      In JavaScript: spread new Set of arr.
+      One line. But uses O of n extra space.
+
+      For interview: if asked for in-place and order
+      doesn't matter, I'd sort first.
+      If order matters, I'd use a set.
+
+      The key insight: the sorted constraint in our problem
+      converts an O of n space problem into O of 1 space.
+      Sorting is the 'preprocessing' that enables this."
+
+  ──────────────── 70:00 — Stream deduplication (5 phút) ────────────
+
+  👤 "What if elements arrive as a sorted stream?"
+
+  🧑 "Perfect use case! I maintain the last unique value seen.
+
+      When a new element arrives:
+      If it equals the last unique — skip (duplicate).
+      If it differs — emit it and update last unique.
+
+      O of 1 time per element, O of 1 space.
+      This is a STREAMING version of our algorithm.
+
+      In practice, this is used for:
+      Log deduplication — consecutive identical log entries.
+      Sensor readings — sampling that produces duplicates.
+      Database change streams — deduplicate consecutive
+      identical rows.
+
+      The key: our two-pointer algorithm naturally
+      translates to a streaming filter because it only
+      needs the LAST unique value as state —
+      not the entire history."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does this pattern appear in production?"
+
+  🧑 "Everywhere!
+
+      First — LOG COMPACTION in Kafka.
+      Kafka retains only the latest value for each key.
+      The compaction process is essentially 'remove duplicates'
+      on a sorted-by-key log.
+
+      Second — DATABASE INDEX MAINTENANCE.
+      When building a sorted index, duplicate key entries
+      are compacted using this exact reader-writer pattern.
+      The unique entries become the index nodes.
+
+      Third — SEARCH ENGINE RESULT DEDUP.
+      After retrieving sorted document IDs from multiple
+      shards, duplicates from overlapping shards are removed
+      using a merge-and-dedup step — same two-pointer logic.
+
+      Fourth — TIME SERIES COMPRESSION.
+      Consecutive identical readings in IoT sensors
+      are compressed by keeping only unique transitions.
+      This is run-length encoding's companion:
+      instead of storing (value, count), just store
+      the unique values."
+
+  ──────────────── 80:00 — Parallel deduplication (5 phút) ────────
+
+  👤 "Can this be parallelized?"
+
+  🧑 "The sequential two-pointer approach is inherently
+      serial — each decision depends on the previous unique.
+
+      But for LARGE sorted arrays, I can parallelize:
+
+      Step 1: Divide the array into P chunks.
+      Step 2: Each processor deduplicates its chunk independently.
+      Step 3: MERGE the chunks. At chunk boundaries,
+      check if the last element of chunk i equals
+      the first element of chunk i plus 1.
+      If so, remove the duplicate at the boundary.
+
+      The merge step is O of P — very small.
+      Each chunk dedup is O of n over P.
+      Total: O of n over P plus P — effectively O of n over P.
+
+      In MapReduce terms:
+      Map: deduplicate each partition.
+      Reduce: merge adjacent partitions, handling boundaries.
+
+      The key insight: deduplication is 'embarrassingly
+      parallel' for sorted data because duplicates are LOCAL."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, READER-WRITER two pointers as a template.
+      One pointer scans (reads), the other places (writes).
+      The write condition is the ONLY thing that changes
+      between Remove Duplicates, Remove Element,
+      and Move Zeros. Master the template, solve the family.
+
+      Second, SORTED enables O of 1 space.
+      Without sorting, I'd need a hash set.
+      The sorted constraint clusters duplicates,
+      making adjacency comparison sufficient.
+      This is a general principle: structure in the data
+      reduces the space needed.
+
+      Third, the OUTPUT matters more than the process.
+      The problem says 'the first k elements.'
+      What's beyond k doesn't matter.
+      This relaxation is what allows in-place modification
+      without preserving everything."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — this is a gateway problem to the two-pointer
+      family. Do you use it early in your interview loop,
+      or as a warm-up before harder two-pointer problems
+      like Container With Water?
+
+      Second — the reader-writer pattern maps directly
+      to stream processing. Do your data pipelines use
+      a similar dedup step for sorted event streams?
+
+      Third — Remove Duplicates II allows at most 2
+      occurrences. Is that a common follow-up in your
+      interviews? It tests whether candidates can
+      generalize the pattern."
+
+  👤 "Excellent progression! The bookshelf analogy was
+      crystal clear, and connecting to Move Zeros and
+      Remove Element showed real pattern thinking.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Remove Dups)       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: State the key insight immediately
+     ✅ "Since the array is sorted, duplicates are adjacent.
+         I only need to compare consecutive elements.
+         No hash set needed."
+
+  📌 MẸO #2: Name the pattern
+     ✅ "This is the reader-writer two-pointer pattern.
+         Slow writes, fast reads. Same family as
+         Remove Element and Move Zeros."
+
+  📌 MẸO #3: Use the bookshelf analogy
+     ✅ "Left hand marks the last accepted unique book.
+         Right hand scans forward. When it finds a new title,
+         slide it next to the last accepted one."
+
+  📌 MẸO #4: Explain slow plus 1
+     ✅ "Slow is a 0-based index pointing to the last unique.
+         The COUNT is always index plus 1.
+         This is the classic off-by-one to watch for."
+
+  📌 MẸO #5: Count the writes, not the comparisons
+     ✅ "I compare n minus 1 times, but only WRITE
+         k minus 1 times — once per unique value.
+         Very efficient for arrays with many duplicates."
+
+  📌 MẸO #6: Connect to the two-pointer family
+     ✅ "Same template as Remove Element and Move Zeros.
+         Only the filter condition changes.
+         Learn one, solve the entire family."
+
+  📌 MẸO #7: Explain why sorted enables O(1) space
+     ✅ "Sorting clusters duplicates adjacently.
+         I only need the LAST unique value — not a full
+         hash set — to detect duplicates."
+
+  📌 MẹO #8: Mention the streaming extension
+     ✅ "This algorithm translates directly to a streaming
+         dedup filter. I only need one variable — the last
+         unique value — as state. O of 1 per element."
+```
+
+---
+

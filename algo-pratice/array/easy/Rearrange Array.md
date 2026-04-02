@@ -776,64 +776,615 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
 ```
-  ──────────────── PHASE 1: Clarify ────────────────
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  👤 Interviewer: "Rearrange array so arr[i] = i.
-                   Values 0 to n-1, missing ones become -1."
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  🧑 You: "Let me clarify:
-   1. Values are in [0, n-1], each appears at most once.
-   2. Some values are missing — those positions get -1.
-   3. I need to place each value at its matching index.
-   4. Can I modify the array in-place?"
+  👤 "Tell me about yourself and a time you used
+      the 'value as index' pattern."
 
-  ──────────────── PHASE 2: Examples ────────────────
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I built a user registration system
+      where each user had a numeric ID from 0 to N minus 1.
+      We needed to check which IDs were assigned and which
+      were free — essentially an ID allocation table.
 
-  🧑 You: "Take [-1, -1, 6, 1, 9, 3, 2, -1, 4, -1].
-   Value 1 should go to index 1, value 6 to index 6, etc.
-   Values 0, 5, 7, 8 don't exist → those indices get -1.
-   Result: [-1, 1, 2, 3, 4, -1, 6, -1, -1, 9]."
+      Instead of using a hash map or boolean array,
+      I realized I could use the ID array itself as
+      the allocation table. If user ID 5 exists,
+      it should be stored at index 5 in the array.
+      Missing IDs get a sentinel value of minus 1.
 
-  ──────────────── PHASE 3: Approach ────────────────
+      The rearrangement was done by swapping each value
+      to its 'home' index. After one pass, the array
+      was its own allocation table — no extra space needed.
 
-  🧑 You: "Three approaches:
+      That's exactly this problem: rearrange so arr at i
+      equals i, or minus 1 if i is absent."
 
-   1. Brute force O(n²): for each i, search for i in array.
-   2. HashSet O(n)/O(n): collect values, then build result.
-   3. In-place swap O(n)/O(1): since each value IS its
-      target index, I can swap it directly to arr[value].
+  👤 "Nice real-world mapping. Let's solve it."
+```
 
-   I'll implement the swap approach. Key insight:
-   value v at index i means v should be at index v.
-   I swap arr[i] and arr[v] using a while loop until
-   arr[i] is either correct (= i) or empty (= -1).
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-   Each element swaps to its correct position at most once,
-   so total swaps ≤ n → amortized O(n)."
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
 
-  ──────────────── PHASE 4: Code + Verify ────────────────
+  👤 "Given an array of n elements with values 0 to n minus 1,
+      some replaced by minus 1. Rearrange so arr[i] = i.
+      If i is not present, arr[i] = -1."
 
-  🧑 You: [writes code, traces [2, 0, 1] example]
+  🧑 "Let me clarify.
 
-  "Important: I save correctPos = arr[i] before swapping
-   to avoid the JS destructuring left-to-right eval bug."
+      Values range from 0 to n minus 1.
+      Each value appears AT MOST once — no duplicates.
+      Some values are missing — replaced by minus 1.
+      Minus 1 is a placeholder meaning 'not present.'
 
-  ──────────────── PHASE 5: Follow-ups ────────────────
+      The key insight: each value KNOWS its target position!
+      Value 5 belongs at index 5. Value 0 belongs at index 0.
+      This is the 'value equals index' property.
+
+      I need to swap each value to its home position.
+      This is the CYCLIC SORT pattern."
+
+  ──────────────── 09:00 — The Classroom Analogy (3 phút) ────────
+
+  🧑 "I like to think of this as a CLASSROOM.
+
+      There are n desks numbered 0 to n minus 1.
+      Each student has a student ID equal to their desk number.
+      Student 3 must sit at desk 3. Student 7 at desk 7.
+
+      Some students are absent — their desks are empty,
+      marked as minus 1.
+
+      The input is the classroom in chaos — students
+      sitting at random desks. I need to send each student
+      to their correct desk.
+
+      I walk through each desk left to right.
+      If the student at desk i has ID v and v is not i,
+      I tell student v to GO TO desk v.
+      I swap the students at desk i and desk v.
+      The new student at desk i might also be at the wrong desk,
+      so I keep swapping until desk i has the right student
+      or is empty."
+
+  ──────────────── 12:00 — Approach 1: Brute Force (3 phút) ────────
+
+  🧑 "The brute force: for each index i, search the entire
+      array for value i.
+
+      If found, swap it to position i.
+      If not found, set arr at i to minus 1.
+
+      But this has a problem: setting arr at i to minus 1
+      might overwrite a value that needs to go elsewhere!
+      And searching takes O of n per index.
+
+      Time: O of n squared. And it's BUG-PRONE.
+      Not a good approach."
+
+  ──────────────── 15:00 — Approach 2: Hash Set (3 phút) ────────
+
+  🧑 "A safer approach: Hash Set.
+
+      Pass 1: collect all non-minus-1 values into a Set.
+      Pass 2: for each index i, check if set has i.
+      If yes, arr at i equals i. If no, arr at i equals minus 1.
+
+      This is O of n time, O of n space.
+      Dead simple, no bugs. But uses extra space."
+
+  ──────────────── 18:00 — Approach 3: In-place Swap (6 phút) ────────
+
+  🧑 "The optimal approach: CYCLIC SORT — swap in-place!
+
+      The key insight: value v at index i tells me
+      v should be at index v. I can swap arr at i
+      with arr at v directly.
+
+      I use a WHILE loop, not an IF.
+      After swapping, the new value at arr at i might
+      ALSO be misplaced. I keep swapping until
+      arr at i equals i — correct — or
+      arr at i equals minus 1 — empty.
+
+      Let me trace arr equals [minus 1, minus 1, 6, 1, 9, 3,
+      2, minus 1, 4, minus 1]:
+
+      i equals 0: arr at 0 equals minus 1. Skip.
+      i equals 1: arr at 1 equals minus 1. Skip.
+      i equals 2: arr at 2 equals 6. Not 2, not minus 1.
+      Swap arr at 2 with arr at 6.
+      Now arr at 6 equals 6 — correct! arr at 2 equals 2 — correct!
+      While loop stops.
+
+      i equals 3: arr at 3 equals 1. Not 3, not minus 1.
+      Swap arr at 3 with arr at 1.
+      Now arr at 1 equals 1 — correct! arr at 3 equals minus 1 — empty.
+      While loop stops.
+
+      Continuing this for all positions gives us
+      [minus 1, 1, 2, 3, 4, minus 1, 6, minus 1, minus 1, 9]."
+
+  ──────────────── 24:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code is clean.
+
+      [Vừa viết vừa nói:]
+
+      function rearrange of arr.
+      const n equal arr dot length.
+
+      for let i equal 0, i less than n, i plus plus:
+      while arr at i not equal minus 1 AND arr at i not equal i:
+      const correctPos equal arr at i.
+      Swap arr at i with arr at correctPos.
+
+      return arr.
+
+      Critical detail: I save correctPos BEFORE swapping.
+      In JavaScript, destructuring evaluates left to right.
+      If I wrote swap arr at i with arr at arr at i,
+      arr at i changes first, then arr at arr at i uses
+      the NEW value of arr at i — wrong index!"
+
+  ──────────────── 27:00 — Trace arr = [2, 0, 1] (3 phút) ────────
+
+  🧑 "Let me trace a swap chain.
+      arr equals [2, 0, 1].
+
+      i equals 0: arr at 0 equals 2. Not 0, not minus 1.
+      correctPos equals 2. Swap arr at 0 with arr at 2.
+      Array becomes [1, 0, 2].
+
+      arr at 0 is now 1. Not 0, not minus 1.
+      correctPos equals 1. Swap arr at 0 with arr at 1.
+      Array becomes [0, 1, 2].
+
+      arr at 0 is now 0. i equals 0. While stops.
+
+      i equals 1: arr at 1 equals 1. Already correct.
+      i equals 2: arr at 2 equals 2. Already correct.
+
+      Two swaps total. Both at i equals 0.
+      After that, everything is settled."
+
+  ──────────────── 30:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      Already correct: arr equals [0, 1, 2, 3].
+      Every arr at i equals i. No swaps needed.
+      The while loop body never executes.
+
+      All missing: arr equals [minus 1, minus 1, minus 1].
+      Every element is minus 1. While condition fails immediately.
+      Output is [minus 1, minus 1, minus 1].
+
+      Single element: arr equals [0]. Already correct.
+      arr equals [minus 1]. Missing. Output [minus 1].
+
+      All misplaced: arr equals [2, 0, 1].
+      Everything is wrong but everything exists.
+      A chain of swaps fixes it in 2 swaps."
+
+  ──────────────── 33:00 — Why O(n) despite while? (4 phút) ────────
+
+  👤 "You have a for loop with a while inside. Isn't that O(n²)?"
+
+  🧑 "Great question! This is the AMORTIZED argument.
+
+      Each element can be swapped to its correct position
+      AT MOST ONCE. Once arr at v equals v, it's settled
+      and never moves again.
+
+      The while loop at position i may execute multiple swaps,
+      but each swap settles one element permanently.
+      Total swaps across ALL iterations of the for loop
+      is at most n.
+
+      Think of it like a potential function:
+      Let phi equal the number of misplaced elements.
+      phi starts at most n. Each swap reduces phi by at least 1.
+      phi can't go below 0. So total swaps is at most n.
+
+      This is the same argument for monotonic stack being O of n
+      despite the while loop. The key invariant: each element
+      is processed at most twice — once when visited, once
+      when swapped to its final position."
+
+  ──────────────── 37:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n amortized. At most n swaps total.
+      The for loop iterates n times.
+      Total operations: at most 2n.
+
+      Space: O of 1. Only one temporary variable
+      for correctPos. Everything is in-place.
+
+      Compared to Hash Set:
+      Same time O of n, but O of n extra space for the Set.
+      In-place swap uses zero extra space."
+
+  ──────────────── 40:00 — JS destructuring trap (3 phút) ────────
+
+  👤 "Tell me about the JavaScript swapping bug."
+
+  🧑 "In JavaScript, destructuring assignment evaluates
+      the LEFT side targets from left to right.
+
+      If I write: bracket arr at i comma arr at bracket arr at i
+      close bracket equals bracket arr at bracket arr at i
+      comma arr at i close bracket —
+
+      The problem: arr at i on the LEFT gets assigned first.
+      Then arr at bracket arr at i uses the NEW value
+      of arr at i — pointing to the wrong index!
+
+      For example, arr equals [2, 0, 1], i equals 0.
+      Without saving correctPos:
+      arr at 0 gets 1 first (from arr at 2).
+      Then arr at bracket arr at 0 — arr at 0 is now 1 —
+      so arr at 1 gets 2. Wrong!
+
+      With correctPos saved first:
+      correctPos equals 2. arr at 0 gets arr at 2 equals 1.
+      arr at 2 gets old arr at 0 equals 2. Correct!
+
+      Always save the target index before destructuring."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Cyclic sort family (5 phút) ────────────
 
   👤 "How does this relate to cyclic sort?"
-  🧑 "This IS cyclic sort! Same pattern: values in [0,n-1]
-      mean value = target index. Swap to correct position.
-      Used in Find Missing Number, Find Duplicates, etc."
 
-  👤 "Why while, not if?"
-  🧑 "After one swap, the NEW value at arr[i] might also
-      be misplaced. The while continues until it's settled.
-      But total swaps still ≤ n — amortized O(n)."
+  🧑 "This IS cyclic sort — it's the CANONICAL example!
 
-  👤 "What if the range is [1, n] instead of [0, n-1]?"
-  🧑 "Same idea, just offset by 1: target position for
-      value v is arr[v-1] = v. Change correctPos = arr[i] - 1."
+      The pattern: when values are in range 0 to n minus 1
+      or 1 to n, each value KNOWS its correct index.
+      Value v belongs at index v — or index v minus 1
+      if 1-indexed.
+
+      I swap each value to its home. After one pass,
+      everything is in place. Any remaining anomaly
+      — a value that's NOT at its home — reveals
+      a missing or duplicate value.
+
+      The cyclic sort family:
+      This problem — Rearrange arr at i equals i.
+      Missing Number 268 — after cyclic sort, find which i
+      has arr at i not equal i.
+      Find Duplicate 287 — during cyclic sort, a collision
+      reveals the duplicate.
+      Find All Missing 448 — after cyclic sort, collect all i
+      where arr at i not equal i.
+      First Missing Positive 41 — cyclic sort values 1 to n only,
+      then scan for the first missing.
+
+      Learning THIS problem teaches the entire family."
+
+  ──────────────── 50:00 — What if range is [1, n]? (3 phút) ────────
+
+  👤 "What if values are 1 to n instead of 0 to n minus 1?"
+
+  🧑 "Simple offset! Value v should go to index v minus 1.
+
+      Change correctPos from arr at i to arr at i minus 1.
+      And the check becomes: arr at i not equal i plus 1.
+
+      For arr equals [3, 1, 2]:
+      i equals 0: arr at 0 equals 3. correctPos equals 2.
+      Swap arr at 0 with arr at 2. Array becomes [2, 1, 3].
+      arr at 0 equals 2. correctPos equals 1.
+      Swap arr at 0 with arr at 1. Array becomes [1, 2, 3].
+      arr at 0 equals 1 equals i plus 1. Done.
+
+      Same algorithm, same O of n, just offset by 1."
+
+  ──────────────── 53:00 — Duplicate handling (4 phút) ────────────
+
+  👤 "What if there could be duplicates?"
+
+  🧑 "With duplicates, the while loop could INFINITE LOOP!
+
+      If arr at i equals 5 and arr at 5 is already 5,
+      swapping would put 5 at arr at i — same value.
+      The while condition is still true. Infinite loop!
+
+      The fix: add a guard. Before swapping, check if
+      arr at correctPos already equals correctPos.
+      If yes, the target is already correct — this copy
+      of the value is a DUPLICATE. Set arr at i to minus 1
+      and break.
+
+      This extended version detects duplicates AS a side effect
+      of the placement process. Very useful for problems
+      like Find the Duplicate Number."
+
+  ──────────────── 57:00 — Hash Set vs In-place trade-off (3 phút) ──
+
+  👤 "When would you prefer Hash Set over in-place swap?"
+
+  🧑 "Hash Set when:
+      The array is READ-ONLY — can't modify it.
+      The values are NOT in a contiguous range — e.g.,
+      arbitrary strings or large sparse integers.
+      Simplicity matters more than space — in code reviews,
+      the Hash Set version is 5 lines and bug-free.
+
+      In-place swap when:
+      Space is critical — embedded systems, large arrays.
+      Values are in a known range 0 to n minus 1 —
+      this is the prerequisite for value-as-index.
+      Performance matters — swap is cache-friendly,
+      Hash Set has overhead from hashing and collisions.
+
+      In interviews, I present Hash Set first for correctness,
+      then optimize to in-place swap for the 'wow' factor."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — First Missing Positive (#41) (4 phút) ──
+
+  👤 "How would you find the first missing positive?"
+
+  🧑 "LeetCode 41 — a HARD problem, but same core idea!
+
+      I only care about values 1 to n.
+      Values outside this range — negatives, zeros,
+      values greater than n — are irrelevant.
+
+      Step 1: Cyclic sort only positive values 1 to n.
+      Value v goes to index v minus 1.
+      Ignore out-of-range values.
+
+      Step 2: Scan the array. The first index i where
+      arr at i is not equal to i plus 1
+      means i plus 1 is the first missing positive.
+
+      If all positions are correct, the answer is n plus 1.
+
+      Time: O of n. Space: O of 1.
+      The cyclic sort makes this solvable in-place!"
+
+  ──────────────── 64:00 — Find All Missing (#448) (3 phút) ────────
+
+  👤 "What about finding ALL missing numbers?"
+
+  🧑 "After cyclic sort, scan the array.
+      Every index i where arr at i is not equal i
+      (or i plus 1 for 1-indexed) is a missing number.
+
+      Collect all such i values into a result array.
+      Time: O of n. Space: O of 1 extra.
+
+      This is beautiful — one cyclic sort pass,
+      then one scan pass. The array becomes a BITMAP
+      of which values are present."
+
+  ──────────────── 67:00 — Set Mismatch (#645) (4 phút) ────────────
+
+  👤 "And Find the Number that occurs twice and is missing?"
+
+  🧑 "That's LeetCode 645 — Set Mismatch.
+
+      Array of n elements, values 1 to n.
+      One value appears TWICE, one is MISSING.
+
+      After cyclic sort, the one position i where
+      arr at i is not equal i plus 1 tells me both:
+      i plus 1 is the MISSING number.
+      arr at i is the DUPLICATE — it's the value
+      sitting at the wrong position.
+
+      Same O of n, O of 1 approach.
+      All these problems are just different QUERIES
+      on the result of cyclic sort."
+
+  ──────────────── 71:00 — Negative values and sentinels (4 phút) ──
+
+  👤 "Why use minus 1 as the sentinel?"
+
+  🧑 "Because the valid values are 0 to n minus 1 —
+      all non-negative. Minus 1 is outside this range,
+      so it can't be confused with a valid value.
+
+      It also serves as a natural STOP signal for the while loop.
+      When arr at i equals minus 1, I know the position
+      is 'empty' — no further swapping is possible.
+
+      If the problem used a different range — say 1 to n —
+      I might use 0 as the sentinel instead.
+      The sentinel must be a value OUTSIDE the valid range.
+
+      In practice, you could also use n as a sentinel,
+      or null in languages that support it."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does this pattern appear in practice?"
+
+  🧑 "Several important domains!
+
+      First — PROCESS ID ALLOCATION.
+      Operating systems assign PIDs from 0 to MAX_PID.
+      Finding the next free PID is 'first missing positive.'
+      A bitmap array where arr at i equals i means
+      PID i is in use.
+
+      Second — DATABASE AUTO-INCREMENT RECOVERY.
+      After deletions, auto-increment IDs have gaps.
+      To compact IDs — reassign so there are no gaps —
+      cyclic sort places each record at its ID position.
+
+      Third — MEMORY ALLOCATION.
+      Free-list managers track which memory blocks are
+      allocated. Block i being at position i means it's
+      in use. Minus 1 means freed.
+
+      Fourth — DEDUPLICATION PIPELINES.
+      In data engineering, detecting duplicate records
+      with sequential IDs uses exactly this pattern:
+      place each record at its ID index, detect collisions."
+
+  ──────────────── 80:00 — Distributed cyclic sort (5 phút) ────────
+
+  👤 "Can this scale to distributed systems?"
+
+  🧑 "In a distributed setting, the values are partitioned
+      across machines by range.
+
+      Machine 0 handles IDs 0 to k minus 1.
+      Machine 1 handles IDs k to 2k minus 1.
+
+      Each machine receives values that belong to it
+      via a SHUFFLE step — routing each value v to the
+      machine responsible for index v.
+
+      After shuffling, each machine independently performs
+      cyclic sort on its local partition.
+
+      This is essentially a distributed RADIX-BASED
+      placement. Communication cost: O of n total messages.
+      Local sort: O of n over P per machine.
+
+      The key insight: the value-as-index property
+      provides a NATURAL partitioning scheme.
+      No hash function needed — the value IS the address."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, VALUE AS INDEX — the fundamental insight.
+      When values are in range 0 to n minus 1, the value
+      itself tells me WHERE it belongs. No searching,
+      no hashing — just direct placement.
+
+      Second, CYCLIC SORT as a family of problems.
+      This single technique — swap to correct position —
+      solves Rearrange, Missing Number, Find Duplicate,
+      Find All Missing, First Missing Positive, and
+      Set Mismatch. Learn one, solve six.
+
+      Third, AMORTIZED ANALYSIS for nested loops.
+      The for-with-while pattern looks O of n squared
+      but is actually O of n because each element
+      moves at most once. This is the same argument
+      for monotonic stack, two-pointer, and sliding window."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — the JS destructuring evaluation order
+      is a subtle bug source. Does your team have
+      linting rules or style guides that catch this?
+
+      Second — the cyclic sort pattern requires
+      a contiguous range. In your databases, do IDs
+      typically have this property, or are they sparse?
+
+      Third — this is a gateway problem to First Missing
+      Positive, which is a common Hard interview question.
+      Do you use it in your interview pipeline?"
+
+  👤 "Great questions! Your classroom analogy made the
+      swap logic intuitive, and the amortized analysis
+      showed you understand complexity deeply.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Rearrange arr=i)   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: State the core insight
+     ✅ "Each value KNOWS its home — value v belongs at index v.
+         I just swap each value to its home position."
+
+  📌 MẸO #2: Use the classroom analogy
+     ✅ "Students with ID numbers sitting at random desks.
+         I walk through each desk and send each student
+         to their correct desk by swapping."
+
+  📌 MẸO #3: Explain while vs if
+     ✅ "After one swap, the NEW value at position i might
+         also be misplaced. The while loop keeps swapping
+         until position i is settled — correct or empty."
+
+  📌 MẸO #4: Present 3 approaches as escalation
+     ✅ "Brute force O of n squared — search for each value.
+         Hash Set O of n, O of n — safe and simple.
+         In-place swap O of n, O of 1 — optimal."
+
+  📌 MẸO #5: Address the O(n) question proactively
+     ✅ "Each element swaps to its home AT MOST ONCE.
+         Total swaps across all for-loop iterations is at most n.
+         Amortized O of n — same as monotonic stack."
+
+  📌 MẸO #6: Flag the JS destructuring bug
+     ✅ "Always save correctPos equals arr at i BEFORE
+         the destructuring swap. Left-to-right evaluation
+         would use the wrong index otherwise."
+
+  📌 MẸO #7: Connect to the cyclic sort family
+     ✅ "This is cyclic sort. Same pattern solves Missing Number,
+         Find Duplicate, First Missing Positive.
+         Learn one, solve the whole family."
+
+  📌 MẸO #8: Explain minus 1 as sentinel
+     ✅ "Minus 1 means 'empty seat.' It stops the while loop
+         because there's nothing to swap. The sentinel must
+         be outside the valid range 0 to n minus 1."
 ```
 
 ---

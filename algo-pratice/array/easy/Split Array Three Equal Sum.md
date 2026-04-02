@@ -759,67 +759,660 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
 ```
-  ──────────────── PHASE 1: Clarify ────────────────
-
-  👤 Interviewer: "Split array into 3 contiguous parts
-                   with equal sum."
-
-  🧑 You: "Let me clarify:
-   1. Three contiguous, non-empty subarrays.
-   2. Each must have the same sum.
-   3. Return the split indices [i, j].
-   4. Values can be negative?"
-
-  ──────────────── PHASE 2: Examples ────────────────
-
-  🧑 You: "arr = [1, 3, 4, 0, 4], total = 12.
-   Each segment must sum to 12/3 = 4.
-   [1,3] = 4, [4] = 4, [0,4] = 4 → [1, 2]."
-
-  ──────────────── PHASE 3: Approach ────────────────
-
-  🧑 You: "Key observations:
-
-   1. If total isn't divisible by 3, impossible immediately.
-   2. Each segment must sum to target = total/3.
-   3. I scan left-to-right to find the first index i where
-      the prefix sum equals target. That's the end of segment 1.
-   4. Then I continue scanning from i+1 to find where the
-      next segment also sums to target. That gives me j.
-   5. The third segment automatically sums to target since
-      total - 2*target = target.
-
-   O(n) time, O(1) space."
-
-  ──────────────── PHASE 4: Code + Verify ────────────────
-
-  🧑 You: [writes code]
-
-  "Key boundaries:
-   - i goes up to n-3 (leave room for segments 2 and 3)
-   - j goes up to n-2 (leave room for segment 3)
-   - I take the FIRST match for i — greedy to maximize
-     space for the remaining segments."
-
-  ──────────────── PHASE 5: Follow-ups ────────────────
-
-  👤 "What if we need k equal parts instead of 3?"
-  🧑 "Generalize: check total % k == 0, target = total/k,
-      then scan for k-1 split points where the running sum
-      hits multiples of target. Same O(n) time."
-
-  👤 "What if segments don't need to be contiguous?"
-  🧑 "That's the subset sum / partition problem — NP-hard
-      in general! For 2 subsets, it's LeetCode #416 which
-      needs DP. Very different from this greedy approach."
-
-  👤 "Does the first split always work?"
-  🧑 "Yes! Since segment 2+3 together sum to 2*target,
-      and we know there exists a valid split within them,
-      the greedy first-match for i guarantees we can
-      find a valid j."
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
 ```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Tell me about yourself and a time you dealt
+      with data partitioning or load balancing."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I worked on a video processing
+      pipeline that needed to split large video files
+      into three equal-duration segments for parallel
+      transcoding across three worker nodes.
+
+      The challenge: each segment had variable-size frames.
+      I needed to find two cut points where the total
+      frame sizes in each segment were roughly equal.
+
+      I computed the total size, divided by 3 for the target,
+      then scanned with a running sum to find the first
+      cut point where the prefix sum hit the target,
+      then found the second cut point the same way.
+
+      That's essentially this problem — splitting an array
+      into three contiguous parts with equal sum."
+
+  👤 "Nice practical connection. Let's formalize."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
+
+  👤 "Split an array into three contiguous parts
+      with equal sum."
+
+  🧑 "Let me clarify.
+
+      Three CONTIGUOUS, NON-EMPTY subarrays.
+      arr[0..i], arr[i+1..j], arr[j+1..n-1].
+      Each must have the same sum.
+
+      Return the split indices [i, j].
+      If impossible, return [-1, -1].
+
+      Values can be negative or zero.
+      If multiple valid splits exist, return any one.
+
+      Edge case: n less than 3 means at least one segment
+      would be empty — impossible."
+
+  ──────────────── 09:00 — Rope Cutting Analogy (3 phút) ────────
+
+  🧑 "I think of this as CUTTING A ROPE into 3 equal pieces.
+
+      The array is a rope. Each element is a segment
+      of rope with a certain length — which can be
+      negative, like a debt.
+
+      I measure the total length: total.
+      Each piece must be total divided by 3.
+
+      First observation: if total is not divisible by 3,
+      it's IMPOSSIBLE. No matter where I cut,
+      three equal pieces can't exist.
+
+      This is my EARLY EXIT — one modulo check
+      eliminates roughly two-thirds of all inputs."
+
+  ──────────────── 12:00 — Early Exit (2 phút) ────────────────
+
+  🧑 "The first thing I do: compute total and check
+      total mod 3.
+
+      If total mod 3 is not 0: return [-1, -1] immediately.
+
+      This is a necessary condition.
+      seg1 plus seg2 plus seg3 equals total.
+      If all three equal target: 3 times target equals total.
+      So target equals total divided by 3.
+      If total isn't divisible by 3, target isn't an integer,
+      and integer sums can never match.
+
+      One modulo operation. O of 1. Eliminates most cases."
+
+  ──────────────── 14:00 — Prefix Sum Approach (6 phút) ────────
+
+  🧑 "Now the key insight: I only need to find TWO
+      split points — not three segments.
+
+      The third segment is AUTOMATIC.
+      If seg1 equals target and seg2 equals target,
+      then seg3 equals total minus 2 times target
+      equals total minus 2 times total over 3
+      equals total over 3 equals target.
+
+      So my algorithm:
+      Step 1: Compute total. Check total mod 3.
+      Step 2: target equals total over 3.
+      Step 3: Scan left to right with a running sum.
+      When the running sum equals target, that's the end
+      of segment 1. Record firstEnd equals i.
+      Step 4: Reset the running sum. Continue scanning
+      from firstEnd plus 1. When the new running sum
+      equals target, that's the end of segment 2.
+      Return [firstEnd, j].
+
+      Let me trace with [1, 3, 4, 0, 4]:
+      Total equals 12. Target equals 4.
+
+      Pass 1: sum equals 0.
+      i equals 0: sum equals 1. Not 4.
+      i equals 1: sum equals 4. MATCH! firstEnd equals 1.
+
+      Pass 2: sum equals 0.
+      j equals 2: sum equals 4. MATCH!
+      Return [1, 2].
+
+      Verify:
+      [1, 3] equals 4. [4] equals 4. [0, 4] equals 4. All target!"
+
+  ──────────────── 20:00 — Boundary Analysis (4 phút) ────────────
+
+  👤 "Why do you stop i at n minus 3?"
+
+  🧑 "Critical boundary constraints!
+
+      Each segment must be NON-EMPTY.
+      Segment 1: arr[0..i] — at least 1 element.
+      Segment 2: arr[i+1..j] — at least 1 element.
+      Segment 3: arr[j+1..n-1] — at least 1 element.
+
+      For segment 3 to have at least 1 element:
+      j plus 1 is at most n minus 1, so j is at most n minus 2.
+
+      For segment 2 to have at least 1 element:
+      i plus 1 is at most j, meaning i is at most j minus 1.
+      Since j is at most n minus 2, i is at most n minus 3.
+
+      So: i ranges from 0 to n minus 3.
+      j ranges from i plus 1 to n minus 2.
+
+      If I let i go up to n minus 1, segment 2 and 3
+      would be empty — violating the non-empty constraint."
+
+  ──────────────── 24:00 — Why FIRST match? (3 phút) ────────────
+
+  👤 "Why take the first match for i?"
+
+  🧑 "Greedy: the first match gives the SHORTEST segment 1.
+      This leaves the MOST elements for segments 2 and 3.
+
+      Since segments 2 and 3 together must sum to
+      2 times target, and they need to be split into
+      two segments each equaling target, an earlier
+      first split gives the second pass more room to find j.
+
+      In fact, ANY valid firstEnd works because:
+      segments 2 plus 3 equals total minus target
+      equals 2 times target. Within any range summing
+      to 2 times target that starts with a valid prefix,
+      we can always find a cut at target.
+
+      But first match is the simplest greedy strategy
+      and eliminates the need for backtracking."
+
+  ──────────────── 27:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code.
+
+      [Vừa viết vừa nói:]
+
+      function splitArray of arr.
+      const total equals arr dot reduce sum.
+      if total mod 3 not equals 0: return [-1, -1].
+
+      const target equals total over 3.
+      let sum equals 0, firstEnd equals -1.
+
+      Pass 1: for i from 0 to arr dot length minus 3.
+      sum plus-equals arr at i.
+      if sum equals target and firstEnd equals -1:
+      firstEnd equals i.
+
+      if firstEnd equals -1: return [-1, -1].
+
+      Pass 2: sum equals 0.
+      for j from firstEnd plus 1 to arr dot length minus 2.
+      sum plus-equals arr at j.
+      if sum equals target: return [firstEnd, j].
+
+      return [-1, -1]."
+
+  ──────────────── 30:00 — Why segment 3 is auto-correct (2 phút) ─
+
+  👤 "Why don't you verify segment 3?"
+
+  🧑 "Because it's MATHEMATICALLY guaranteed.
+
+      total equals seg1 plus seg2 plus seg3.
+      seg1 equals target, seg2 equals target.
+      seg3 equals total minus 2 times target
+      equals 3 times target minus 2 times target
+      equals target.
+
+      Checking segment 3 would be REDUNDANT.
+      It adds code, adds a potential bug source,
+      and wastes a pass through the data.
+      The proof is watertight."
+
+  ──────────────── 32:00 — Edge Cases (4 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      n less than 3: return [-1, -1] immediately.
+      Can't form 3 non-empty segments.
+
+      All zeros [0, 0, 0, 0]: total equals 0, target equals 0.
+      First match at i equals 0, then j equals 1.
+      Return [0, 1]. Each segment sums to 0.
+
+      Negative numbers [1, -1, 1, -1, 1, -1]:
+      total equals 0, target equals 0.
+      prefix sum: 1, 0, 1, 0, 1, 0.
+      First 0 at i equals 1. Second 0 at j equals 3.
+      Return [1, 3]. Correct!
+
+      total mod 3 equals 0 but no valid split:
+      arr equals [1, 2, 3], total equals 6, target equals 2.
+      prefix: 1, 3 — neither equals 2.
+      firstEnd equals -1. Return [-1, -1].
+
+      Minimum case [3, 3, 3]: firstEnd equals 0, j equals 1."
+
+  ──────────────── 36:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n.
+      Pass 0: n additions for total.
+      Pass 1: at most n minus 2 additions for firstEnd.
+      Pass 2: at most n minus 2 additions for j.
+      Total: at most 3n operations.
+
+      Space: O of 1.
+      Two variables: sum and firstEnd.
+      No auxiliary arrays needed.
+
+      The early exit on total mod 3 eliminates
+      roughly two-thirds of random inputs in O of 1.
+
+      Is this optimal? Yes.
+      I must look at every element to compute the total.
+      Omega of n is the lower bound."
+
+  ──────────────── 39:00 — Alternative: Count of target hits (4 phút)
+
+  👤 "Is there another way to solve this?"
+
+  🧑 "Yes! A single-pass approach.
+
+      Compute total and target equals total over 3.
+      Scan with a running prefix sum.
+      Count how many times the prefix sum equals target.
+
+      When the prefix sum equals 2 times target
+      AND the count of 'target hits' is at least 1
+      AND we're not at the last element:
+      A valid split exists!
+
+      The target hit before the current position
+      is the first split. The current position is
+      the second split.
+
+      This avoids the two-pass pattern but is harder
+      to extract the actual split indices.
+      For a boolean 'does a split exist?' answer,
+      it's elegant."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Correctness proof (5 phút) ────────────
+
+  👤 "Can you prove the algorithm is complete —
+      that it finds a split whenever one exists?"
+
+  🧑 "Completeness proof.
+
+      Suppose a valid split exists at indices i*, j*.
+      Then prefix sum at i* equals target.
+
+      My pass 1 finds firstEnd, the FIRST index where
+      prefix sum equals target. So firstEnd is at most i*.
+
+      Now segments 2 and 3 starting from firstEnd plus 1
+      together sum to total minus target equals 2 times target.
+
+      I need to show a valid j exists in the range
+      [firstEnd plus 1, n minus 2].
+
+      Consider the prefix sum from firstEnd plus 1.
+      At j equals n minus 2 (scanning all of seg2 plus most of seg3),
+      the running sum equals total minus target minus arr[n-1].
+      Not necessarily target.
+
+      But here's the key: since the original split at
+      [i*, j*] was valid, AND firstEnd is at most i*,
+      the remaining array from firstEnd plus 1 has
+      sum equals 2 times target. Within it, there's
+      a sub-prefix that sums to target — guaranteed
+      by the existence of the original valid j*.
+
+      If firstEnd equals i*: j equals j* works directly.
+      If firstEnd is less than i*: the remaining range
+      is LARGER, containing more elements.
+      Since prefix sum is monotonically accumulated
+      from the same values, a target-hit must exist. QED."
+
+  ──────────────── 50:00 — Floating point trap (3 phút) ────────────
+
+  👤 "What if the values are floating point?"
+
+  🧑 "With floating point values, the modulo check
+      breaks because floating point division isn't exact.
+
+      total divided by 3 might be 4.000000000001.
+      Comparing sum equals target would fail.
+
+      Solutions:
+      1. Use an EPSILON tolerance: abs(sum minus target)
+         less than epsilon.
+      2. Scale values to integers: multiply all by
+         a power of 10 to eliminate decimals.
+      3. Use exact arithmetic libraries like BigDecimal.
+
+      For integer-only inputs (typical in interviews),
+      this isn't an issue. But I'd mention it to show
+      awareness of numerical precision."
+
+  ──────────────── 53:00 — Contiguous vs non-contiguous (4 phút) ──
+
+  👤 "What if the segments don't need to be contiguous?"
+
+  🧑 "That changes the problem DRAMATICALLY!
+
+      Non-contiguous partition into 2 equal subsets:
+      LeetCode 416 — Partition Equal Subset Sum.
+      This is a SUBSET SUM problem, which is NP-hard
+      in general. The DP solution is O of n times target.
+
+      Non-contiguous into k equal subsets:
+      LeetCode 698 — Partition to K Equal Sum Subsets.
+      This requires backtracking — exponential time.
+
+      The word 'contiguous' is the KEY difference.
+      Contiguous means prefix sum, which gives us O of n.
+      Non-contiguous means subset selection, which is NP-hard.
+
+      In interviews, always clarify: 'Are the segments
+      contiguous subarrays or arbitrary subsets?'
+      The answer changes the approach entirely."
+
+  ──────────────── 57:00 — Multiple valid splits (3 phút) ────────
+
+  👤 "What if you need ALL valid splits?"
+
+  🧑 "I'd modify the approach.
+
+      Pass 1: find ALL indices where prefix sum equals target.
+      Store them in a list: candidates for firstEnd.
+
+      For each candidate firstEnd:
+      Pass 2: find ALL indices j where the middle segment
+      sums to target.
+
+      Total valid splits: the count of all valid (i, j) pairs.
+
+      Time: O of n squared in the worst case
+      (every position is a valid split for target equals 0).
+
+      For just COUNTING valid splits with target equals 0:
+      I can use a prefix sum and count pairs where
+      prefix at i equals target AND prefix at j equals
+      2 times target. O of n with combinatorics."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Generalize to k parts (4 phút) ────────
+
+  👤 "What about k equal parts instead of 3?"
+
+  🧑 "Same pattern! Check total mod k. target equals total
+      over k. Find k minus 1 split points.
+
+      Scan with a running sum. Each time the sum hits
+      a multiple of target, record a split point and
+      reset the sum.
+
+      function splitKEqual of arr, k:
+      check total mod k. target equals total over k.
+      splits array. running sum.
+      for each element: sum plus equals element.
+      if sum equals target and splits length less than k minus 1:
+      push i to splits. reset sum.
+      return splits of length k minus 1.
+
+      Time: O of n. Space: O of k.
+      The two-pass approach for k equals 3 is just
+      a specialization of this general template."
+
+  ──────────────── 64:00 — Minimum difference split (4 phút) ────────
+
+  👤 "What if equal split isn't possible and you want
+      to MINIMIZE the difference between segments?"
+
+  🧑 "That's a harder optimization problem.
+
+      For 2 segments: find the split point i that minimizes
+      abs(prefix at i minus (total minus prefix at i)).
+      Scan linearly, track the minimum. O of n.
+
+      For 3 segments: I need to try all possible first splits
+      and for each, find the best second split.
+      With prefix sums precomputed, this is O of n squared.
+
+      For k segments: this becomes a DP problem.
+      dp at (k, i) equals the minimum max-segment-sum
+      when splitting the first i elements into k parts.
+      Binary search optimization gives O of n log(sum))."
+
+  ──────────────── 68:00 — LeetCode #1013 connection (3 phút) ────
+
+  👤 "How does this relate to LeetCode 1013?"
+
+  🧑 "LeetCode 1013 — Partition Array Into Three Parts
+      With Equal Sum. It's EXACTLY this problem!
+
+      The only difference: 1013 returns true/false,
+      not the split indices. So the single-pass
+      counting approach works well:
+
+      Count positions where prefix sum equals target.
+      If we reach a position where prefix sum equals
+      2 times target and count is at least 1,
+      return true.
+
+      Same O of n, O of 1 approach."
+
+  ──────────────── 71:00 — Split with equal average (4 phút) ────────
+
+  👤 "What about splitting so each part has the same AVERAGE?"
+
+  🧑 "Equal average is EQUIVALENT to equal sum
+      only when all parts have the same SIZE.
+
+      If sizes differ: average equals sum divided by size.
+      For two parts with sizes s1 and s2:
+      sum1 over s1 equals sum2 over s2.
+      This means sum1 times s2 equals sum2 times s1.
+
+      LeetCode 805 — Split Array With Same Average.
+      This is NP-hard in general! It reduces to subset sum.
+      The DP solution is O of n squared times sum.
+
+      Equal SUM with contiguous parts: O of n (our problem).
+      Equal AVERAGE with any partition: NP-hard.
+      Again, 'contiguous' and 'sum' are the key simplifiers."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does this pattern appear in real systems?"
+
+  🧑 "Several important domains!
+
+      First — LOAD BALANCING across servers.
+      Given a sequence of tasks with varying costs,
+      split them into k contiguous batches for k workers.
+      Each batch should have roughly equal total cost.
+      This is exactly our k-way split problem.
+
+      Second — VIDEO TRANSCODING pipelines.
+      Split a video into segments for parallel processing.
+      Each segment should have roughly equal total frame size.
+      The prefix sum approach finds optimal cut points.
+
+      Third — DATA SHARDING in databases.
+      When range-partitioning a sorted dataset across nodes,
+      we want each shard to hold roughly equal data.
+      The prefix sum of row sizes determines shard boundaries.
+
+      Fourth — PARAGRAPH SPLITTING in text rendering.
+      Split text into columns of equal height.
+      Each character's height contributes to the prefix sum.
+      Finding cut points that equalize column heights
+      is the same algorithm."
+
+  ──────────────── 80:00 — Streaming variant (5 phút) ────────────
+
+  👤 "Can you split a stream into k equal parts?"
+
+  🧑 "For a stream, we don't know the total upfront.
+
+      Option 1: Two-pass. First pass computes total.
+      Second pass finds split points.
+      Requires storing or re-reading the entire stream.
+
+      Option 2: Sampling. Estimate total from a sample.
+      Compute approximate target. Split greedily.
+      May not be exact but works for load balancing.
+
+      Option 3: Dynamic rebalancing.
+      Split greedily with an estimated target.
+      After processing, if splits are uneven,
+      rebalance by moving elements between segments.
+
+      In practice, distributed systems use Option 3.
+      Initial split is approximate, then a background
+      rebalancing job evens out the shards.
+      This is how Kafka partition rebalancing works."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, the EARLY EXIT pattern.
+      One modulo check eliminates most inputs instantly.
+      This generalizes: whenever a problem requires
+      dividing something into k equal parts, check
+      divisibility FIRST before doing any work.
+
+      Second, the 'LAST SEGMENT IS FREE' insight.
+      If the first k minus 1 segments are correct,
+      the last is guaranteed by subtraction.
+      This reduces k checks to k minus 1 —
+      fewer passes, fewer bugs, cleaner code.
+
+      Third, CONTIGUOUS vs NON-CONTIGUOUS
+      is a defining constraint.
+      Contiguous gives prefix sum and O of n.
+      Non-contiguous gives subset sum and NP-hardness.
+      Always clarify this in interviews — it changes
+      the entire approach."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — in your data infrastructure, how do you
+      handle shard rebalancing? Is it based on prefix sums
+      of key distributions, or hash-based partitioning?
+
+      Second — the contiguous vs non-contiguous distinction
+      reminds me of scheduling theory. Do your systems
+      use contiguous task batching for locality benefits?
+
+      Third — the early exit via modulo check is elegant.
+      Do you value these kinds of mathematical pruning
+      techniques in your codebase, or do you prefer
+      more general-purpose solutions?"
+
+  👤 "Excellent! The 'last segment is free' observation
+      was the highlight — most candidates redundantly
+      verify all three segments. Your explanation of
+      contiguous versus non-contiguous complexity showed
+      genuine CS depth. We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Split 3 Equal)    ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Lead with the early exit
+     ✅ "First check: total mod 3.
+         If not divisible, return impossible immediately.
+         One modulo check eliminates most inputs."
+
+  📌 MẸO #2: State the target clearly
+     ✅ "Each segment must sum to total divided by 3.
+         I need TWO split points — not three checks."
+
+  📌 MẸO #3: Explain why segment 3 is free
+     ✅ "If seg1 and seg2 both equal target,
+         seg3 equals total minus 2 times target
+         which equals target. No verification needed."
+
+  📌 MẸO #4: Emphasize boundary constraints
+     ✅ "i goes up to n minus 3 — leave room for
+         segments 2 and 3, each at least 1 element.
+         j goes up to n minus 2 — leave room for segment 3."
+
+  📌 MẸO #5: Justify the greedy first match
+     ✅ "I take the FIRST index where prefix sum equals target.
+         This gives the remaining segments maximum room.
+         Any valid first split works, but first is simplest."
+
+  📌 MẸO #6: Use the rope cutting analogy
+     ✅ "Cutting a rope into 3 equal pieces.
+         Measure total length, divide by 3,
+         cut at the first and second target marks."
+
+  📌 MẸO #7: Contrast contiguous vs non-contiguous
+     ✅ "Contiguous: prefix sum, O of n.
+         Non-contiguous: subset sum, NP-hard.
+         The word 'contiguous' is the key simplifier."
+
+  📌 MẸO #8: Generalize to k parts
+     ✅ "For k equal contiguous parts:
+         check total mod k. target equals total over k.
+         Find k minus 1 split points via prefix sum.
+         Same O of n algorithm."
+```
+
 
 ---
 

@@ -786,61 +786,679 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
 ```
-  ──────────────── PHASE 1: Clarify ────────────────
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  👤 Interviewer: "Array of size n, elements 1 to n-1,
-                   exactly one repeats. Find it."
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  🧑 You: "Let me confirm:
-   1. Array has n elements, values range from 1 to n-1.
-   2. Exactly one value appears twice, all others once.
-   3. I need to return the duplicate value.
-   4. The array is unsorted."
+  👤 "Tell me about yourself and a time you detected
+      a data anomaly using mathematical techniques."
 
-  ──────────────── PHASE 2: Examples ────────────────
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I was building an e-commerce
+      checkout system. We had an inventory reconciliation
+      process where each product SKU from 1 to N should
+      appear exactly once in a batch.
 
-  🧑 You: "arr = [1, 3, 2, 3, 4], n=5.
-   Values should be {1,2,3,4}, each once.
-   But 3 appears twice. Expected sum = 10, actual = 13.
-   13 - 10 = 3 — the duplicate."
+      One day the batch had one extra item — a duplicate
+      SKU that had been scanned twice. Instead of scanning
+      every item one by one to find it, I realized I could
+      just compute the TOTAL of all SKU numbers and compare
+      it to the EXPECTED total — which I knew from the
+      formula n times n minus 1 over 2.
 
-  ──────────────── PHASE 3: Approach ────────────────
+      The difference was the duplicate SKU. One subtraction.
+      No database lookup, no hashmap, no sorting.
 
-  🧑 You: "Since values are in a known range [1, n-1],
-   I know the expected sum = n(n-1)/2.
-   The actual sum exceeds this by exactly the duplicate.
-   One subtraction gives me the answer.
+      That's the exact technique for this problem:
+      actual sum minus expected sum equals the duplicate."
 
-   O(n) time to compute the sum, O(1) space."
+  👤 "That's a clean approach. Let's formalize it."
+```
 
-  ──────────────── PHASE 4: Code + Edge Cases ────────────────
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  🧑 You: [writes code]
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
 
-  "Edge cases:
-   - n=2, arr=[1,1]: (1+1) - 1 = 1 ✅
-   - Duplicate at end: still works, sum is order-independent."
+  👤 "Array of size n, elements from 1 to n-1,
+      exactly one value repeats. Find it."
 
-  ──────────────── PHASE 5: Follow-ups ────────────────
+  🧑 "Let me clarify.
 
-  👤 "What about overflow?"
-  🧑 "For very large n, the sum could overflow. I'd switch
-      to XOR: XOR all array elements with XOR of 1..n-1.
-      All pairs cancel, leaving only the duplicate.
-      Same O(n) time, O(1) space, but no overflow."
+      The array has n elements.
+      Values range from 1 to n minus 1.
+      That's n minus 1 distinct values filling n slots.
+      So exactly ONE value must appear TWICE.
+      Everything else appears exactly once.
 
-  👤 "What if there's no fixed range?"
-  🧑 "Then I'd need a different approach — like Floyd's
-      cycle detection for LeetCode #287, or a HashSet."
+      Key observations:
+      The RANGE is FIXED and KNOWN — 1 to n minus 1.
+      This means I can compute the EXPECTED sum
+      without seeing the array.
+
+      This is a '1 unknown, 1 equation' problem.
+      The unknown is the duplicate D.
+      The equation is: actual sum equals expected sum plus D.
+
+      The array is NOT sorted.
+      I need to return the VALUE of the duplicate,
+      not its index."
+
+  ──────────────── 09:00 — The 'Inventory Audit' Insight (3 phút) ──
+
+  🧑 "I like to think of this as an INVENTORY AUDIT.
+
+      Imagine a warehouse with n minus 1 types of items,
+      each type having exactly 1 unit. Someone accidentally
+      added an extra unit of one type.
+
+      To find which type was duplicated, I don't need
+      to inspect every shelf. I just WEIGH the entire
+      warehouse and compare to the expected weight.
+
+      The excess weight IS the duplicate.
+
+      Mathematically:
+      Expected sum equals sum from 1 to n minus 1
+      equals n times open paren n minus 1 close paren
+      over 2.
+      Actual sum equals sum of all array elements.
+      Duplicate equals actual minus expected."
+
+  ──────────────── 12:00 — Approach 1: Sum (4 phút) ────────────
+
+  🧑 "My primary approach: the SUM technique.
+
+      Step 1: Compute expected sum equals n times
+      n minus 1 over 2. This is O of 1.
+
+      Step 2: Compute actual sum by adding all elements.
+      This is O of n.
+
+      Step 3: Return actual minus expected.
+
+      For arr equal [1, 3, 2, 3, 4] with n equal 5:
+      Expected equals 4 times 5 over 2 equals 10.
+      Actual equals 1 plus 3 plus 2 plus 3 plus 4 equals 13.
+      Duplicate equals 13 minus 10 equals 3.
+
+      Time: O of n. Space: O of 1. Two lines of code.
+
+      This is the SIMPLEST possible solution."
+
+  ──────────────── 16:00 — Approach 2: XOR (5 phút) ────────────
+
+  🧑 "If the interviewer asks about overflow,
+      I switch to the XOR technique.
+
+      XOR has two key properties:
+      a XOR a equals 0 — cancellation.
+      a XOR 0 equals a — identity.
+
+      I XOR all array elements together,
+      then XOR with all values from 1 to n minus 1.
+
+      Every value EXCEPT the duplicate appears exactly
+      twice — once in the array and once in the range.
+      They cancel out: x XOR x equals 0.
+
+      The duplicate D appears THREE times — twice in
+      the array plus once in the range.
+      D XOR D XOR D equals D. Because D XOR D equals 0,
+      and 0 XOR D equals D.
+
+      So the final result is D.
+
+      For arr equal [1, 3, 2, 3, 4]:
+      XOR all arr: 1 XOR 3 XOR 2 XOR 3 XOR 4 equals 7.
+      XOR range 1 to 4: 7 XOR 1 XOR 2 XOR 3 XOR 4.
+      All pairs cancel: result equals 3. Correct!
+
+      Time: O of n. Space: O of 1. No overflow risk."
+
+  ──────────────── 21:00 — Approach 3: Index Mark (4 phút) ────────
+
+  🧑 "A third approach: use the array itself as a visited set.
+
+      Since values are in range 1 to n minus 1,
+      I can use each value as an INDEX into the array.
+
+      For each element, I take its absolute value as idx.
+      If arr at idx is already negative, then idx has been
+      visited before — it's the duplicate!
+      Otherwise, I negate arr at idx to mark it as visited.
+
+      For arr equal [1, 3, 2, 3, 4]:
+      i equal 0: value 1, arr at 1 is 3, positive.
+      Negate: arr at 1 becomes minus 3.
+      i equal 1: value abs of minus 3 equals 3.
+      arr at 3 is 3, positive. Negate: arr at 3 becomes minus 3.
+      i equal 2: value 2, arr at 2 is 2, positive.
+      Negate: arr at 2 becomes minus 2.
+      i equal 3: value abs of minus 3 equals 3.
+      arr at 3 is minus 3. NEGATIVE! Duplicate found: 3!
+
+      Time: O of n. Space: O of 1.
+      But it MODIFIES the array — a trade-off."
+
+  ──────────────── 25:00 — Write Code (3 phút) ────────────────
+
+  🧑 "Let me code the sum approach — it's the cleanest.
+
+      [Vừa viết vừa nói:]
+
+      function findRepeating of arr.
+      const n equal arr dot length.
+      const expected equal n minus 1 times n over 2.
+      const actual equal arr dot reduce of
+      open paren a, b close paren arrow a plus b, 0.
+      return actual minus expected.
+
+      That's 4 lines. The key insight is in line 3:
+      expected equals n minus 1 times n over 2.
+      NOT n times n plus 1 over 2!
+
+      The range is 1 to n MINUS 1, not 1 to n.
+      This is the most common mistake."
+
+  ──────────────── 28:00 — Trace bằng LỜI (3 phút) ────────────────
+
+  🧑 "Let me trace with arr equal [1, 5, 1, 2, 3, 4], n equal 6.
+
+      Expected: sum of 1 to 5 equals 5 times 6 over 2 equals 15.
+      Actual: 1 plus 5 plus 1 plus 2 plus 3 plus 4 equals 16.
+      Duplicate: 16 minus 15 equals 1. Correct!
+
+      Notice: the duplicate 1 appears at index 0 and index 2.
+      Their positions don't matter — sum is order-independent.
+
+      Let me also trace XOR for the same example:
+      Pass 1 — XOR arr:
+      1 XOR 5 XOR 1 XOR 2 XOR 3 XOR 4.
+      The two 1s cancel: 5 XOR 2 XOR 3 XOR 4.
+
+      Pass 2 — XOR range 1 to 5:
+      XOR with 1 XOR 2 XOR 3 XOR 4 XOR 5.
+      5 XOR 5 cancels, 2 XOR 2 cancels, 3 XOR 3 cancels,
+      4 XOR 4 cancels. Left with 1. Correct!"
+
+  ──────────────── 31:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      Minimum array: arr equal [1, 1], n equal 2.
+      Expected: sum of 1 to 1 equals 1.
+      Actual: 1 plus 1 equals 2.
+      Duplicate: 2 minus 1 equals 1. Correct.
+
+      Duplicate at the end: arr equal [1, 2, 3, 4, 4].
+      Expected: 10. Actual: 14. Duplicate: 4.
+
+      Duplicate at the beginning: arr equal [1, 1, 2, 3, 4].
+      Expected: 10. Actual: 11. Duplicate: 1.
+
+      The position of the duplicate doesn't matter
+      for both Sum and XOR — they're commutative operations.
+      sum of a, b, c equals sum of c, a, b.
+      XOR of a, b, c equals XOR of c, a, b."
+
+  ──────────────── 34:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n. One pass through the array to compute
+      the sum or XOR. The expected sum formula is O of 1.
+
+      Space: O of 1. Just a running total.
+      No extra arrays, no hashmaps.
+
+      Compared to alternatives:
+      HashMap: O of n time, O of n space. Works but wasteful.
+      Sorting: O of n log n time. Overkill.
+      Brute force nested loops: O of n squared. Way too slow.
+
+      The sum approach is OPTIMAL in both time and space.
+      It's also the simplest — literally 2 lines of logic."
+
+  ──────────────── 37:00 — Sum formula derivation (3 phút) ────────
+
+  👤 "How do you derive n times n minus 1 over 2?"
+
+  🧑 "Classic Gauss formula.
+
+      Sum from 1 to k equals k times k plus 1 over 2.
+
+      For this problem, the range is 1 to n minus 1.
+      So k equals n minus 1:
+      sum equals n minus 1 times n minus 1 plus 1 over 2
+      equals n minus 1 times n over 2.
+
+      The intuition: pair the smallest with the largest.
+      1 plus n minus 1 equals n.
+      2 plus n minus 2 equals n.
+      There are n minus 1 over 2 such pairs.
+      Total equals n times n minus 1 over 2.
+
+      A common trap: using n times n plus 1 over 2,
+      which is sum from 1 to N, not 1 to n minus 1."
+
+  ──────────────── 40:00 — Why this is a '1-unknown' problem (3 phút)
+
+  🧑 "I want to highlight WHY sum alone is sufficient here.
+
+      I have 1 UNKNOWN — the duplicate D.
+      I need 1 EQUATION to solve for D.
+      Sum gives me that equation:
+      actual equals expected plus D.
+
+      If I had 2 unknowns — like in Missing and Repeating —
+      I'd need 2 equations: sum AND sum of squares.
+      That's the 'system of equations' approach.
+
+      The rule of thumb: number of unknowns equals
+      number of equations needed.
+      1 unknown: Sum or XOR.
+      2 unknowns: Sum plus Sum-of-squares, or XOR partition."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Overflow analysis (5 phút) ────────────
+
+  👤 "When does the sum overflow?"
+
+  🧑 "The actual sum is at most n minus 1 times n over 2
+      plus n minus 1 — the expected sum plus the maximum
+      possible duplicate.
+
+      In JavaScript, Number dot MAX_SAFE_INTEGER is
+      2 to the 53 minus 1, approximately 9 times 10 to the 15.
+
+      The sum grows as n squared over 2.
+      Setting n squared over 2 less than 9 times 10 to the 15,
+      n is approximately the square root of 1.8 times 10 to the 16,
+      which is about 1.34 times 10 to the 8.
+
+      So for n up to about 130 million, JavaScript's
+      Number is safe. Beyond that, I'd need BigInt or XOR.
+
+      In C++ with 32-bit integers:
+      n squared over 2 exceeds 2 to the 31 when n is about 65,000.
+      With 64-bit long long, safe up to about 4 billion.
+
+      XOR NEVER overflows because it operates bit by bit.
+      The result is always in the same range as the inputs.
+      For safety-critical code, XOR is the better choice."
+
+  ──────────────── 50:00 — XOR deep dive (4 phút) ────────────
+
+  👤 "Why does D XOR D XOR D equal D?"
+
+  🧑 "Let me break it down.
+
+      XOR is associative and commutative.
+      D XOR D equals 0. That's the cancellation property.
+      0 XOR D equals D. That's the identity property.
+
+      So D XOR D XOR D equals open paren D XOR D close paren
+      XOR D equals 0 XOR D equals D.
+
+      More generally:
+      D XOR-ed an EVEN number of times gives 0.
+      D XOR-ed an ODD number of times gives D.
+
+      In our problem:
+      Every non-duplicate value appears twice — once in the
+      array, once in the range. Even count: cancels to 0.
+      D appears three times — twice in array, once in range.
+      Odd count: survives as D.
+
+      This is the same principle behind RAID parity,
+      error-correcting codes, and the 'single number'
+      problem on LeetCode 136."
+
+  ──────────────── 54:00 — Sum vs XOR trade-off (3 phút) ────────
+
+  👤 "When would you choose Sum over XOR?"
+
+  🧑 "Sum: simpler to understand, 2 lines of code.
+      Anyone can read it. The math is elementary school
+      arithmetic. But it has overflow risk.
+
+      XOR: no overflow, same complexity.
+      But it requires understanding bitwise operations.
+      Less intuitive for someone unfamiliar with XOR.
+
+      In an interview, I'd PRESENT Sum first because
+      it's the most direct mapping from the insight.
+      Then I'd MENTION XOR as the overflow-safe alternative
+      if the interviewer asks.
+
+      In production code:
+      If n is bounded — say under a million — Sum is fine.
+      If n is unbounded — or the language has strict
+      integer limits like C — XOR is safer."
+
+  ──────────────── 57:00 — Index Mark vs Sum/XOR (3 phút) ────────
+
+  👤 "When would you prefer Index Mark?"
+
+  🧑 "Index Mark has one unique advantage: EARLY TERMINATION.
+
+      Sum and XOR must process ALL elements before
+      producing the answer. They're full-scan approaches.
+
+      Index Mark can stop as soon as it finds the duplicate.
+      In the best case, the duplicate's two copies are
+      at the beginning — O of 1 work.
+      On average, it stops after scanning about 2/3 of
+      the array — because by that point, enough values
+      are marked that the duplicate is likely found.
+
+      The downside: it MODIFIES the input array.
+      If the array is read-only — or I need it intact
+      for later use — Index Mark isn't an option.
+
+      So the choice depends:
+      Read-only? Sum or XOR.
+      Modifiable and want early exit? Index Mark.
+      Overflow risk? XOR."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Missing Number (#268) (3 phút) ────────
 
   👤 "How does this relate to Missing Number?"
-  🧑 "Same pattern, opposite direction! Missing Number:
-      expected - actual = missing. This problem:
-      actual - expected = duplicate. Both use Sum or XOR."
+
+  🧑 "They're MIRROR problems!
+
+      Missing Number: array of n elements, values 0 to n,
+      one value is MISSING. Find it.
+      Answer: expected minus actual equals missing.
+
+      Only Repeating: array of n elements, values 1 to n minus 1,
+      one value is DUPLICATED. Find it.
+      Answer: actual minus expected equals duplicate.
+
+      Same technique, OPPOSITE subtraction!
+      Missing: expected is LARGER. Excess is in expected.
+      Duplicate: actual is LARGER. Excess is in actual.
+
+      Both can also use XOR. The XOR approach is identical
+      in structure — XOR all elements with the full range.
+      The 'leftover' is the anomaly."
+
+  ──────────────── 63:00 — Missing AND Repeating (4 phút) ────────
+
+  👤 "What if you need to find BOTH a missing and a repeating?"
+
+  🧑 "Now I have 2 unknowns: D for duplicate, M for missing.
+      I need 2 equations.
+
+      Equation 1: actual sum minus expected sum equals D minus M.
+      Call this diff.
+
+      Equation 2: actual sum-of-squares minus expected
+      sum-of-squares equals D squared minus M squared.
+      Call this sqDiff.
+
+      D squared minus M squared equals D plus M times D minus M
+      equals D plus M times diff.
+      So D plus M equals sqDiff over diff.
+
+      Now I have D minus M and D plus M.
+      D equals D plus M plus D minus M over 2.
+      M equals D plus M minus D minus M over 2.
+
+      This is the 'system of equations' technique.
+      1 unknown: 1 equation. 2 unknowns: 2 equations.
+      The pattern scales."
+
+  ──────────────── 67:00 — Find Duplicate (#287) (4 phút) ────────
+
+  👤 "How does this compare to LeetCode 287?"
+
+  🧑 "LeetCode 287 — Find the Duplicate Number — is HARDER.
+
+      The array has n plus 1 elements with values 1 to n.
+      But the key difference: the duplicate can appear
+      MORE than twice.
+
+      Sum won't work because the excess isn't just one copy.
+      XOR won't work because the cancellation pattern
+      doesn't hold with arbitrary repetitions.
+
+      The elegant solution for 287 is FLOYD'S CYCLE DETECTION.
+      Treat the array as a linked list where arr at i
+      points to the next node. The duplicate creates a cycle.
+
+      For OUR problem — Only Repeating — the duplicate
+      appears EXACTLY twice. So Sum and XOR work perfectly.
+
+      The decision heuristic:
+      Known range, exactly 1 extra copy? Sum or XOR.
+      Unknown repetitions? Floyd's cycle detection.
+      No range constraint at all? HashMap."
+
+  ──────────────── 71:00 — Multiple duplicates (4 phút) ────────────
+
+  👤 "What if there could be multiple duplicates?"
+
+  🧑 "Sum alone gives the TOTAL excess — the sum of all
+      duplicate values — but not which values are duplicated.
+
+      For example, arr equal [1, 1, 2, 2, 3] with n equal 5.
+      Expected sum of 1 to 4 equals 10. Actual equals 9.
+      Diff equals minus 1? That doesn't make sense...
+
+      Actually, the problem structure changes completely.
+      With multiple duplicates, some values must be MISSING
+      to make room. It becomes a 'find all missing and
+      all repeating' problem — much harder.
+
+      Approaches:
+      HashMap: O of n time, O of n space. Count occurrences.
+      Index Mark: O of n time, O of 1 space. Mark visited,
+      collect those seen twice.
+      XOR: doesn't directly help — cancellation only
+      works for single anomalies.
+
+      This is why the problem specifies EXACTLY one duplicate.
+      It's a carefully crafted constraint that enables
+      the elegant Sum/XOR solution."
 ```
 
----
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does this pattern appear in practice?"
+
+  🧑 "Several important domains!
+
+      First — DATA INTEGRITY / CHECKSUMS.
+      Network protocols use checksums to verify data.
+      TCP checksum is essentially a running sum.
+      If the received checksum doesn't match the expected
+      one, a byte was corrupted — same diff technique.
+
+      Second — FINANCIAL RECONCILIATION.
+      Bank transactions should balance. If the actual
+      total differs from expected, there's a discrepancy.
+      actual minus expected equals the anomaly.
+      Auditors use this DAILY.
+
+      Third — DATABASE DEDUPLICATION.
+      In distributed databases, unique IDs from 1 to N
+      are assigned to records. If the count is N plus 1,
+      there's a duplicate. Sum of IDs minus expected
+      gives the duplicated ID.
+
+      Fourth — NETWORK PACKET SEQUENCING.
+      TCP packets have sequence numbers. If a packet
+      arrives twice — a duplicate ACK — the receiver
+      can detect it using the same sum or XOR technique
+      against expected sequence numbers."
+
+  ──────────────── 80:00 — Streaming detection (5 phút) ────────────
+
+  👤 "Can you detect duplicates in a data stream?"
+
+  🧑 "Yes! The Sum and XOR techniques are STREAMING-FRIENDLY.
+
+      I maintain a running sum as elements arrive.
+      I also maintain the expected sum based on the count
+      of elements seen so far.
+
+      If at any point actual sum exceeds expected sum
+      by more than what's possible with remaining elements,
+      I've found the duplicate.
+
+      But there's a subtlety: in a stream, I might not
+      know N upfront. In that case, I need a different approach:
+
+      BLOOM FILTER: probabilistic, O of 1 space per element.
+      Reports 'possibly seen' or 'definitely not seen.'
+      False positives but no false negatives.
+
+      EXACT STREAMING: maintain a RUNNING XOR.
+      When the stream is complete, XOR with 1 to n minus 1.
+      The result is the duplicate. But I need to know n.
+
+      For the specific constraint of this problem —
+      known range, exactly one duplicate — the running sum
+      approach is optimal for streaming."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, KNOWN RANGE enables mathematical solutions.
+      The moment I see 'elements 1 to n minus 1,' I think
+      Sum or XOR. The range gives me the EXPECTED value,
+      and the difference reveals the anomaly.
+
+      Second, NUMBER OF UNKNOWNS equals NUMBER OF EQUATIONS.
+      1 unknown — Sum is enough.
+      2 unknowns — Need Sum plus Sum-of-squares.
+      This principle scales to any detection problem.
+
+      Third, the PATTERN FAMILY.
+      Only Repeating, Missing Number, Missing-and-Repeating —
+      they're all variations of 'fixed range with anomaly.'
+      Learning one teaches the others."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — this problem reduces to a single subtraction.
+      But in real systems, data anomalies are rarely this
+      clean. Do you use checksum-based techniques for
+      data integrity in your infrastructure?
+
+      Second — the XOR approach is more robust against
+      overflow but harder to read. In code reviews,
+      do you prefer clarity of Sum or safety of XOR?
+
+      Third — the 'known range' constraint is the key
+      enabler. Most production systems don't have such
+      clean constraints. What's the most common anomaly
+      detection pattern your team uses?"
+
+  👤 "Great questions. Your progression from the inventory
+      analogy to the mathematical proof was very clear.
+      The connection to Missing Number and the overflow
+      analysis showed real depth. We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Only Repeating)    ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: State the core insight immediately
+     ✅ "The range is fixed — 1 to n minus 1.
+         I know the expected sum. Actual minus expected
+         gives the duplicate. One subtraction."
+
+  📌 MẸO #2: Use the 'inventory audit' analogy
+     ✅ "It's like a warehouse with n minus 1 types of items.
+         One extra item was added. Weigh the total,
+         subtract the expected weight. The excess is
+         the duplicate."
+
+  📌 MẹO #3: Present Sum first, XOR as backup
+     ✅ "Sum: simplest, 2 lines. XOR: same complexity
+         but no overflow. I present Sum first because
+         it's the most intuitive, then mention XOR
+         if overflow comes up."
+
+  📌 MẸO #4: Highlight the '1 unknown, 1 equation' rule
+     ✅ "I have 1 unknown — the duplicate.
+         I need 1 equation — Sum gives me that.
+         If I had 2 unknowns, I'd need Sum PLUS
+         Sum-of-squares."
+
+  📌 MẸO #5: Flag the formula trap
+     ✅ "Sum of 1 to n minus 1 is n minus 1 times n over 2.
+         NOT n times n plus 1 over 2! The range ends at
+         n minus 1, not n."
+
+  📌 MẸO #6: Connect to the family
+     ✅ "Only Repeating: actual minus expected.
+         Missing Number: expected minus actual.
+         Missing and Repeating: two equations.
+         Same pattern, different directions."
+
+  📌 MẸO #7: Address overflow proactively
+     ✅ "Sum overflows at about n equals 130 million in JS.
+         XOR never overflows. For safety-critical code,
+         I'd choose XOR."
+
+  📌 MẸO #8: Mention Index Mark for early termination
+     ✅ "If I can modify the array, Index Mark stops
+         as soon as it finds the duplicate — potentially
+         before scanning the full array."
+```
+
 
 ## 📚 Bài tập liên quan — Practice Problems
 

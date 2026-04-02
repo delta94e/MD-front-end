@@ -554,35 +554,455 @@ Test Cases:
 
 ## 🗣️ Interview Script
 
-> 🎙️ *"Two pointers from both ends, swap and move inward. O(n) time, O(1) space, n/2 swaps total. This is the standard in-place reversal. The same pattern appears in palindrome checking, rotating arrays, and reversing linked lists."*
+### 🎙️ Mô phỏng phỏng vấn thực... theo chuẩn Google
 
-### Pattern & Liên kết
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Candidate nói không hoàn hảo... có do dự, tự sửa.
+> Interviewer react ngắn, guide bằng câu hỏi, không lecture.
 
 ```
-  TWO POINTERS — OPPOSITE DIRECTION pattern!
+╔══════════════════════════════════════════════════════════════╗
+║  PART 1: INTRODUCTION                                        ║
+╚══════════════════════════════════════════════════════════════╝
 
-  Cấu trúc:
-    let L = 0, R = n - 1;
-    while (L < R) {
-      // xử lý arr[L] và arr[R]
-      L++;
-      R--;
-    }
+  👤 "Hi! Tell me a bit about yourself.
+      Your background, what you've been working on lately."
 
-  Reverse Array là BUILDING BLOCK cho:
-  ┌─────────────────────────────────────────────────────────────┐
-  │  Array Reverse                                              │
-  │         ↓                                                   │
-  │  Rotate Array     → reverse 3 lần!                         │
-  │    Right: reverse(ALL) → reverse(0..d-1) → reverse(d..n-1) │
-  │    Left:  reverse(0..d-1) → reverse(d..n-1) → reverse(ALL) │
-  │                                                             │
-  │  Palindrome Check → so sánh arr[L] === arr[R] thay vì swap │
-  │  Valid Palindrome (#125)                                    │
-  │  Two Sum Sorted (#167) → L tăng nếu sum nhỏ, R giảm nếu lớn│
-  │  Container With Most Water (#11) → L++/R-- tùy height      │
-  │  Trapping Rain Water (#42)                                  │
-  │  Reverse String (#344) → cùng logic!                       │
-  │  Reverse LinkedList (#206) → prev/curr/next thay vì L/R    │
-  └─────────────────────────────────────────────────────────────┘
+  🧑 "Sure. I'm a frontend engineer, been at it for a few years.
+      Mostly working on data-heavy products... tables,
+      dashboards, that kind of thing.
+      So array manipulation comes up a lot."
+
+  👤 "Oh yeah? Like what?"
+
+  🧑 "Things like pagination, sorting, reordering rows in a table.
+      Reversing order for descending sort is something
+      I run into pretty often actually."
+
+  👤 "Nice. Okay, let's get into it."
+
+  🧑 "Yeah, let's go."
+```
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 2: PROBLEM + CLARIFY                                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Okay. Here's the problem.
+
+      Given an array, reverse it in-place.
+      So the first element becomes the last,
+      the second becomes the second-to-last, and so on.
+
+      For example, if the input is one, four, three, two, six, five,
+      the output should be five, six, two, three, four, one.
+
+      Take a moment. Let me know when you're ready."
+
+  🧑 "[Reads. Pauses.]
+
+      Okay. So... reverse the array in-place.
+      Let me ask a couple of questions."
+
+  👤 "Go ahead."
+
+  🧑 "When you say in-place... does that mean I can't
+      return a new array? I have to modify the original?"
+
+  👤 "Correct. Modify the original, return nothing."
+
+  �� "Got it. And what if the array is empty,
+      or only has one element?"
+
+  👤 "Empty stays empty. One element stays the same.
+      They're already reversed."
+
+  🧑 "Okay, that's what I expected.
+      Can I assume the input is always a valid array?
+      No null, no undefined?"
+
+  👤 "Yes, always a valid array."
+
+  🧑 "And the values... could be any type?
+      Numbers, strings, objects?"
+
+  �� "Any type."
+
+  🧑 "Okay.
+      So the logic should only care about positions,
+      not the values themselves.
+      Does that sound right?"
+
+  👤 "Yes, exactly."
+
+  🧑 "Alright. Should I walk through an approach?"
+
+  👤 "Please."
+```
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 3: APPROACH                                            ║
+╚══════════════════════════════════════════════════════════════╝
+
+  🧑 "[Thinks for a moment.]
+
+      Okay. So the first thing I think of
+      is creating a new array and copying elements backwards.
+      You'd read from the original right-to-left
+      and write into the new array left-to-right.
+
+      That works. But it uses O of n extra space
+      for the copy, and we said in-place.
+      So that's probably not the way to go."
+
+  👤 "Right. What's the in-place version?"
+
+  🧑 "Two pointers.
+      One starts at the left end, one at the right end.
+      Swap those two, then move both pointers inward.
+      Keep going until they meet in the middle.
+
+      That's O of n over 2 swaps... which is O of n.
+      And O of 1 space, just the two pointer variables.
+
+      I think that's the clean solution."
+
+  👤 "Is there another way you could express the same idea?"
+
+  �� "Yeah. A for loop with a mirror index.
+      You loop i from 0 to n over 2 minus 1,
+      and at each step you swap arr bracket i
+      with arr bracket n minus 1 minus i.
+
+      It's the same logic, just written differently.
+      Left is i, right is n minus 1 minus i.
+      Same number of swaps."
+
+  👤 "Which would you go with?"
+
+  🧑 "Two pointers. It makes the intent clearer.
+      You can see the two pointers moving toward each other,
+      and the stopping condition reads naturally.
+
+      The for loop version is shorter, but you have to reason
+      through the mirror formula to understand what's happening.
+
+      Um... should I trace through an example first
+      before writing the code?"
+
+  👤 "Yeah, go ahead."
+```
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 4: TRACE + CODE                                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+  🧑 "Okay, I'll use the example from the problem.
+      One, four, three, two, six, five.
+
+      Left starts at index 0, that's one.
+      Right starts at index 5, that's five.
+
+      Step one... swap one and five.
+      Now the array is five, four, three, two, six, one.
+      Left moves to index 1, right moves to index 4.
+
+      Step two... left is four, right is six.
+      Swap them. Five, six, three, two, four, one.
+      Left moves to 2, right moves to 3.
+
+      Step three... left is three, right is two.
+      Swap. Five, six, two, three, four, one.
+      Left moves to 3, right moves to 2.
+
+      Now left is 3 and right is 2.
+      Left is no longer less than right, so we stop.
+
+      Result is five, six, two, three, four, one.
+      That matches the expected output. Right?"
+
+  👤 "Good. How many swaps was that?"
+
+  🧑 "Three. For six elements.
+      That's n over 2.
+      Each pair gets swapped exactly once."
+
+  👤 "Okay. Go ahead and write the code."
+
+  🧑 "Okay. [Starts typing.]
+
+      Function reverseArray, takes arr.
+
+      Left equals 0.
+      Right equals arr dot length minus 1.
+
+      Then a while loop...
+      while left is less than right.
+
+      [Pauses.]
+
+      Actually, let me think about that condition.
+      Should it be less than, or less than or equal?"
+
+  👤 "What do you think?"
+
+  🧑 "Less than.
+      If left equals right, we're at the middle element
+      of an odd-length array.
+      Swapping it with itself doesn't do anything,
+      so we can just stop.
+      Less than or equal would do one extra no-op swap.
+      Less than is cleaner."
+
+  👤 "Mhm."
+
+  🧑 "Okay. Inside the loop...
+      swap arr bracket left with arr bracket right.
+
+      I'll use destructuring assignment for the swap.
+      So: arr bracket left, arr bracket right
+      equals arr bracket right, arr bracket left.
+
+      Then left-plus-plus. right-minus-minus.
+
+      And that's it. Return arr."
+
+  👤 "Walk me through each line."
+
+  🧑 "Sure.
+
+      Left and right are the two pointers.
+      Left starts at the beginning, right at the end.
+
+      The while condition keeps us going
+      as long as the pointers haven't crossed.
+      The moment left reaches or passes right, we stop.
+
+      The destructuring swap exchanges the two elements
+      without needing a temporary variable.
+      It's equivalent to using a temp, just shorter.
+
+      Left-plus-plus and right-minus-minus move both
+      pointers one step toward the center.
+
+      When the loop finishes, every element has been
+      swapped with its mirror. Array is reversed."
+
+  👤 "Quick question... why arr.length minus 1?
+      Why not just arr.length?"
+
+  🧑 "Because arrays are zero-indexed.
+      For a six-element array,
+      the valid indices are 0 through 5.
+      The last index is always n minus 1.
+      If I wrote arr.length, that would be index 6,
+      which is out of bounds.
+
+      So right has to start at length minus 1."
+
+  👤 "Good. Can you trace through the code
+      to make sure it's correct?"
+
+  🧑 "Yeah.
+      One, four, three, two, six, five.
+      Left is 0, right is 5.
+
+      0 less than 5... true.
+      Swap index 0 and index 5. One and five.
+      Now: five, four, three, two, six, one.
+      Left becomes 1, right becomes 4.
+
+      1 less than 4... true.
+      Swap index 1 and index 4. Four and six.
+      Now: five, six, three, two, four, one.
+      Left becomes 2, right becomes 3.
+
+      2 less than 3... true.
+      Swap index 2 and index 3. Three and two.
+      Now: five, six, two, three, four, one.
+      Left becomes 3, right becomes 2.
+
+      3 less than 2... false. Stop.
+
+      Result: five, six, two, three, four, one. Correct."
+
+  👤 "What's the time complexity?"
+
+  🧑 "O of n. We do n over 2 swaps,
+      but Big-O drops constants."
+
+  👤 "Space?"
+
+  🧑 "O of 1. Just the two pointer variables.
+      We're not allocating any extra arrays."
+```
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 5: EDGE CASES                                          ║
+╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Can you walk me through some edge cases?
+      Start with empty array."
+
+  🧑 "Empty array.
+      arr.length is 0.
+      Right is 0 minus 1... that's negative 1.
+      Condition is 0 less than negative 1... false.
+      Loop never runs. Array stays empty. Correct."
+
+  👤 "Single element."
+
+  🧑 "Single element, like just [7].
+      Left is 0, right is 0.
+      Condition is 0 less than 0... false.
+      Loop never runs. Array stays as is. Correct.
+      One element is already reversed."
+
+  👤 "Two elements?"
+
+  🧑 "Two elements, like 1 and 2.
+      Left is 0, right is 1.
+      0 less than 1... true. Swap.
+      Now it's 2 and 1.
+      Left becomes 1, right becomes 0.
+      1 less than 0... false. Stop.
+      One swap. Correct."
+
+  👤 "What about an odd-length array?"
+
+  🧑 "Like one, two, three.
+      Left is 0, right is 2.
+      Swap index 0 and index 2. One and three.
+      Now: three, two, one.
+      Left becomes 1, right becomes 1.
+      1 less than 1... false. Stop.
+
+      The middle element, two, was never touched.
+      Which is correct... it stays in the center."
+
+  👤 "What if all elements are the same?"
+
+  🧑 "Like five, five, five.
+      We'd still do the swaps.
+      But swapping identical values doesn't change anything.
+      Result is still five, five, five. Correct."
+
+  👤 "Does the type of values matter?"
+
+  🧑 "Not at all.
+      The algorithm only looks at positions,
+      not the values themselves.
+      Strings, objects, mixed types... works the same.
+      The swap just moves references around."
+
+  👤 "Are you satisfied all the cases are handled?"
+
+  🧑 "Yeah.
+      Empty... loop never starts.
+      Single element... same.
+      Two elements... one swap, correct.
+      Odd length... middle element untouched.
+      All same... no-op swaps, still correct.
+      Any value type... position-based, type doesn't matter.
+
+      I'd be comfortable putting this in a code review."
+```
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 6: FOLLOW-UP QUESTIONS                                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+  👤 "What if you weren't allowed to modify in-place?
+      Had to return a new array?"
+
+  🧑 "Then I'd build the output differently.
+      Create a new array of the same length.
+      Loop from the end of the original forward,
+      and push each element into the new array.
+
+      That's O of n time and O of n space.
+      Clean, but uses extra memory."
+
+  👤 "What if you wanted to check if an array
+      is a palindrome?
+      Does this algorithm relate?"
+
+  🧑 "Yeah, it's the same skeleton.
+      You still use two pointers from both ends
+      moving inward.
+      But instead of swapping, you compare.
+      If arr bracket left ever doesn't equal
+      arr bracket right, it's not a palindrome.
+      If the pointers meet without a mismatch, it is.
+
+      Same structure, different operation inside the loop."
+
+  👤 "What about rotating an array?
+      Like rotate right by k positions?"
+
+  🧑 "There's a classic trick using three reverses.
+
+      To rotate right by k...
+      first reverse the whole array.
+      Then reverse just the first k elements.
+      Then reverse the remaining n minus k elements.
+
+      Each reverse is just this algorithm.
+      So you'd call reverseArray three times on subarrays."
+
+  👤 "Why does that work?"
+
+  🧑 "Hmm. Let me think through an example.
+      Say one, two, three, four, five.
+      Rotate right by two.
+
+      Reverse all... five, four, three, two, one.
+      Reverse first two... four, five, three, two, one.
+      Reverse last three... four, five, one, two, three.
+
+      Which is correct. The last two moved to the front.
+
+      The intuition is... reversing the whole array
+      puts the last k elements at the front, but backwards.
+      Reversing those first k fixes their order.
+      Then reversing the rest fixes the remaining."
+
+  👤 "Last thing. What if the array was very large?
+      Say a billion elements. Any concerns?"
+
+  🧑 "O of n is unavoidable here.
+      To reverse n elements, you have to touch
+      all of them at least once.
+      There's no way to do it faster.
+
+      The O of 1 space is what makes this good.
+      You're not allocating anything proportional to n.
+      For a billion elements, memory stays constant.
+
+      For practical concerns... cache misses might matter
+      at that scale, since you're accessing opposite ends
+      of a huge array. But that's hardware-level,
+      not something we'd optimize in the algorithm itself."
+
+  👤 "OK. I think that's everything.
+      Any questions for me?"
+
+  🧑 "Yeah. How does your team typically handle
+      in-place versus immutable patterns in production code?
+      Is there a convention, or does it depend on context?"
+
+  👤 "Depends on context mostly.
+      Performance-critical paths we go in-place.
+      Shared state we tend toward immutability.
+
+      OK. Good session. You had strong instincts
+      on the in-place tradeoffs and the palindrome connection.
+      We'll be in touch."
+
+  🧑 "Thank you. Enjoyed it."
 ```

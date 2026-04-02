@@ -751,103 +751,645 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
-```
-  ──────────────── PHASE 1: Clarify ────────────────
-
-  👤 Interviewer: "Rearrange the array so even-positioned elements 
-                   are greater than odd-positioned (1-based)."
-
-  🧑 You: "So I need a zigzag pattern: positions alternate between
-   being a peak (≥ previous) and valley (≤ previous).
-   Let me clarify:
-   1. 1-based indexing — position 2,4,6... are peaks
-   2. Non-strict inequalities (≥, ≤) — duplicates OK
-   3. Any valid rearrangement, not unique answer required
-   4. In-place modification preferred?"
-
-  ──────────────── PHASE 2: Brute Force ────────────────
-
-  🧑 You: "My first approach: sort the array, then swap adjacent
-   pairs starting from index 1. After sorting, arr[i] ≤ arr[i+1],
-   so swapping makes arr[i] ≥ arr[i+1] — creating peaks.
-   
-   This is O(n log n) due to sorting. Can I do better?"
-
-  ──────────────── PHASE 3: Optimize → Greedy ────────────────
-
-  🧑 You: "I notice each constraint only involves adjacent elements.
-   So I can do a single pass: at each position, if the zigzag
-   condition is violated, I swap with the previous element.
-
-   The key insight is that this swap never breaks the already-fixed
-   condition at the previous position. If position i needs to be
-   a peak but arr[i] < arr[i-1], swapping makes the smaller value
-   go to position i-1 (a valley), which is still ≤ its predecessor.
-
-   This gives O(n) time, O(1) space — optimal!"
-
-  ──────────────── PHASE 4: Follow-up ────────────────
-
-  👤 Interviewer: "What if the inequality is STRICT? (< > < >)"
-
-  🧑 You: "That's Wiggle Sort II (#324), a Hard problem!
-   Simple swapping doesn't work because equal elements break
-   strict inequality. The approach is:
-   1. Find the median in O(n) using QuickSelect
-   2. Place elements > median at odd indices
-   3. Place elements < median at even indices
-   4. Handle elements = median carefully
-   
-   This requires O(n) time but is significantly more complex."
-```
-
-### Pattern & Liên kết
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
 
 ```
-  ZIGZAG/WAVE pattern family:
-
-  ┌──────────────────────────────────────────────────────────────┐
-  │  Wiggle Sort I (#280) / Wave Array — BÀI NÀY:              │
-  │    → Non-strict: ≤ ≥ ≤ ≥                                    │
-  │    → Greedy single pass O(n) ✅                             │
-  │                                                              │
-  │  Wiggle Sort II (#324) — HARD:                               │
-  │    → Strict: < > < >                                         │
-  │    → Sort + 3-way interleave hoặc Median + Index mapping    │
-  │                                                              │
-  │  Sort Colors (#75):                                          │
-  │    → Rearrange 0s, 1s, 2s                                    │
-  │    → Dutch National Flag, 3 pointers O(n)                   │
-  │                                                              │
-  │  Alternating Positive/Negative:                              │
-  │    → Rearrange [+, -, +, -, ...]                            │
-  │    → Two queues hoặc modify zigzag approach                  │
-  └──────────────────────────────────────────────────────────────┘
-
-  📌 PATTERN CHUNG: "Rearrange theo quy tắc xen kẽ"
-     → Nếu non-strict → Greedy swap O(n)
-     → Nếu strict → Sort + interleave O(n log n)
-     → Nếu multi-type → Multi-pointer O(n)
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
 ```
 
-### Skeleton code — Zigzag pattern template
-
-```javascript
-// TEMPLATE: Rearrange zigzag ≤ ≥ ≤ ≥
-function zigzagSort(arr) {
-  for (let i = 1; i < arr.length; i++) {
-    const shouldBePeak = (i % 2 !== 0); // adjust based on problem
-    
-    if (shouldBePeak && arr[i] < arr[i - 1]) {
-      [arr[i], arr[i - 1]] = [arr[i - 1], arr[i]];
-    }
-    if (!shouldBePeak && arr[i] > arr[i - 1]) {
-      [arr[i], arr[i - 1]] = [arr[i - 1], arr[i]];
-    }
-  }
-  return arr;
-}
-
-// Biến thể: Wave Array (≥ ≤ ≥ ≤) — đảo shouldBePeak!
-// Biến thể: Start with peak — thay (i % 2 !== 0) bằng (i % 2 === 0)
 ```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Tell me about yourself and a time you solved
+      a problem with a greedy, fix-as-you-go approach."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I was building a dashboard
+      that displayed a bar chart of server loads.
+      The product manager wanted a 'zigzag' visual —
+      alternating tall and short bars for aesthetic appeal.
+
+      My first approach: sort the loads, then interleave
+      the largest and smallest. But sorting was O of n log n
+      and messed up the original groupings.
+
+      Then I realized: each bar only needs to satisfy
+      a LOCAL condition relative to its neighbor.
+      I could scan left to right, and whenever a bar
+      violated the zigzag pattern, swap it with its neighbor.
+
+      One pass, O of n, in-place. That's exactly
+      the greedy approach for Wave Sort."
+
+  👤 "Great! Let's formalize that intuition."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
+
+  👤 "Rearrange the array so even-positioned elements
+      (1-based) are greater than or equal to their
+      adjacent odd-positioned elements."
+
+  🧑 "Let me clarify the pattern.
+
+      1-based: positions 1, 2, 3, 4, 5...
+      Even positions (2, 4, 6) should be PEAKS:
+      arr at pos 2 greater-equals arr at pos 1.
+      Odd positions (3, 5, 7) should be VALLEYS:
+      arr at pos 3 less-equals arr at pos 2.
+
+      So the pattern is: valley, PEAK, valley, PEAK, valley...
+      Or in terms of comparison: less-equals, greater-equals,
+      less-equals, greater-equals...
+
+      A ZIGZAG or WAVE pattern!
+
+      Important: converting to 0-based indexing —
+      1-based EVEN position equals 0-based ODD index.
+      1-based ODD position equals 0-based EVEN index.
+      This is the NUMBER ONE source of bugs.
+
+      Non-strict inequalities, so duplicates are fine.
+      Multiple valid answers exist.
+      Array has at least one element."
+
+  ──────────────── 09:00 — Zigzag Mountain Analogy (3 phút) ──────
+
+  🧑 "I visualize this as a MOUNTAIN RANGE.
+
+      Imagine peaks and valleys alternating:
+
+      The number 7 at the peak, then down to 3 in the valley,
+      up to 9 at the next peak, down to 2, up to 5.
+
+      Like this: 3, 7, 3, 9, 2, 5.
+
+      Each peak is higher than BOTH neighbors.
+      Each valley is lower than BOTH neighbors.
+
+      The greedy insight: I only need to check
+      each position against its LEFT neighbor.
+      If the zigzag condition is violated, I swap.
+      One pass from left to right fixes everything."
+
+  ──────────────── 12:00 — Approach 1: Sort + Swap (4 phút) ────────
+
+  🧑 "First approach: Sort, then create the zigzag.
+
+      After sorting, the array is monotonically increasing.
+      I swap adjacent pairs starting from index 1:
+      swap positions 1 and 2, swap positions 3 and 4, etc.
+
+      Example: [1, 2, 3, 4, 5, 6, 7] after sorting.
+      Swap (2, 3): [1, 3, 2, 4, 5, 6, 7].
+      Swap (4, 5): [1, 3, 2, 5, 4, 6, 7].
+      Swap (6, 7): [1, 3, 2, 5, 4, 7, 6].
+
+      Verify: 1 less-equals 3 greater-equals 2
+      less-equals 5 greater-equals 4 less-equals 7
+      greater-equals 6. Correct!
+
+      Time: O of n log n because of sorting.
+      Can I avoid sorting entirely?"
+
+  ──────────────── 16:00 — Approach 2: Greedy Single Pass (6 phút) ──
+
+  🧑 "Yes! Each constraint only involves TWO ADJACENT elements.
+
+      I scan from index 1 to n minus 1.
+      At each position i, I check:
+
+      If i is ODD (0-based) — should be a PEAK:
+      arr at i should be greater-equals arr at i minus 1.
+      If it's less, violation! Swap them.
+
+      If i is EVEN (0-based) — should be a VALLEY:
+      arr at i should be less-equals arr at i minus 1.
+      If it's greater, violation! Swap them.
+
+      Let me trace with arr equals [7, 3, 5, 1, 9, 2]:
+
+      i equals 1 (odd, PEAK): arr at 1 equals 3.
+      arr at 0 equals 7. 3 less than 7? YES, violation!
+      Swap. Array becomes [3, 7, 5, 1, 9, 2].
+
+      i equals 2 (even, VALLEY): arr at 2 equals 5.
+      arr at 1 equals 7. 5 greater than 7? NO. OK.
+
+      i equals 3 (odd, PEAK): arr at 3 equals 1.
+      arr at 2 equals 5. 1 less than 5? YES, violation!
+      Swap. Array becomes [3, 7, 1, 5, 9, 2].
+
+      i equals 4 (even, VALLEY): arr at 4 equals 9.
+      arr at 3 equals 5. 9 greater than 5? YES, violation!
+      Swap. Array becomes [3, 7, 1, 9, 5, 2].
+
+      i equals 5 (odd, PEAK): arr at 5 equals 2.
+      arr at 4 equals 5. 2 less than 5? YES, violation!
+      Swap. Array becomes [3, 7, 1, 9, 2, 5].
+
+      Final: [3, 7, 1, 9, 2, 5].
+      Verify: 3 less-equals 7 greater-equals 1
+      less-equals 9 greater-equals 2 less-equals 5. Correct!
+
+      Time: O of n. Space: O of 1. Single pass!"
+
+  ──────────────── 22:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code is very clean.
+
+      [Vừa viết vừa nói:]
+
+      function rearrangeGreedy of arr.
+      const result equal spread arr.
+      const n equal result dot length.
+
+      for let i equal 1, i less than n, i plus plus.
+      If i mod 2 not equal 0 — odd index, PEAK needed:
+      if result at i less than result at i minus 1:
+      swap result at i with result at i minus 1.
+      Else — even index, VALLEY needed:
+      if result at i greater than result at i minus 1:
+      swap result at i with result at i minus 1.
+
+      return result.
+
+      Eight lines total. The i mod 2 check determines
+      whether we expect a peak or valley."
+
+  ──────────────── 25:00 — Why swap doesn't break previous (5 phút)
+
+  👤 "How do you know the swap doesn't break the condition
+      you already fixed at position i minus 1?"
+
+  🧑 "This is the KEY correctness argument!
+
+      Consider three consecutive elements: a, b, c
+      at positions i minus 1, i, i plus 1.
+
+      Case: i is odd (PEAK needed). Condition: b greater-equals a.
+      Suppose b less than a — violation. I swap a and b.
+      After swap: b, a, c. Now position i has a, which is
+      greater than b. Peak condition satisfied.
+
+      But does position i minus 1 (VALLEY) break?
+      Before swap: position i minus 1 had a, and it satisfied
+      its valley condition: a less-equals its left neighbor.
+      After swap: position i minus 1 has b.
+      Since b less than a, and a was already less-equals
+      its left neighbor, b is EVEN SMALLER.
+      So b is definitely less-equals the left neighbor.
+      Valley condition PRESERVED!
+
+      The intuition: when I swap, the SMALLER value moves
+      to the valley position, and the LARGER value moves
+      to the peak position. Both conditions are maintained.
+
+      This is why greedy works — local fixes don't
+      break global invariants."
+
+  ──────────────── 30:00 — The 1-based vs 0-based trap (3 phút) ────
+
+  🧑 "The most common bug in this problem:
+      confusing 1-based positions with 0-based indices.
+
+      The problem says 'even position' meaning position 2, 4, 6
+      in 1-based. But in code, that's index 1, 3, 5 — ODD indices!
+
+      If you get this wrong, the zigzag is INVERTED:
+      peaks where valleys should be and vice versa.
+      The output looks 'correct' but fails validation.
+
+      My rule: always write a comment like
+      'i odd (0-based) equals even position (1-based) equals PEAK.'
+      This prevents the mistake."
+
+  ──────────────── 33:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      Single element: always valid. Nothing to compare.
+
+      Two elements: [a, b]. Position 2 (0-based index 1)
+      is a PEAK, so b should be greater-equals a.
+      If not, one swap fixes it.
+
+      All equal: [5, 5, 5, 5]. Every comparison is
+      5 less-equals 5 and 5 greater-equals 5.
+      All satisfied. No swaps needed.
+
+      Already sorted ascending: [1, 2, 3, 4, 5].
+      Greedy will swap at every valley position.
+      Result: [1, 3, 2, 5, 4].
+
+      Already sorted descending: [5, 4, 3, 2, 1].
+      Greedy will swap at every peak position.
+      Result: [4, 5, 2, 3, 1]."
+
+  ──────────────── 36:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n. Single pass from 1 to n minus 1.
+      Each position does at most one comparison and
+      at most one swap. Total: at most n minus 1
+      comparisons and at most n minus 1 swaps.
+
+      Space: O of 1. Only swapping in-place.
+      If I copy the array first, that's O of n for the copy,
+      but O of 1 extra beyond that.
+
+      Is this optimal? Yes. I must examine each element
+      at least once — that's Omega of n.
+      We match the lower bound.
+
+      Compared to Sort + Swap:
+      Sort is O of n log n. Greedy is O of n.
+      Greedy wins by a log factor."
+
+  ──────────────── 39:00 — Alternative: compact form (3 phút) ────
+
+  👤 "Can you write it more concisely?"
+
+  🧑 "Yes! One condition covers both cases:
+
+      if i mod 2 not equal 0 AND result at i less than
+      result at i minus 1 — swap.
+      OR i mod 2 equal 0 AND result at i greater than
+      result at i minus 1 — swap.
+
+      Or even more compact:
+      if shouldBePeak AND arr at i less than arr at i minus 1
+      OR NOT shouldBePeak AND arr at i greater than
+      arr at i minus 1 — swap.
+
+      But in an interview, I prefer the explicit if-else
+      with comments. Clarity beats cleverness."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Formal invariant proof (4 phút) ────────
+
+  👤 "Can you formalize the correctness?"
+
+  🧑 "Sure. The LOOP INVARIANT:
+
+      After processing position i, all positions 0 through i
+      satisfy the zigzag condition with their left neighbor.
+
+      Base case: i equals 1. I check and fix position 1.
+      After processing, positions 0 and 1 satisfy the condition.
+
+      Inductive step: assume positions 0 through i minus 1
+      satisfy the condition. At position i, I check
+      arr at i versus arr at i minus 1.
+
+      If the condition holds, nothing changes. Invariant preserved.
+
+      If violated, I swap arr at i and arr at i minus 1.
+      The swap fixes position i.
+      Position i minus 1 gets a value that STRENGTHENS
+      its own condition (smaller for valley, larger for peak).
+      So the invariant at i minus 1 is preserved.
+
+      By induction, after processing all positions,
+      the entire array satisfies the zigzag pattern."
+
+  ──────────────── 49:00 — Multiple valid outputs (4 phút) ────────
+
+  👤 "The problem says any valid answer. How many exist?"
+
+  🧑 "For n distinct elements, there can be MANY valid
+      zigzag arrangements.
+
+      The greedy approach produces ONE specific output —
+      determined by the input order. A different starting
+      order gives a different valid output.
+
+      Sort + Swap produces a DETERMINISTIC output —
+      always the same regardless of input order.
+
+      For n equals 3 with values [1, 2, 3]:
+      Valid outputs: [1, 3, 2], [2, 3, 1], [1, 2, 1] if
+      considering repeats... For distinct values,
+      the number of valid arrangements grows exponentially.
+
+      This multiple-solution property is why greedy works —
+      we don't need THE answer, just ANY answer."
+
+  ──────────────── 53:00 — Stability considerations (3 phút) ────────
+
+  👤 "Is the greedy approach stable?"
+
+  🧑 "No — swaps change the relative order of equal elements.
+
+      But stability doesn't matter here because
+      the problem asks for ANY valid arrangement.
+      There's no 'original order' to preserve.
+
+      If stability were required — say, among equal elements,
+      maintain the original order — the greedy swap approach
+      would need modification. But I've never seen that variant
+      in an interview."
+
+  ──────────────── 56:00 — What about strict inequality? (4 phút) ──
+
+  👤 "What if the problem requires STRICT inequality?
+      Less-than and greater-than instead of less-equals
+      and greater-equals?"
+
+  🧑 "That's Wiggle Sort II — LeetCode 324 — a HARD problem!
+
+      The greedy swap approach FAILS for strict inequality.
+      Example: [1, 1, 2, 2]. I need strictly less, greater,
+      less, greater. But with two 1s and two 2s,
+      I can't avoid equal neighbors with simple swaps.
+
+      The approach for strict inequality:
+      1. Find the MEDIAN in O of n using QuickSelect.
+      2. Three-way partition: less than median, equal, greater.
+      3. Place greater-than-median at odd indices (peaks).
+      4. Place less-than-median at even indices (valleys).
+      5. Equal-to-median fills remaining spots carefully.
+
+      This requires O of n time but is MUCH more complex.
+      The key difference: non-strict allows equal neighbors,
+      so greedy swap always works. Strict does not."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Wave Array (inverted zigzag) (3 phút) ──
+
+  👤 "What about the Wave Array variant: peak, valley, peak?"
+
+  🧑 "Just flip the condition!
+
+      Instead of: odd index equals peak (0-based),
+      use: even index equals peak (0-based).
+
+      In code, change i mod 2 not equal 0 to i mod 2 equal 0
+      in the peak check.
+
+      Or equivalently: swap shouldBePeak logic.
+      Same algorithm, same complexity, just inverted pattern.
+
+      Wave Array expects:
+      arr at 0 greater-equals arr at 1,
+      arr at 1 less-equals arr at 2,
+      arr at 2 greater-equals arr at 3...
+
+      Instead of our:
+      arr at 0 less-equals arr at 1,
+      arr at 1 greater-equals arr at 2..."
+
+  ──────────────── 63:00 — Sort Colors / DNF (4 phút) ────────────
+
+  👤 "How does this relate to Sort Colors?"
+
+  🧑 "Sort Colors — LeetCode 75 — is a RELATED rearrangement
+      problem but with a different goal.
+
+      Sort Colors: partition [0, 1, 2] into three groups.
+      Uses Dutch National Flag: three pointers (low, mid, high).
+
+      Our problem: alternating peaks and valleys.
+      Uses greedy swap with one pointer.
+
+      The connection: both are REARRANGEMENT problems
+      solvable in O of n with O of 1 space.
+      Both use LOCAL swap decisions.
+      But the INVARIANT is different:
+      Sort Colors maintains group boundaries.
+      Zigzag maintains alternating comparison direction.
+
+      The meta-pattern: 'rearrange array to satisfy
+      local constraints' often yields O of n greedy solutions."
+
+  ──────────────── 67:00 — Alternating positive/negative (4 phút) ──
+
+  👤 "What about alternating positive and negative numbers?"
+
+  🧑 "That's a variant where the rearrangement criterion
+      is based on SIGN rather than relative magnitude.
+
+      If equal counts of positives and negatives:
+      Separate into two queues — positives and negatives.
+      Interleave: take from positive queue, negative queue,
+      positive, negative...
+      O of n time, O of n space.
+
+      For unequal counts, the extra elements go at the end.
+
+      Can I do it in-place? With a modified zigzag approach:
+      Scan left to right. If position i should be positive
+      but arr at i is negative, find the next positive
+      and rotate the subarray to bring it here.
+      But this can be O of n squared in the worst case.
+
+      The in-place O of n solution is possible but complex —
+      requires merge-based techniques."
+
+  ──────────────── 71:00 — K-way zigzag (4 phút) ────────────────
+
+  👤 "Can you generalize to a k-way pattern?"
+
+  🧑 "Interesting extension! Instead of 2-period zigzag
+      (peak-valley), a k-period pattern.
+
+      For k equals 3: small, medium, LARGE, small, medium, LARGE...
+
+      Sort + interleave generalizes naturally:
+      Sort the array, divide into k groups by rank,
+      then interleave cyclically.
+      O of n log n time.
+
+      Greedy is harder for k greater than 2.
+      The swap might need to consider k minus 1 neighbors
+      instead of just 1. The correctness proof becomes
+      more complex.
+
+      In practice, k equals 2 — classic zigzag —
+      covers almost all interview scenarios."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does zigzag/wave pattern appear in practice?"
+
+  🧑 "Several domains!
+
+      First — LOAD BALANCING.
+      In distributed systems, you might want to alternate
+      between heavy and light tasks across servers.
+      A zigzag assignment ensures no two heavy tasks
+      are adjacent — preventing hotspots.
+
+      Second — SIGNAL PROCESSING.
+      Anti-aliasing in digital audio uses a form of
+      alternating pattern to avoid resonance.
+      Dithering in images intentionally creates
+      zigzag noise patterns.
+
+      Third — SCHEDULING.
+      In OS thread scheduling, alternating between
+      CPU-bound and IO-bound tasks maximizes throughput.
+      The zigzag ensures the CPU is never idle
+      while waiting for IO.
+
+      Fourth — UI/UX DESIGN.
+      Dashboard layouts often alternate between
+      tall and short visual elements for readability.
+      This is the exact use case from my introduction."
+
+  ──────────────── 80:00 — Streaming zigzag (5 phút) ────────────
+
+  👤 "What if elements arrive as a stream?"
+
+  🧑 "In a streaming scenario, I maintain the zigzag
+      invariant incrementally.
+
+      When a new element arrives, I append it to the array.
+      Then I check: does it satisfy the zigzag condition
+      with its left neighbor?
+
+      If yes, done. If no, swap with the left neighbor.
+      But after swapping, I might need to check the
+      left neighbor's condition too — so I might cascade
+      leftward.
+
+      Worst case per insertion: O of 1 amortized.
+      Because each swap settles one violated condition,
+      and the newly swapped value going LEFT satisfies
+      the valley condition (it's the smaller value).
+
+      This makes the zigzag pattern STREAMABLE —
+      I can maintain it in an online fashion
+      with O of 1 work per new element.
+
+      Useful for real-time dashboards where data points
+      arrive continuously and need immediate visualization."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, GREEDY FIX-AS-YOU-GO for local constraints.
+      When each constraint involves only adjacent elements,
+      a single pass fixing violations is often optimal.
+      No sorting, no extra space needed.
+
+      Second, SWAP PRESERVES INVARIANT — the correctness key.
+      Swapping two adjacent elements fixes the current
+      violation WITHOUT breaking the previous one.
+      The smaller value naturally satisfies the valley,
+      the larger value satisfies the peak.
+
+      Third, 1-BASED vs 0-BASED is the number one bug source.
+      'Even position' in 1-based is 'odd index' in 0-based.
+      Always write explicit comments to prevent this mistake."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — the greedy approach works for non-strict
+      inequalities. Have you seen candidates struggle
+      with the strict version — Wiggle Sort II?
+      It's a significant jump in difficulty.
+
+      Second — the zigzag pattern is useful for load
+      balancing. Do your distributed systems use any
+      form of alternating assignment to prevent hotspots?
+
+      Third — this problem has multiple valid outputs.
+      In your testing framework, how do you validate
+      'any valid zigzag' rather than a specific output?"
+
+  👤 "Excellent questions! Your correctness proof —
+      showing swap preserves the valley condition —
+      was the highlight. The connection to Wiggle Sort II
+      showed strong pattern recognition. We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Even-Odd Wave)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Name the pattern immediately
+     ✅ "This is a ZIGZAG or WAVE sort problem.
+         Alternating peaks and valleys."
+
+  📌 MẸO #2: Clarify 1-based vs 0-based up front
+     ✅ "Even position in 1-based equals odd INDEX in 0-based.
+         I'll write comments to avoid confusion."
+
+  📌 MẸO #3: Present two approaches as escalation
+     ✅ "Sort + swap adjacent pairs: O of n log n.
+         Greedy single pass: O of n. Optimal."
+
+  📌 MẸO #4: Explain why local fix works globally
+     ✅ "Swapping sends the smaller value to the valley
+         and the larger to the peak. Both conditions
+         are maintained. Local fix equals global fix."
+
+  📌 MẸO #5: Trace with a violation example
+     ✅ "At index 1 (PEAK), 3 is less than 7 — violation.
+         Swap: [3, 7, ...]. Now 3 is at the valley,
+         7 at the peak. Both satisfied."
+
+  📌 MẸO #6: Note non-strict vs strict difference
+     ✅ "Non-strict (less-equals/greater-equals) — greedy works.
+         Strict (less-than/greater-than) — that's Wiggle Sort II,
+         a Hard problem requiring median partitioning."
+
+  📌 MẸO #7: Mention the mountain range visualization
+     ✅ "Peaks and valleys like a mountain range.
+         Each position alternates between going up
+         and going down."
+
+  📌 MẹO #8: Connect to the rearrangement family
+     ✅ "Same meta-pattern as Sort Colors and alternating
+         positive-negative: rearrange to satisfy local
+         constraints using O of n greedy swaps."
+```
+
+---

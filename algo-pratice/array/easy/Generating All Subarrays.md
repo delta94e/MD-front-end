@@ -1361,44 +1361,808 @@ Test Cases:
 
 ## 🗣️ Interview Script
 
-> 🎙️ *"A subarray is defined by a start and end index. Two nested loops enumerate all valid (start, end) pairs where start ≤ end. For each pair, I extract the subarray using slice. Total count is n(n+1)/2. Time complexity is O(n²) for enumeration, though output size is O(n³) total elements. For practical problems, we use techniques like Sliding Window or Kadane's instead of generating all subarrays."*
+### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
-### Think Out Loud — Quá trình suy nghĩ
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
 
 ```
-  🧠 BƯỚC 1: Đọc đề → phát hiện keywords
-    "all subarrays" → ENUMERATION problem!
-    "contiguous" → liên tiếp → không phải subsequence!
-    → Cần liệt kê TẤT CẢ cặp (start, end)
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  🧠 BƯỚC 2: Tính số lượng
-    Mỗi subarray = 1 cặp (start, end) với start ≤ end
-    Số cặp = C(n+1, 2) = n(n+1)/2
-    → Output SIZE đã là O(n²) → không thể nhanh hơn O(n²)
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  🧠 BƯỚC 3: Chọn approach
-    Brute force: 3 vòng for → O(n³) → đơn giản nhưng chậm
-    Optimize: 2 vòng + slice → code gọn hơn
-    Best: Incremental build → ít copy nhất
+  👤 "Tell me about yourself and a time you had to enumerate
+      or generate structured data systematically."
 
-  🧠 BƯỚC 4: Code
-    2 vòng for:
-      i = start (0 → n-1)
-      j = end (i → n-1)     ← j bắt đầu từ i!
-      slice(i, j+1)         ← j+1 vì slice exclusive!
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I was building an autocomplete
+      feature for a search box. The user types 'abc' and
+      I needed to generate all possible prefix queries:
+      'a,' 'ab,' 'abc' — essentially all contiguous prefixes.
 
-  🧠 BƯỚC 5: Follow-up question (interviewer hay hỏi)
-    "Nếu không cần TẤT CẢ mà chỉ cần MAX SUM?"
-    → Kadane's O(n)!
-    "Nếu cần subarray SUM = k?"
-    → Prefix Sum + HashMap O(n)!
+      That's a special case of subarrays — all subarrays
+      that start from index 0. But I also needed substrings
+      that start from any position: 'b,' 'bc,' 'c.'
 
-  🎙️ Interview phrasing:
-    "I notice this requires generating ALL subarrays, which is
-     inherently O(n²) since there are n(n+1)/2 of them. I'll use
-     two nested loops for start and end indices. For each pair,
-     I extract the subarray with slice. If you needed something
-     specific like max sum, I'd switch to Kadane's for O(n)."
+      To build the suggestion engine, I first wrote a brute-force
+      generator — two nested loops picking start and end indices.
+      Then I realized for the actual autocomplete, I didn't need
+      ALL substrings — just the ones matching a dictionary.
+      So I switched to a Trie for O of length lookup.
+
+      That progression — 'enumerate everything' to
+      'use a smarter data structure' — came directly
+      from understanding the foundational enumeration pattern."
+
+  👤 "Good. Let's see how you generate all subarrays formally."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
+
+  👤 "Generate all contiguous subarrays of a given array."
+
+  🧑 "Let me clarify the terminology first, because this is
+      a common source of confusion.
+
+      A SUBARRAY is a contiguous slice of the original array.
+      It's defined by two indices — start and end — where
+      start is at most end. Every element between them
+      is included. No gaps.
+
+      This is different from a SUBSEQUENCE, which can skip
+      elements but must maintain relative order.
+      And different from a SUBSET, which ignores order entirely.
+
+      For example, given [1, 2, 3]:
+      [1, 2] is a subarray — indices 0 to 1, contiguous.
+      [1, 3] is a subsequence — skips index 1, but keeps order.
+      {3, 1} is a subset — same as {1, 3}, order doesn't matter.
+
+      For this problem, I need only non-empty subarrays.
+      No empty subarrays.
+
+      And the count: with n elements, the total number of
+      subarrays is n times n plus 1 divided by 2."
+
+  👤 "How did you get that formula?"
+
+  🧑 "Two ways to see it.
+
+      First, arithmetic series: for each starting index i,
+      the number of valid ending indices is n minus i.
+      Summing over all starts:
+      n plus n minus 1 plus n minus 2 plus dot dot dot plus 1
+      equal n times n plus 1 divided by 2.
+
+      Second, combinatorics: think of n plus 1 'fence posts'
+      — positions between and around each element.
+      Choosing any 2 fence posts defines exactly one subarray.
+      That's 'n plus 1 choose 2' equal n times n plus 1
+      divided by 2."
+
+  ──────────────── 09:00 — Brute Force: 3 loops (4 phút) ────────────────
+
+  🧑 "The most direct approach uses three nested loops.
+
+      Loop one — variable i: picks the START index.
+      Ranges from 0 to n minus 1.
+
+      Loop two — variable j: picks the END index.
+      Ranges from i to n minus 1.
+      It starts from i, not from 0, because end must be
+      at least equal to start.
+
+      Loop three — variable k: collects the elements.
+      Ranges from i to j, pushing each element into
+      a temporary array.
+
+      At the end of each inner iteration, I push the
+      temporary array into the result.
+
+      Time: O of n cubed. The first two loops generate
+      O of n squared pairs, and the third loop copies
+      up to O of n elements per pair.
+
+      Space: O of n times n plus 1 divided by 2 for the result,
+      with average subarray length n over 3."
+
+  ──────────────── 13:00 — Optimization: slice (3 phút) ────────────────
+
+  🧑 "I notice that the third loop just copies elements from
+      index i to j — that's exactly what arr dot slice does.
+
+      slice of i comma j plus 1 returns a new array
+      containing elements from index i up to but NOT including
+      j plus 1 — so elements at indices i through j.
+
+      The plus 1 is important because slice uses exclusive end.
+
+      This eliminates the third loop from my CODE,
+      making it cleaner — just two nested loops and a slice call.
+
+      However, slice INTERNALLY still copies O of j minus i
+      elements. So the actual TIME complexity is still O of n cubed
+      when totaling across all pairs.
+
+      But the code is significantly more readable:
+      2 loops instead of 3, one line per subarray."
+
+  ──────────────── 16:00 — Trace bằng LỜI (5 phút) ────────────────
+
+  🧑 "Let me trace with arr equal [1, 2, 3]. n equal 3.
+      Expected count: 3 times 4 divided by 2 equal 6.
+
+      i equal 0 — fixing start at 0:
+        j equal 0: slice of 0 comma 1 gives [1].
+        j equal 1: slice of 0 comma 2 gives [1, 2].
+        j equal 2: slice of 0 comma 3 gives [1, 2, 3].
+      Three subarrays starting from index 0.
+
+      i equal 1 — fixing start at 1:
+        j equal 1: slice of 1 comma 2 gives [2].
+        j equal 2: slice of 1 comma 3 gives [2, 3].
+      Two subarrays starting from index 1.
+
+      i equal 2 — fixing start at 2:
+        j equal 2: slice of 2 comma 3 gives [3].
+      One subarray starting from index 2.
+
+      Total: 3 plus 2 plus 1 equal 6. Matches the formula.
+
+      The output is GROUPED BY START index because i is the
+      outer loop. If I swapped the loop nesting — outer loop
+      for end, inner for start — the output would be grouped
+      by end index instead."
+
+  ──────────────── 21:00 — Incremental Build (5 phút) ────────────────
+
+  🧑 "Now here's an important optimization.
+
+      Looking at the subarrays starting from index 0:
+      [1], then [1, 2], then [1, 2, 3].
+
+      Each new subarray is just the PREVIOUS one with ONE
+      more element appended. I don't need to re-slice
+      from scratch each time!
+
+      For each start i, I initialize an empty temporary array.
+      Then as j goes from i to n minus 1, I push arr at j
+      into the temporary array. After each push, I save
+      a COPY of the temporary array to the result.
+
+      The copy is critical — I use the spread operator
+      dot-dot-dot sub in brackets. Without it, I'd push
+      a REFERENCE, and subsequent pushes would modify
+      all previous entries.
+
+      This is the INCREMENTAL BUILD pattern. Each subarray
+      is built by extending the previous one, rather than
+      constructing from scratch.
+
+      Time is still O of n cubed total because copying takes
+      O of length each time. But I avoid the overhead of
+      slice's internal index calculations, and conceptually
+      this pattern is the BRIDGE to Kadane's algorithm."
+
+  👤 "How does this connect to Kadane's?"
+
+  🧑 "In Kadane's, I don't need the actual subarray — just
+      the running SUM. So instead of pushing elements,
+      I maintain a running accumulator:
+
+      For each i, let sum equal 0.
+      As j goes from i to n minus 1:
+        sum plus-equal arr at j.
+        max sum equal max of max sum and sum.
+
+      That's the incremental sum version — O of n squared.
+      Then Kadane's takes it further by noticing I can reset
+      versus extend in O of n.
+
+      The progression: generate all subarrays O of n cubed,
+      to incremental build O of n cubed,
+      to incremental sum O of n squared,
+      to Kadane's O of n.
+      Each step eliminates one level of redundancy."
+
+  ──────────────── 26:00 — Recursive approach (4 phút) ────────────────
+
+  🧑 "There's also a recursive solution. Instead of two nested
+      loops, I use a single recursive function with start
+      and end parameters.
+
+      The function has three cases:
+
+      Case one: start equal n. All starting positions exhausted.
+      Return — base case.
+
+      Case two: end equal n. All ending positions for this start
+      exhausted. Move to the next start:
+      recurse with start plus 1 and end equal start plus 1.
+
+      Case three: valid pair. Generate the subarray via slice,
+      then recurse with start and end plus 1.
+
+      This produces the same output as the iterative version
+      when I make start the 'slow' variable and end the 'fast'
+      variable. Each recursive call replaces one iteration
+      of the inner loop.
+
+      The complexity is the same — O of n squared calls,
+      each doing O of n work for slice. But it demonstrates
+      that iterative nested loops and recursion are
+      interchangeable enumeration strategies."
+
+  ──────────────── 30:00 — flatMap functional (3 phút) ────────────────
+
+  🧑 "For completeness, there's a one-liner functional approach:
+
+      arr dot flatMap of underscore comma i arrow
+        arr dot slice of i dot map of underscore comma j arrow
+          arr dot slice of i comma i plus j plus 1.
+
+      The outer flatMap iterates start indices.
+      For each start i, arr dot slice of i creates the suffix
+      starting at i. The inner map iterates over this suffix
+      using a RELATIVE index j. The subarray is
+      arr dot slice of i comma i plus j plus 1.
+
+      Why i plus j plus 1? j is 0-based within the suffix.
+      To get j plus 1 elements starting at i, the exclusive end
+      is i plus j plus 1.
+
+      flatMap flattens one level of nesting, so the result
+      is a flat array of subarrays.
+
+      This is elegant but harder to read. In interviews,
+      I'd mention it as an alternative but write the iterative
+      version for clarity."
+
+  ──────────────── 33:00 — Viết code, NÓI từng block (3 phút) ────────────
+
+  🧑 "Let me write the clean 2-loop solution.
+
+      [Vừa viết vừa nói:]
+
+      I declare the result array.
+
+      Outer loop: i from 0 to n minus 1 — start index.
+
+      Inner loop: j from i to n minus 1 — end index.
+      j starts from i because end must be at least start.
+
+      Inside: push arr dot slice of i comma j plus 1.
+      The plus 1 compensates for slice's exclusive end.
+
+      Return result.
+
+      Four lines of logic. The two loops enumerate all
+      n times n plus 1 divided by 2 valid start-end pairs.
+      Slice extracts each corresponding subarray."
+
+  ──────────────── 36:00 — Edge Cases (3 phút) ────────────────
+
+  👤 "What are the edge cases?"
+
+  🧑 "Single element: [5]. n equal 1.
+      Only one pair: start equal 0, end equal 0.
+      Output: [[5]]. Count: 1 equal 1 times 2 divided by 2.
+
+      Two elements: [1, 2]. n equal 2.
+      Pairs: (0,0), (0,1), (1,1).
+      Output: [[1], [1,2], [2]]. Count: 3 equal 2 times 3
+      divided by 2.
+
+      All same elements: [3, 3, 3].
+      Output: [[3], [3,3], [3,3,3], [3], [3,3], [3]].
+      All subarrays are generated independently —
+      duplicates in VALUES don't affect the enumeration.
+      The problem generates by POSITION, not by value.
+
+      Empty array: the outer loop doesn't execute.
+      Return an empty result. This is correct — zero subarrays."
+
+  ──────────────── 39:00 — Complexity analysis (3 phút) ────────────────
+
+  🧑 "Let me be precise about complexity.
+
+      NUMBER of subarrays: n times n plus 1 divided by 2.
+      This is Theta of n squared.
+
+      TOTAL ELEMENTS across all subarrays:
+      Each element at index k appears in exactly
+      (k plus 1) times (n minus k) subarrays.
+      Summing over all k: the total is
+      n times n plus 1 times n plus 2 divided by 6.
+      This is Theta of n cubed.
+
+      So the OUTPUT SIZE is O of n cubed.
+      Any algorithm that writes all subarrays to memory
+      cannot be better than O of n cubed.
+
+      The 2-loop plus slice approach:
+      Time: O of n cubed — bounded by output size.
+      Space: O of n cubed — storing all subarrays.
+
+      This is optimal for this specific problem —
+      the output itself is O of n cubed, so I can't beat it.
+
+      But for problems that COMPUTE something over subarrays
+      without storing them — like max sum or count —
+      I can do much better."
+
+  ──────────────── 42:00 — Why THIS problem matters (3 phút) ────
+
+  👤 "This seems like a simple enumeration. Why is it important?"
+
+  🧑 "Because it's the FOUNDATION for understanding why
+      techniques like Kadane's and Sliding Window exist.
+
+      If I want the maximum subarray sum, the brute force IS
+      this enumeration — generate all subarrays, compute each sum,
+      take the max. O of n cubed.
+
+      Incremental sum optimization brings it to O of n squared.
+      Kadane's algorithm brings it to O of n.
+
+      Each optimization STARTS from understanding the enumeration.
+      You can't appreciate why Kadane's is clever unless you
+      first understand what it's AVOIDING.
+
+      This problem also teaches the (start, end) pair mental model.
+      Sliding window is just a CONSTRAINED enumeration:
+      only consider (start, end) pairs where end minus start
+      equals a fixed k, or where the window satisfies some
+      condition. Two pointers is a smart way to enumerate
+      pairs without checking all O of n squared possibilities.
+
+      So this is the conceptual starting point for at least
+      five major algorithm families."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Slice internals (4 phút) ────────────────
+
+  👤 "You replaced the third loop with slice. What does slice
+      actually do under the hood?"
+
+  🧑 "In JavaScript, Array dot prototype dot slice creates
+      a SHALLOW COPY of a portion of the array.
+
+      Internally, it allocates a new array of size
+      end minus start, then copies element references
+      one by one. For primitives like numbers, this is
+      effectively a deep copy. For objects, it copies
+      references — both arrays point to the same objects.
+
+      For this problem, since array elements are numbers,
+      slice gives independent copies. Modifying one subarray
+      doesn't affect others.
+
+      Performance-wise, slice is implemented in the engine's
+      native code — V8 uses C++ — so it's faster than
+      a JavaScript for loop doing the same copy.
+      But the asymptotic complexity is identical: O of length.
+
+      One subtle point: slice of i with no second argument
+      copies from i to the end. This is useful in the flatMap
+      approach where I need the suffix starting at i."
+
+  ──────────────── 49:00 — Spread operator copy (3 phút) ────────────────
+
+  👤 "In the incremental build, you used spread. Why not
+      just push the array directly?"
+
+  🧑 "Let me demonstrate the bug.
+
+      If I write result dot push of sub — no spread —
+      I push a REFERENCE to the same array object.
+
+      Then when I push the next element into sub,
+      ALL previously stored entries in result also change!
+      They all point to the same array.
+
+      For [1, 2, 3]:
+      After j equal 0: sub equal [1]. result equal [[1]].
+      After j equal 1: sub equal [1, 2].
+      But result is now [[1, 2], [1, 2]]! WRONG.
+      Both entries point to the same sub.
+
+      Using [...sub] creates a SHALLOW COPY at each step.
+      The spread operator iterates sub and creates a new array
+      with the same elements. Now sub and the result entry
+      are independent objects.
+
+      Alternatives: sub dot slice with no arguments also works,
+      or Array dot from of sub. All create shallow copies.
+      Spread is the most idiomatic in modern JavaScript."
+
+  ──────────────── 52:00 — Subarray vs Subsequence count (4 phút) ────────
+
+  👤 "You said subarrays are n times n plus 1 over 2, but
+      subsequences are 2 to the n. Why the difference?"
+
+  🧑 "The difference is the CONTIGUITY constraint.
+
+      For subarrays, I choose a starting point and an ending
+      point — one contiguous block. There are only O of n squared
+      such blocks because the space of valid pairs is a triangle.
+
+      For subsequences, I make an INDEPENDENT decision for each
+      element: include it or exclude it. n binary choices
+      give 2 to the n possibilities.
+
+      The contiguity constraint dramatically reduces the count.
+      For n equal 20: subarrays equal 210 versus
+      subsequences equal 1,048,576. That's 5000 times fewer!
+
+      This is why subarray problems are often solvable in
+      polynomial time — O of n or O of n squared —
+      while subsequence problems are often NP-hard or require
+      exponential enumeration.
+
+      The notable exception: the LONGEST COMMON SUBSEQUENCE
+      can be solved in O of n squared using dynamic programming
+      because it exploits optimal substructure,
+      not brute-force enumeration."
+
+  ──────────────── 56:00 — Element frequency analysis (4 phút) ────────────
+
+  👤 "How many times does each element appear across all subarrays?"
+
+  🧑 "This is a beautiful counting argument!
+
+      Element at index k appears in a subarray starting at i
+      and ending at j whenever i is at most k and k is at most j.
+
+      The number of valid starts: i can be 0, 1, dot dot dot, k.
+      That's k plus 1 choices.
+
+      The number of valid ends: j can be k, k plus 1,
+      dot dot dot, n minus 1. That's n minus k choices.
+
+      Total: (k plus 1) times (n minus k).
+
+      For a 5-element array, element at index 2 appears in
+      3 times 3 equal 9 out of 15 total subarrays.
+
+      This is useful in competitive programming:
+      if I want the sum of all subarray sums, I don't need
+      to generate anything. I just multiply each element by
+      its frequency and sum up.
+
+      Sum of all subarray sums equal
+      the sum over k of arr at k times (k plus 1) times (n minus k).
+      One pass, O of n!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Incremental sum (4 phút) ────────────────
+
+  👤 "What if you only need the SUM of each subarray,
+      not the subarray itself?"
+
+  🧑 "Then I don't need to store subarrays at all!
+
+      For each starting index i, I maintain a running sum.
+      As j goes from i to n minus 1:
+        sum plus-equal arr at j.
+        Now sum holds the sum of arr from i to j.
+
+      Each sum update is O of 1 — just one addition.
+      Across all subarrays, that's n times n plus 1 over 2
+      additions equal O of n squared.
+
+      Compare this to the naive approach:
+      generate the subarray, then sum it.
+      That's O of n cubed — generating costs O of n cubed
+      and summing costs another O of n cubed.
+
+      The incremental sum approach is a FULL ORDER of magnitude
+      faster. And it uses O of 1 extra space — just the
+      running sum variable.
+
+      This is the DIRECT bridge to Kadane's algorithm,
+      which takes this O of n squared approach and reduces it
+      to O of n by recognizing when to restart the sum."
+
+  ──────────────── 64:00 — Fixed-size window (3 phút) ────────────────
+
+  👤 "What about generating only subarrays of a fixed size k?"
+
+  🧑 "That simplifies dramatically!
+
+      I only need one loop: for i from 0 to n minus k.
+      Each subarray is arr dot slice of i comma i plus k.
+
+      There are exactly n minus k plus 1 such subarrays.
+      Time: O of n times k — linear in n.
+
+      This IS the sliding window pattern.
+      The window of size k slides from left to right,
+      one position per step. At each position,
+      I process the current window.
+
+      For practical problems, I don't even store the window.
+      I maintain a running aggregate — sum, max, count —
+      and update it incrementally as the window slides:
+      add the new element entering from the right,
+      subtract the old element leaving from the left.
+      O of 1 per slide, O of n total."
+
+  ──────────────── 67:00 — Count subarrays with property (4 phút) ────
+
+  👤 "What if you need to COUNT subarrays satisfying a condition,
+      not enumerate them?"
+
+  🧑 "Great question! The answer depends on the condition.
+
+      If the condition is MONOTONIC — meaning if a subarray
+      i to j satisfies it, then i to j minus 1 also satisfies it
+      (or the reverse) — I can use the TWO POINTERS technique.
+
+      Example: count subarrays with sum less than k
+      where all elements are positive.
+
+      I maintain a sliding window with left and right pointers.
+      For each right pointer position, I find the leftmost
+      left such that the window sum is below k.
+      The number of valid subarrays ending at right is
+      right minus left plus 1.
+
+      Sum across all right positions: O of n total.
+
+      The key insight: I'm NOT enumerating
+      n times n plus 1 over 2 subarrays.
+      I'm using the monotonic property to COUNT them
+      in O of n without examining each one."
+
+  ──────────────── 71:00 — Subarray sum equal k (4 phút) ────────────────
+
+  👤 "And if the condition is sum equal exactly k?"
+
+  🧑 "That's LeetCode 560 — Subarray Sum Equals K.
+
+      I can't use sliding window because the sum isn't monotonic
+      when the array has negatives. Adding an element might
+      increase or decrease the sum.
+
+      Instead, I use the PREFIX SUM plus HASHMAP technique.
+
+      For each index j, the sum from i to j equals
+      prefix at j minus prefix at i.
+      I want this to equal k, so I need
+      prefix at i equal prefix at j minus k.
+
+      I maintain a HashMap of prefix sums I've seen so far.
+      At each j, I check how many times
+      'prefix at j minus k' has appeared.
+      That's the count of valid starting points i.
+
+      Time: O of n. Space: O of n for the HashMap.
+
+      This is the canonical example of how understanding
+      the brute-force enumeration — generate all subarrays —
+      leads to a RADICALLY better algorithm by focusing on
+      what you actually NEED from the subarrays."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Windowed analytics (5 phút) ────────────────
+
+  👤 "Where does the subarray concept appear in system design?"
+
+  🧑 "Everywhere in time-series and streaming systems!
+
+      First — ROLLING METRICS.
+      'Average response time over the last 5 minutes'
+      is a fixed-size subarray of the time-series data.
+      The sliding window approach directly applies.
+      I maintain a running sum and divide by window size.
+
+      Second — ANOMALY DETECTION.
+      'Is there any 10-second window where error rate
+      exceeds 50 percent?' This is 'does a subarray
+      of size 10 satisfy a condition?' — a sliding window search.
+
+      Third — LOG SEARCH.
+      'Find all 1-hour windows where total traffic
+      exceeded 1 million requests.' This is enumerating
+      fixed-size subarrays that satisfy a threshold.
+
+      Fourth — RATE LIMITING.
+      'A user may make at most 100 requests per minute.'
+      I maintain a sliding window of request timestamps
+      and check if the count exceeds the limit.
+
+      In ALL these cases, the system never generates ALL
+      possible windows. It maintains ONE active window
+      and slides it — exactly the optimization we discussed."
+
+  ──────────────── 80:00 — Streaming windows (5 phút) ────────────────
+
+  👤 "How do streaming frameworks like Kafka or Flink
+      handle windowed computations?"
+
+  🧑 "They formalize the subarray concept into three
+      window types.
+
+      TUMBLING windows: non-overlapping, fixed-size chunks.
+      Like dividing the array into consecutive subarrays
+      of size k with no overlap. Each element belongs
+      to exactly one window.
+
+      SLIDING windows: overlapping, fixed-size, fixed slide.
+      A window of size 10 seconds that slides every 2 seconds.
+      Each element belongs to up to 5 windows.
+      This is like generating subarrays of size 10
+      at every 2nd starting position.
+
+      SESSION windows: variable-size, gap-based.
+      A window ends when there's a gap of more than t seconds
+      between events. This is like finding maximal subarrays
+      where consecutive elements are within t distance.
+
+      Under the hood, these frameworks use the same
+      incremental computation we discussed:
+      when the window slides, add the new element,
+      remove the old element, update the aggregate.
+      They never recompute from scratch.
+
+      The memory optimization is critical — for a stream
+      of billions of events, they can't store the full array.
+      They maintain only the current window state."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, the (START, END) PAIR mental model.
+      Every subarray is uniquely identified by a start-end pair.
+      Two nested loops enumerate all valid pairs.
+      This mental model extends to sliding window — which fixes
+      one constraint on the pair — and two pointers — which
+      enumerate pairs smartly without checking all combinations.
+      Understanding the brute force makes every optimization
+      feel like a natural simplification.
+
+      Second, the PROGRESSION from enumeration to optimization.
+      Generate all subarrays O of n cubed.
+      Incremental build O of n cubed but cleaner.
+      Incremental sum O of n squared.
+      Kadane's or Sliding Window O of n.
+      Each step removes one redundancy.
+      This progression is HOW I think about optimization —
+      not as jumping to the answer, but as systematically
+      eliminating unnecessary work.
+
+      Third, knowing WHEN to stop generating.
+      In real interviews, generating all subarrays is almost
+      never the final answer. The interviewer wants me to
+      recognize that I don't need ALL subarrays — I need
+      a specific PROPERTY of them. Identifying that property
+      unlocks techniques that avoid enumeration entirely.
+      This is the difference between an n squared solution
+      and an n solution."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — in your production systems, what's the most
+      common 'windowed computation' pattern? Rolling averages,
+      anomaly detection, or something else?
+
+      Second — when candidates solve subarray problems
+      in interviews, do you prefer they start with brute force
+      and optimize, or jump to the optimal approach?
+
+      Third — how does your team handle the conceptual gap
+      between 'I understand the enumeration' and 'I can
+      derive the Kadane's optimization'? Do you find that
+      teaching the progression helps?"
+
+  👤 "Great questions! I really liked how you connected
+      the simple enumeration to Kadane's, Sliding Window,
+      and even stream processing frameworks.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Subarrays)        ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Clarify the three terms immediately
+     ✅ "Subarray is CONTIGUOUS — no gaps.
+         Subsequence can skip but keeps order.
+         Subset ignores order entirely.
+         For [1,2,3]: [1,3] is a subsequence,
+         NOT a subarray."
+
+  📌 MẸO #2: State the count formula with TWO derivations
+     ✅ "There are n times n plus 1 over 2 subarrays.
+         I can see this as the arithmetic series sum:
+         n plus n minus 1 plus dot dot dot plus 1.
+         Or as 'n plus 1 choose 2' fence-post combinations."
+
+  📌 MẸO #3: Explain why j starts from i
+     ✅ "The inner loop starts at i, not 0,
+         because end must be at least start.
+         An end before start would be an empty range —
+         we only want non-empty subarrays."
+
+  📌 MẸO #4: Mention slice's exclusive end
+     ✅ "Slice uses an exclusive end boundary:
+         slice of i comma j takes elements at i through j minus 1.
+         So I pass j plus 1 to include element at index j.
+         This is a common off-by-one source."
+
+  📌 MẸO #5: Warn about the reference trap
+     ✅ "In the incremental build, I must push a COPY:
+         dot-dot-dot sub in brackets — not sub itself.
+         Without copying, all result entries point to the same
+         array and get modified when I push the next element."
+
+  📌 MẸO #6: Bridge to Kadane's naturally
+     ✅ "If I only need the sum, I replace the inner array
+         with a running accumulator — that's O of n squared.
+         Kadane's takes it to O of n by recognizing when
+         extending is worse than restarting."
+
+  📌 MẸO #7: Name the output size bottleneck
+     ✅ "The total number of elements across all subarrays
+         is O of n cubed. Any algorithm that writes all subarrays
+         to memory is bounded by this — O of n cubed minimum.
+         That's WHY we use techniques that avoid enumeration."
+
+  📌 MẸO #8: Connect to real systems
+     ✅ "The subarray concept maps directly to windowed
+         computation in streaming systems. Tumbling windows
+         are non-overlapping fixed-size subarrays.
+         Sliding windows are overlapping ones.
+         The optimization — incremental update, not recompute —
+         is exactly what Kafka and Flink do under the hood."
 ```
 
 ### Biến thể & Mở rộng

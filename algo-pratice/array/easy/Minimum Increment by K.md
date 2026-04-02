@@ -474,39 +474,728 @@ function minOps(arr, k) {
 
 ## 🗣️ Interview Script
 
-> 🎙️ *"Since we can only increment, the target must be the maximum. For each element, the difference to max must be divisible by k. If not, return -1. Otherwise, sum up all (max - arr[i]) / k. O(n) time, O(1) space — a simple greedy modular arithmetic problem."*
+### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
-### Script chi tiết (nếu interviewer hỏi sâu)
-
-```
-  Q: "Tại sao target phải là max?"
-  A: "Vì chỉ được tăng, không giảm. Phần tử max không thể giảm →
-      mọi phần tử phải tăng lên bằng max. Target > max thì tốn thêm
-      thao tác không cần thiết."
-
-  Q: "Khi nào impossible?"
-  A: "Khi (max - arr[i]) không chia hết cho k. Tức là arr[i] và max
-      thuộc khác nhóm modulo k. Cộng k bao nhiêu lần cũng không đạt."
-
-  Q: "Nếu được cả tăng và giảm thì sao?"
-  A: "Bài khó hơn nhiều! Cần check mọi cặp (arr[i] - arr[j]) % k = 0.
-      Tương đương mọi phần tử cùng mod k. Target có thể là bất kỳ
-      giá trị nào cùng nhóm dư, tối ưu nhất là chọn target sao cho
-      tổng |diff|/k nhỏ nhất (giống bài Minimum Moves to Equal)."
-
-  Q: "Math.max(...arr) có vấn đề gì không?"
-  A: "Có! Với mảng rất lớn (>100k phần tử), spread operator đẩy tất cả
-      lên call stack → Stack Overflow. Nên dùng vòng for thủ công."
-```
-
-### Pattern
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
 
 ```
-  GREEDY + MODULAR ARITHMETIC pattern
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  Key insight: chỉ tăng → target = MAX!
-  Check: diff % k === 0 (modular divisibility)
-  Count: diff / k (operations needed)
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Tell me about yourself and a time you dealt with
+      a feasibility check before optimization."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I was building a data normalization
+      pipeline. We had sensor readings from multiple devices,
+      and we needed all readings to reach the same calibration
+      level by adjusting them in fixed increments.
+
+      The first question was: IS this even possible?
+      Not all readings can reach the same target if the
+      difference isn't divisible by the step size.
+
+      I realized this is a modular arithmetic problem.
+      Two numbers are reachable by a fixed step k if and
+      only if they belong to the same CONGRUENCE CLASS
+      modulo k. If any reading was in a different class,
+      calibration was impossible.
+
+      Once feasibility was confirmed, the count was trivial:
+      sum of all differences divided by k.
+
+      That's the exact pattern for this problem."
+
+  👤 "Great. Let's formalize that."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 05:00 — Clarify (5 phút) ────────────────
+
+  👤 "Given an array and an integer k, find the minimum number
+      of operations to make all elements equal. Each operation
+      increments one element by k. Return minus 1 if impossible."
+
+  🧑 "Let me clarify the constraints carefully.
+
+      I can only INCREMENT — add k. No subtraction.
+      Each operation affects exactly ONE element.
+      I need ALL elements to become the SAME value.
+
+      First key realization: what is the target value?
+      Since I can only INCREASE elements, no element can
+      decrease. The maximum element can't go down.
+      So every element must reach AT LEAST the maximum.
+
+      Can the target be HIGHER than the maximum?
+      Yes technically, but that would waste operations —
+      I'd need to increment even the max element.
+      So the OPTIMAL target is exactly the maximum.
+
+      Second key realization: when is this IMPOSSIBLE?
+      Starting from arr at i, adding k repeatedly gives:
+      arr at i, arr at i plus k, arr at i plus 2k, and so on.
+      I can only land on values that are arr at i plus
+      some multiple of k. If the max is NOT in this sequence,
+      it's impossible.
+
+      Mathematically: max minus arr at i must be
+      divisible by k. If not — impossible for that element,
+      and therefore impossible for the entire problem.
+
+      Array has positive integers, n at least 1."
+
+  ──────────────── 10:00 — The Number Line Analogy (4 phút) ────────
+
+  🧑 "I like to visualize this on a NUMBER LINE.
+
+      Each element is a point on the number line.
+      Each operation is a JUMP of exactly k units to the right.
+      The question is: can every point REACH the max
+      by jumping k steps?
+
+      For arr equal [4, 7, 19, 16] with k equal 3:
+
+      Element 4: 4, 7, 10, 13, 16, 19. Five jumps. Reaches 19!
+      Element 7: 7, 10, 13, 16, 19. Four jumps. Reaches 19!
+      Element 16: 16, 19. One jump. Reaches 19!
+      Element 19: already at 19. Zero jumps.
+
+      All elements can reach 19. Total: 5 plus 4 plus 1 plus 0
+      equal 10 operations.
+
+      Now for arr equal [4, 2, 6, 8] with k equal 3:
+
+      Element 4: 4, 7, 10, 13... JUMPS OVER 8!
+      4 mod 3 equal 1, but 8 mod 3 equal 2.
+      Different congruence classes. Impossible!
+
+      The physical analogy: imagine a frog on a number line
+      that can only jump exactly k units forward.
+      If the landing pad is at a distance that's NOT
+      a multiple of k, the frog can never land on it."
+
+  ──────────────── 14:00 — Modular Arithmetic Insight (4 phút) ────
+
+  🧑 "The deeper insight: this is about CONGRUENCE CLASSES.
+
+      For step size k, the number line is partitioned into
+      k groups: numbers with remainder 0, 1, 2, up to k minus 1
+      when divided by k.
+
+      Two numbers are reachable from each other by adding k
+      if and only if they're in the SAME congruence class.
+
+      For k equal 3: three classes.
+      Class 0: 0, 3, 6, 9, 12, 15, 18...
+      Class 1: 1, 4, 7, 10, 13, 16, 19...
+      Class 2: 2, 5, 8, 11, 14, 17, 20...
+
+      In arr equal [4, 7, 19, 16]:
+      4 mod 3 equal 1, 7 mod 3 equal 1, 19 mod 3 equal 1,
+      16 mod 3 equal 1. ALL in class 1. Possible!
+
+      In arr equal [4, 2, 6, 8]:
+      4 mod 3 equal 1, 2 mod 3 equal 2.
+      Different classes. Impossible!
+
+      So the feasibility check is: all arr at i mod k
+      must be EQUAL. One different value and we return minus 1.
+
+      This is equivalent to checking diff mod k equal 0
+      for each element, where diff equal max minus arr at i."
+
+  ──────────────── 18:00 — Algorithm (3 phút) ────────────────
+
+  🧑 "The algorithm is straightforward:
+
+      Step 1: Find the maximum element.
+      Step 2: For each element, compute diff equal max minus arr at i.
+      Step 3: If diff mod k is not 0, return minus 1 immediately.
+      Step 4: Otherwise, add diff divided by k to the total.
+      Step 5: Return the total.
+
+      The diff divided by k gives the exact number of
+      jumps needed for that element. No simulation needed —
+      it's direct division."
+
+  ──────────────── 21:00 — Trace bằng LỜI (4 phút) ────────────────
+
+  🧑 "Let me trace with arr equal [4, 7, 19, 16], k equal 3.
+      max equal 19.
+
+      Element 4: diff equal 19 minus 4 equal 15.
+      15 mod 3 equal 0 — feasible.
+      Operations: 15 divided by 3 equal 5.
+
+      Element 7: diff equal 19 minus 7 equal 12.
+      12 mod 3 equal 0 — feasible.
+      Operations: 12 divided by 3 equal 4.
+
+      Element 19: diff equal 0.
+      0 mod 3 equal 0 — trivially feasible.
+      Operations: 0.
+
+      Element 16: diff equal 19 minus 16 equal 3.
+      3 mod 3 equal 0 — feasible.
+      Operations: 3 divided by 3 equal 1.
+
+      Total: 5 plus 4 plus 0 plus 1 equal 10."
+
+  🧑 "Now the impossible case: arr equal [4, 2, 6, 8], k equal 3.
+      max equal 8.
+
+      Element 4: diff equal 8 minus 4 equal 4.
+      4 mod 3 equal 1 — NOT zero!
+      Return minus 1 IMMEDIATELY.
+
+      I don't even need to check the remaining elements.
+      This is the FAIL-FAST pattern: the moment one element
+      fails the divisibility check, the entire problem
+      is impossible."
+
+  ──────────────── 25:00 — Write Code (3 phút) ────────────────
+
+  🧑 "Let me code this.
+
+      [Vừa viết vừa nói:]
+
+      First, find the max of the array.
+      I'll use Math dot max with spread for interview clarity.
+
+      Initialize ops equal 0.
+
+      Loop through each element:
+      Compute diff equal max minus arr at i.
+      If diff mod k is not 0, return minus 1.
+      Otherwise, ops plus equals diff divided by k.
+
+      Return ops.
+
+      That's about 8 lines of actual logic.
+
+      Production note: Math dot max with spread can overflow
+      the call stack for very large arrays — same caveat
+      as Math dot min. A for loop is safer."
+
+  ──────────────── 28:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      Single element: [5], k equal 2.
+      Already equal to itself! Zero operations.
+
+      All equal: [4, 4, 4, 4], k equal 3.
+      diff equal 0 for every element. Total: 0.
+
+      k equal 1: this is the 'CHEAT CODE.'
+      Every integer difference is divisible by 1.
+      So it's ALWAYS feasible when k equal 1.
+      Total: sum of all max minus arr at i.
+
+      Multiple elements equal to max: [5, 5, 5, 2], k equal 3.
+      Only element 2 needs incrementing: diff equal 3,
+      3 divided by 3 equal 1. Total: 1.
+
+      Large and small: [1, 1000000], k equal 3.
+      diff equal 999999. 999999 mod 3 equal 0.
+      Operations: 333333. Feasible!"
+
+  ──────────────── 31:00 — Why target must be MAX (3 phút) ────────
+
+  👤 "Prove that the target must be the maximum."
+
+  🧑 "Three cases cover ALL possibilities.
+
+      Case 1: target less than max.
+      The max element needs to DECREASE to reach the target.
+      But I can only increment. Decreasing is impossible.
+      So target less than max is infeasible.
+
+      Case 2: target greater than max.
+      Now EVERY element needs to increase, including max.
+      Compared to target equal max, every element needs
+      at least as many operations, and max needs ADDITIONAL
+      operations it didn't need before.
+      Total strictly increases. Not optimal.
+
+      Case 3: target equal max.
+      Max needs zero operations.
+      All other elements use the minimum number of jumps.
+      This is optimal.
+
+      By exhaustion of cases, target must be max."
+
+  ──────────────── 34:00 — Two-pass necessity (3 phút) ────────────
+
+  👤 "Can you do this in a single pass?"
+
+  🧑 "Good question. I need to think carefully.
+
+      To compute diff for each element, I need to know max.
+      But I don't know max until I've seen ALL elements.
+      So I can't compute diff during the same pass
+      that finds max.
+
+      Therefore, I need TWO passes:
+      Pass 1: find max.
+      Pass 2: compute diffs, check divisibility, sum operations.
+
+      Or equivalently: one Math dot max call plus one for loop.
+
+      Can I combine into one pass with deferred computation?
+      I could accumulate the sum of all elements and n times max
+      separately... but I still don't know max until the end.
+
+      The answer is: two passes are NECESSARY.
+      But both are O of n, so total is still O of n.
+      The constant factor of 2n versus n doesn't change
+      the asymptotic complexity."
+
+  ──────────────── 37:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n. Two passes through the array.
+      Pass 1: find max in O of n.
+      Pass 2: compute operations in O of n.
+      Total: 2n — linear.
+
+      Space: O of 1. Just variables for max, diff, and ops.
+
+      Is this optimal? Yes — I must read every element
+      at least once to check divisibility and compute operations.
+      Omega of n is the lower bound. My algorithm meets it.
+
+      There's no way to avoid reading all elements because
+      a single 'bad' element could make the answer minus 1.
+      I can't know until I check all of them."
+
+  ──────────────── 40:00 — Alternative: modular pre-check (3 phút) ──
+
+  👤 "Is there a faster way to check feasibility?"
+
+  🧑 "Yes — a one-liner pre-check!
+
+      Instead of checking diff mod k for each element,
+      I can check: do all elements have the same remainder
+      when divided by k?
+
+      If arr at 0 mod k differs from arr at i mod k for any i,
+      return minus 1 immediately.
+
+      This is equivalent but sometimes conceptually cleaner.
+      It separates the FEASIBILITY check from the COST
+      computation.
+
+      In code: take r equal arr at 0 mod k.
+      Loop: if arr at i mod k is not equal to r, return minus 1.
+
+      Then in a second pass, compute the operations.
+      Or combine: check and compute in the same loop.
+
+      The total complexity doesn't change — still O of n."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — k equal 0 (3 phút) ────────────────
+
+  👤 "What if k is 0?"
+
+  🧑 "If k equal 0, each operation adds 0 — no change!
+
+      If all elements are already equal, the answer is 0.
+      If any element differs, it's impossible — return minus 1.
+
+      But there's a mathematical trap: diff divided by k
+      would be division by zero!
+
+      I'd add a special case at the start:
+      if k equal 0, check if all elements are equal.
+      If yes, return 0. If no, return minus 1.
+
+      In practice, most problem statements guarantee k
+      is at least 1, but mentioning this edge case shows
+      thoroughness."
+
+  ──────────────── 48:00 — Mathematical formula (4 phút) ────────────
+
+  👤 "Can you express the total operations as a single formula?"
+
+  🧑 "Yes! The total is:
+
+      ops equal sum of max minus arr at i divided by k
+      for all i from 0 to n minus 1.
+
+      Factor out the constant:
+      ops equal 1 divided by k times the sum of max minus arr at i
+      for all i.
+
+      The sum of max minus arr at i is:
+      n times max minus sum of all arr at i.
+
+      So: ops equal n times max minus totalSum, all divided by k.
+
+      This is a CLOSED-FORM formula! I can compute it
+      in one pass: find max and totalSum simultaneously,
+      then apply the formula.
+
+      Wait — but I still need to CHECK feasibility.
+      The formula gives a valid integer only if the total
+      difference is divisible by k AND each individual
+      difference is divisible by k.
+
+      Actually, if all elements are in the same congruence class
+      mod k, then n times max minus totalSum is automatically
+      divisible by k. So the closed-form works IF I first
+      verify the congruence class condition."
+
+  ──────────────── 52:00 — Why not sort? (3 phút) ────────────────
+
+  👤 "Would sorting help?"
+
+  🧑 "Sorting is overkill here.
+
+      After sorting, the max is at the last position.
+      I'd still need to sum all differences.
+      Sorting gives O of n log n — worse than O of n.
+
+      Sorting WOULD help if the problem asked me to find
+      the OPTIMAL target for a different cost function —
+      like minimizing the sum of absolute differences
+      when I can both increment and decrement.
+      In that case, the median is optimal, and sorting helps.
+
+      But for this problem — increment only, target equals max —
+      no sorting needed."
+
+  ──────────────── 55:00 — Overflow concerns (5 phút) ────────────
+
+  👤 "Any overflow concerns?"
+
+  🧑 "In JavaScript, numbers are 64-bit floats.
+      Safe integer range is up to 2 to the 53.
+
+      The sum of differences could be large.
+      If n is 100,000 and max is 1,000,000 with k equal 1,
+      the total operations could be around 10 to the 11 —
+      still within safe range.
+
+      But the closed-form n times max minus totalSum:
+      n times max could be 10 to the 11, and totalSum
+      similar. Both are within safe range individually,
+      and their difference is also safe.
+
+      For this problem, overflow is unlikely in JavaScript.
+      In languages with 32-bit integers — C++, Java —
+      I'd use long or 64-bit integers.
+
+      The Math dot max spread issue is separate:
+      not numeric overflow, but STACK overflow from
+      too many function arguments."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Increment AND Decrement (5 phút) ────────
+
+  👤 "What if you can both increment AND decrement by k?"
+
+  🧑 "This changes the problem fundamentally!
+
+      Now target doesn't have to be max. Any element can
+      go UP or DOWN by k. The target can be ANY value,
+      as long as all elements can reach it.
+
+      Feasibility: all elements must be in the same
+      congruence class mod k. Same check as before.
+
+      But the OPTIMAL target is the one that minimizes
+      the TOTAL number of operations.
+
+      Each element contributes absolute value of
+      target minus arr at i divided by k operations.
+      This is the sum of absolute deviations divided by k.
+
+      The sum of absolute deviations is minimized at
+      the MEDIAN of the array — not the mean!
+
+      So: sort the array, take the median, and if all elements
+      are in the same congruence class, compute the total.
+
+      Time: O of n log n for sorting.
+
+      This is LeetCode 462 — Minimum Moves to Equal
+      Elements II, but with step k instead of step 1."
+
+  ──────────────── 65:00 — Increment by 1 only (3 phút) ────────────
+
+  👤 "What if k equals 1?"
+
+  🧑 "When k equals 1, the divisibility check ALWAYS passes.
+      Every integer difference is divisible by 1.
+      So it's ALWAYS feasible.
+
+      Total operations: sum of max minus arr at i for all i.
+      Equivalently: n times max minus totalSum.
+
+      This is LeetCode 453 — Minimum Moves to Make Array
+      Elements Equal. The insight there is that incrementing
+      n minus 1 elements by 1 is EQUIVALENT to decrementing
+      1 element by 1. So the target becomes the MINIMUM.
+      Total: sum of arr at i minus min for all i.
+
+      Wait — that's a different problem formulation!
+      LeetCode 453 says 'increment n minus 1 elements by 1'
+      while our problem says 'increment 1 element by k.'
+      They look similar but have different greedy strategies."
+
+  ──────────────── 68:00 — Minimize COST not COUNT (4 phút) ────────
+
+  👤 "What if each increment costs arr at i — the current value?"
+
+  🧑 "Now the cost isn't just the count of operations.
+      Each increment has a COST that depends on the element.
+
+      Incrementing a large element is more expensive than
+      incrementing a small one. This changes the optimization.
+
+      The total cost for element i is:
+      the number of increments times arr at i...
+      wait, the cost of each increment is arr at i at the
+      TIME of the increment. But arr at i changes!
+
+      After the first increment: arr at i plus k.
+      After the second: arr at i plus 2k.
+      The costs are arr at i, arr at i plus k, arr at i plus 2k...
+      This is an arithmetic series!
+
+      Total cost for element i:
+      sum from j equal 0 to ops minus 1 of arr at i plus j times k.
+      equals ops times arr at i plus k times ops times ops minus 1
+      divided by 2.
+
+      The target is still max, but the optimization changes.
+      Elements with SMALLER values need MORE operations AND
+      have lower per-operation cost. The trade-offs become
+      interesting."
+
+  ──────────────── 72:00 — Multiple possible targets (3 phút) ────────
+
+  👤 "What if both increment by k AND decrement by k are allowed,
+      and I want to minimize operations?"
+
+  🧑 "As I mentioned, the target must be in the same congruence
+      class as all elements. Among valid targets, the one
+      minimizing total absolute distance divided by k
+      is the MEDIAN of the reachable values.
+
+      But there's a subtlety: the target must be an actual
+      value reachable from the congruence class, not just
+      the statistical median.
+
+      The optimal target is the reachable value closest
+      to the median. In practice, I sort the array and
+      pick arr at the middle index — since all elements
+      share the same congruence class, that's valid.
+
+      Time: O of n log n for sorting.
+      Space: O of 1 if sorting in place."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does this pattern appear in real systems?"
+
+  🧑 "Several domains!
+
+      First — SIGNAL QUANTIZATION.
+      In digital signal processing, analog values are
+      mapped to discrete levels separated by a fixed step.
+      Checking if a value CAN be represented at a given
+      quantization level is exactly the modular arithmetic
+      check: value mod step must equal the level's offset.
+
+      Second — DATA NORMALIZATION in ETL pipelines.
+      When aligning datasets from different sources,
+      values may need to be adjusted by fixed increments
+      to reach a common scale. The feasibility check ensures
+      alignment is possible before committing resources.
+
+      Third — RESOURCE PROVISIONING.
+      Cloud VMs come in fixed-size tiers. Scaling up
+      from a current size to a target means adding
+      fixed increments. If the target isn't reachable
+      from the current size, provisioning fails.
+
+      Fourth — BATCH PROCESSING ALIGNMENT.
+      In distributed systems, batch sizes must align
+      to a common multiple. Making all nodes process
+      the same batch size by adding fixed increments
+      is exactly this problem."
+
+  ──────────────── 80:00 — Congruence classes at scale (5 phút) ────
+
+  👤 "How would you handle this for a billion elements?"
+
+  🧑 "The algorithm is already O of n, so a billion elements
+      takes about 4-8 seconds with careful implementation.
+
+      Key optimizations for scale:
+
+      First — PARALLEL FEASIBILITY CHECK.
+      The modular check is embarrassingly parallel.
+      Split the array across threads; each thread checks
+      its partition's congruence class. If any thread
+      finds a mismatch, short-circuit and return minus 1.
+
+      Second — STREAMING SUM.
+      I can compute the total operations in a single
+      streaming pass using the closed-form:
+      n times max minus totalSum divided by k.
+      I need to know max in advance, so I either
+      do two passes or use a MapReduce pattern:
+      pass 1 reduces to max, pass 2 sums differences.
+
+      Third — APPROXIMATE ANSWER.
+      For very large n, if I only need an approximate
+      operation count, I can sample the array,
+      estimate the mean, and compute n times max minus
+      estimated mean times n divided by k.
+      This gives an O of 1 estimate."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, FEASIBILITY BEFORE OPTIMIZATION.
+      Before counting operations, I check: is this even
+      possible? The modular arithmetic check is a single
+      comparison per element. This 'fail-fast' pattern
+      saves time and catches impossible cases early.
+
+      Second, MODULAR ARITHMETIC as a problem-solving tool.
+      The insight that reachability by step k is equivalent
+      to same congruence class mod k is powerful.
+      It appears in problems about divisibility, periodicity,
+      and cyclic structures. Whenever a problem involves
+      fixed-size jumps, I think MODULO.
+
+      Third, DIVISION REPLACES SIMULATION.
+      Instead of simulating each jump — arr at i plus k,
+      plus k, plus k... — I compute diff divided by k directly.
+      This reduces O of diff divided by k per element to O of 1.
+      The lesson: when step size is fixed, count the steps
+      with division, don't walk them."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — in your systems, do you encounter alignment
+      problems where values need to be adjusted by fixed
+      increments? I'm thinking of things like memory page
+      alignment or batch size normalization.
+
+      Second — the 'increment only' constraint makes this
+      problem easy. If you allowed decrement too, the target
+      becomes the median — a harder optimization.
+      Do your interviews probe that far?
+
+      Third — the k equal 1 special case trivializes the
+      divisibility check. Do you use that as a warm-up
+      before introducing the general k?"
+
+  👤 "Excellent questions! Your explanation of congruence
+      classes and the fail-fast pattern was very clear.
+      The connection to signal quantization was impressive.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Min Increment K)   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Use the number line jumping analogy
+     ✅ "Each element is a point on a number line.
+         Each operation is a jump of exactly k units forward.
+         The question: can every point reach the target
+         by jumping k steps?"
+
+  📌 MẸO #2: State the target proof by cases
+     ✅ "Target less than max: infeasible — can't decrease.
+         Target greater than max: suboptimal — wastes operations.
+         Target equals max: optimal — minimum total operations."
+
+  📌 MẸO #3: Explain feasibility with congruence classes
+     ✅ "Two numbers are reachable by step k if and only if
+         they have the same remainder mod k. All elements must
+         be in the same congruence class."
+
+  📌 MẸO #4: Show the fail-fast pattern
+     ✅ "The moment ONE element fails the divisibility check,
+         the entire problem is impossible. I return minus 1
+         immediately without checking the rest."
+
+  📌 MẸO #5: Know the k equal 1 special case
+     ✅ "When k equals 1, it's ALWAYS feasible because
+         every integer divides by 1. Total operations
+         equals n times max minus totalSum."
+
+  📌 MẹO #6: Mention two-pass necessity
+     ✅ "I need max BEFORE computing diffs. Can't combine
+         into one pass. Two O of n passes is still O of n."
+
+  📌 MẸO #7: Connect to the 'Make Equal' family
+     ✅ "Increment only: target equals max. This problem.
+         Decrement only: target equals min. Symmetric.
+         Both: target equals median. LeetCode 462.
+         Increment n minus 1 by 1: target equals min. LeetCode 453."
+
+  📌 MẸO #8: Emphasize division over simulation
+     ✅ "Don't simulate jumps: 4 plus 3 plus 3 plus 3...
+         Just compute: 19 minus 4 equal 15, 15 divided by 3
+         equal 5. Division gives the answer in O of 1."
 ```
 
 ---

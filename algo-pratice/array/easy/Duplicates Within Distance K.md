@@ -1545,91 +1545,787 @@ graph LR
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
 ```
-  ──────────────── PHASE 1: Clarify ────────────────
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  👤 Interviewer: "Given an array and integer k, check if there exist
-                   duplicate elements within distance k."
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  🧑 You: "Let me clarify a few things:
-   1. I need two DIFFERENT indices i and j where arr[i] equals arr[j]
-      and |i-j| is at most k.
-   2. I just need to find ONE such pair to return 'Yes'.
-   3. If d > n, I should still check — d mod n isn't applicable here
-      like rotation, since it's a distance constraint not cyclic.
-   4. Edge cases: empty array or single element → always 'No'."
+  👤 "Tell me about yourself and a time you chose the right
+      data structure for a problem."
 
-  👤 Interviewer: "Correct. What's your approach?"
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I was building a rate-limiting
+      feature for an API gateway. We needed to detect
+      if a user made duplicate requests within a short
+      time window — essentially 'has this exact request
+      been seen in the last k seconds?'
 
-  ──────────────── PHASE 2: Brute Force ────────────────
+      My first approach stored every request in a database
+      and scanned backwards — analogous to O of n times k.
+      Way too slow at scale.
 
-  🧑 You: "Let me start with the brute force. For each element at
-   index i, I check all elements from i+1 to min(i+k, n-1) for a
-   match. This is O(n×k) time, O(1) space.
+      I switched to a HashMap that mapped each request hash
+      to its last-seen timestamp, checking if the gap
+      was within our threshold. This brought it down to
+      O of 1 per request lookup.
 
-   When k approaches n, this degrades to O(n²). Can I do better?"
+      Later, when memory became a concern, I replaced it
+      with a fixed-size sliding window using a Set — only
+      keeping the most recent k entries. That cut memory
+      usage by 99 percent while maintaining the same
+      O of 1 check.
 
-  ──────────────── PHASE 3: Optimize → HashMap ────────────────
+      That progression — brute force scan to HashMap
+      to sliding window Set — is exactly the arc of
+      this problem."
 
-  🧑 You: "The inner loop is essentially searching for arr[i] among
-   previously seen elements. I can replace this O(k) scan with an
-   O(1) hash lookup.
+  👤 "Nice. Let's see how you approach it formally."
+```
 
-   I'll use a HashMap mapping each value to its LAST SEEN index.
-   When I encounter a value already in the map, I check if the
-   distance to its last occurrence is within k.
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-   The key insight: I only need to compare against the CLOSEST
-   previous occurrence. If that's too far, any earlier occurrence
-   is guaranteed to be even farther. So I always overwrite with
-   the current index.
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
 
-   This gives O(n) time, O(n) space."
+  👤 "Given an array and an integer k, determine if there exist
+      two distinct indices i and j such that the values at those
+      indices are equal and the absolute difference of i and j
+      is at most k."
 
-  👤 Interviewer: "Why do you always overwrite the index?"
+  🧑 "Let me break this down into two SIMULTANEOUS conditions.
 
-  🧑 You: "Great question. Consider [1, 0, 1, 1] with k=1.
-   At i=2 (value 1), the last index is 0, distance is 2 > k=1.
-   If I DON'T overwrite, at i=3 I'd still check against index 0
-   with distance 3 — missing the valid pair (2,3)!
+      Condition one: arr at i equal arr at j — same VALUE.
+      This is the 'duplicate' part.
 
-   By overwriting to index 2, at i=3 I check distance 3-2=1 ≤ 1.
-   The overwrite ensures I always compare against the nearest
-   occurrence, which is the optimal candidate."
+      Condition two: the absolute difference of i and j
+      is at most k — close POSITION.
+      This is the 'within distance' part.
 
-  ──────────────── PHASE 4: Space Optimization ────────────────
+      Both must hold at the same time.
 
-  👤 Interviewer: "Can you optimize the space?"
+      A few clarifications: i and j must be different indices.
+      I just need to find ONE such pair — I return 'Yes'
+      as soon as I find it, making early exit valuable.
 
-  🧑 You: "Yes. The HashMap stores ALL seen values, but I only care
-   about elements within the last k positions. Elements farther back
-   are guaranteed to exceed the distance constraint.
+      For an empty array or single element, there can't be
+      two distinct indices, so the answer is always 'No.'
 
-   I can maintain a sliding window using a Set of size at most k.
-   For each new element:
-   1. Check if it's in the Set → if yes, return 'Yes'
-   2. Add it to the Set
-   3. If Set size exceeds k, remove the element that just left
-      the window (arr[i-k])
+      And if k equal 0, the distance constraint requires
+      i equal j, but i must differ from j — so the answer
+      is always 'No' regardless of duplicates."
 
-   This gives O(n) time, O(k) space — significant savings when
-   k is much smaller than n."
+  👤 "That's correct."
 
-  ──────────────── PHASE 5: Follow-up questions ────────────────
+  ──────────────── 09:00 — Brute Force (3 phút) ────────────────
 
-  👤 Interviewer: "What if the constraint is |arr[i]-arr[j]| ≤ t
-                   instead of arr[i] == arr[j]?"
+  🧑 "The brute force approach: for each index i, I check all
+      indices j from i plus 1 up to the minimum of i plus k
+      and n minus 1. If arr at i equal arr at j, return 'Yes.'
 
-  🧑 You: "That's Contains Duplicate III (#220)! The equality check
-   becomes a RANGE check: is there a value in my window within ±t?
+      I limit j to i plus k because any j beyond that would
+      violate the distance constraint — no need to check further.
 
-   For the sliding window approach, I'd replace the Set with either:
-   - A balanced BST (TreeSet) for O(log k) range queries, or
-   - Bucket sort with bucket size t+1 — each bucket holds at most
-     one value, so I only need to check the same bucket and adjacent
-     buckets. This achieves O(n) time, O(k) space.
+      Time: O of n times k. When k approaches n, this degrades
+      to O of n squared. Space: O of 1.
 
-   The bucket approach is the optimal solution for #220."
+      The inner loop is essentially SEARCHING for a matching
+      value among the k nearest elements. Whenever I see a
+      search loop, I ask: can I replace it with O of 1
+      hash lookup?"
+
+  ──────────────── 12:00 — Key Insight bằng LỜI (5 phút) ────────────────
+
+  🧑 "And the answer is yes!
+
+      I'll use a HashMap that maps each value to its LAST SEEN
+      index. As I scan left to right, for each element:
+
+      Step one: check if this value is already in the map.
+      If yes, compute the distance: current index minus
+      the stored index. If that distance is at most k,
+      I've found my pair — return 'Yes.'
+
+      Step two: regardless of whether I found a match,
+      I UPDATE the map with the current index.
+
+      The critical insight here is: I only need to compare
+      against the MOST RECENT previous occurrence.
+
+      Why? Because if a value appears at positions i-one,
+      i-two, i-three, where i-one is less than i-two is less
+      than i-three, and I'm currently at some position j
+      greater than all of them:
+
+      j minus i-three is less than j minus i-two
+      is less than j minus i-one.
+
+      The closest occurrence gives the SMALLEST distance.
+      If even the smallest distance exceeds k, then all
+      earlier occurrences are guaranteed to exceed k too.
+      Conversely, if the smallest distance is within k,
+      I immediately return 'Yes.'
+
+      So storing just the LAST index is sufficient —
+      this is a GREEDY insight."
+
+  ──────────────── 17:00 — Trace bằng LỜI (6 phút) ────────────────
+
+  🧑 "Let me trace this with a 'Yes' example.
+      Array: one, two, three, one, four, five. k equal 3.
+
+      I start with an empty map.
+
+      i equal 0, value is 1. Map doesn't have 1.
+      I store 1 maps-to 0. Map: {1 arrow 0}.
+
+      i equal 1, value is 2. Map doesn't have 2.
+      Store 2 maps-to 1. Map: {1 arrow 0, 2 arrow 1}.
+
+      i equal 2, value is 3. Not in map.
+      Store 3 maps-to 2. Map: {1 arrow 0, 2 arrow 1, 3 arrow 2}.
+
+      i equal 3, value is 1. Map HAS 1! Last index is 0.
+      Distance: 3 minus 0 equal 3. Is 3 at most k equal 3? YES!
+      Return 'Yes' immediately!
+
+      I found the pair at indices 0 and 3, both with value 1,
+      distance exactly 3 which satisfies at most k equal 3."
+
+  🧑 "Now a 'No' example. Same array structure but k equal 2:
+      one, two, three, four, one. k equal 2.
+
+      i equal 0 through 3: store values, no duplicates yet.
+      Map: {1 arrow 0, 2 arrow 1, 3 arrow 2, 4 arrow 3}.
+
+      i equal 4, value is 1. Map has 1, last index 0.
+      Distance: 4 minus 0 equal 4. Is 4 at most 2? NO.
+      I update: 1 now maps-to 4.
+
+      No more elements. Return 'No.'
+
+      The duplicate existed but was too far apart."
+
+  ──────────────── 23:00 — Viết code, NÓI từng block (3 phút) ────────────
+
+  🧑 "Let me code the HashMap solution.
+
+      [Vừa viết vừa nói:]
+
+      I create a new Map.
+
+      I loop through the array. For each index i:
+
+      I check two things with a combined condition:
+      does the map have this value, AND is the distance
+      from the current index to the stored index at most k?
+
+      If both are true, return 'Yes.'
+
+      Outside the if block, I ALWAYS set the current value
+      to the current index — this overwrites any previous entry.
+
+      If the loop finishes without finding a pair,
+      return 'No.'
+
+      That's six lines of code. The key design choice is:
+      map dot set runs UNCONDITIONALLY after the check.
+      Whether the value was new, or the distance was too large,
+      I update to the latest index."
+
+  ──────────────── 26:00 — Overwrite deep-dive (4 phút) ────────────────
+
+  👤 "Walk me through why the unconditional overwrite is correct."
+
+  🧑 "Let me use a specific example that breaks without it.
+
+      Array: one, zero, one, one. k equal 1.
+
+      Without overwrite — WRONG behavior:
+      i equal 0: store {1 arrow 0}.
+      i equal 1: store {1 arrow 0, 0 arrow 1}.
+      i equal 2: value 1, last index is 0.
+      Distance 2 minus 0 equal 2, greater than k equal 1. Not found.
+      But I DON'T update! Map still has {1 arrow 0}.
+      i equal 3: value 1, last index is STILL 0.
+      Distance 3 minus 0 equal 3, greater than 1. Return 'No.'
+      WRONG! The pair at indices 2 and 3 should be 'Yes'!
+
+      With overwrite — CORRECT behavior:
+      i equal 2: distance 2, too large. But I UPDATE to {1 arrow 2}.
+      i equal 3: value 1, last index is now 2.
+      Distance 3 minus 2 equal 1, at most k equal 1. YES!
+
+      The overwrite ensures that even when a match fails on distance,
+      I advance the stored index forward so the NEXT check
+      uses a closer reference point."
+
+  ──────────────── 30:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases:
+
+      Empty array or single element: the loop doesn't produce
+      two distinct indices. Return 'No.'
+
+      k equal 0: the distance constraint requires zero separation,
+      which means i equals j. But the problem requires DISTINCT
+      indices. So it's always 'No.'
+
+      k greater than or equal to n: this effectively reduces to
+      Contains Duplicate without distance constraint.
+      Every pair is within range.
+
+      All elements identical: [5, 5, 5, 5] with k equal 1.
+      At i equal 1, value 5 has last index 0. Distance is 1,
+      which is at most 1. Return 'Yes' immediately.
+
+      No duplicates at all: [1, 2, 3, 4, 5].
+      Map dot has never returns true. Full traversal, return 'No.'
+      This is the worst case for time."
+
+  ──────────────── 33:00 — Complexity (2 phút) ────────────────
+
+  🧑 "Time: O of n. One pass through the array.
+      Each element involves one map dot has and one map dot set,
+      both O of 1 amortized.
+
+      Space: O of n. The map can hold up to n entries
+      if all values are distinct.
+
+      The brute force was O of n times k time but O of 1 space.
+      This HashMap approach trades space for time —
+      a classic algorithmic tradeoff."
+
+  ──────────────── 35:00 — Space optimization: Sliding Window (6 phút) ────
+
+  👤 "Can you optimize the space?"
+
+  🧑 "Great question! The HashMap stores ALL previously seen
+      values, but I only NEED values within the last k positions.
+      Any element more than k positions behind is guaranteed
+      to fail the distance check.
+
+      So instead of a Map of size n, I maintain a SET of
+      at most k elements — a sliding window.
+
+      For each index i:
+      Step one: check if arr at i is in the Set.
+      If yes, return 'Yes' — a duplicate exists within
+      the current window of k elements.
+
+      Step two: add arr at i to the Set.
+
+      Step three: if the Set size exceeds k, DELETE
+      the element that just fell out of the window:
+      arr at i minus k.
+
+      The order is critical: check BEFORE add.
+      If I add first, Set dot has would always return true
+      for the element I just added — a false positive.
+
+      Space: O of k instead of O of n.
+
+      When k is much smaller than n — say k equal 10
+      and n equal a million — the Set holds 10 entries
+      instead of a million. That's a 100,000x reduction
+      in memory."
+
+  👤 "Why a Set and not a Map?"
+
+  🧑 "Because the window guarantees that anything IN the Set
+      is within k distance — by construction!
+
+      I don't NEED to know the exact index. If the value
+      is in the Set, it was added within the last k iterations.
+      Its distance to the current index is at most k.
+
+      The Set answers a simpler question:
+      'is this value present in my window?' — membership only.
+      The Map answered: 'where was this value last seen?'
+
+      When the window handles the distance constraint
+      structurally, I don't need the Map's index metadata."
+
+  ──────────────── 41:00 — Trace Sliding Window (4 phút) ────────────────
+
+  🧑 "Let me trace the sliding window on the 'No' case.
+      Array: one, two, three, four, one, two, three, four.
+      k equal 3.
+
+      i equal 0: Set is empty. 1 not in Set. Add 1.
+      Set: {1}. Size 1, at most 3.
+
+      i equal 1: 2 not in Set. Add 2.
+      Set: {1, 2}. Size 2.
+
+      i equal 2: 3 not in Set. Add 3.
+      Set: {1, 2, 3}. Size 3 equal k. Full window.
+
+      i equal 3: 4 not in Set. Add 4.
+      Set: {1, 2, 3, 4}. Size 4, exceeds k!
+      Delete arr at 3 minus 3 equal arr at 0 equal 1.
+      Set: {2, 3, 4}. Size 3.
+
+      i equal 4: 1 not in {2, 3, 4}. Add 1.
+      Size 4, delete arr at 1 equal 2.
+      Set: {3, 4, 1}.
+
+      Notice: 1 was removed at step 3, so when 1 reappears
+      at step 4, it's NOT in the Set. The window correctly
+      reflects that the previous 1 was at index 0,
+      which is farther than k equal 3 from index 4.
+
+      i equal 5 through 7: same pattern. Each duplicate
+      arrives after its predecessor has been evicted.
+      Final answer: 'No.'"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Greedy proof (4 phút) ────────────────
+
+  👤 "You said 'only compare against the nearest occurrence'
+      and called it greedy. Can you prove that's correct?"
+
+  🧑 "Sure. I'll prove by contradiction.
+
+      Suppose the algorithm says 'No,' but there actually exists
+      a valid pair at indices p and q where arr at p equal arr at q
+      and q minus p is at most k.
+
+      When the algorithm reaches index q, it checks against
+      the LAST stored index for this value, call it r.
+      By definition, r is at least p and at most q minus 1
+      (since r is the most recent occurrence before q).
+
+      Case 1: r is greater than p.
+      Then q minus r is less than q minus p, which is at most k.
+      So q minus r is also at most k. The algorithm would return
+      'Yes' — contradiction.
+
+      Case 2: r equal p.
+      The algorithm checks q minus p, which is at most k.
+      It returns 'Yes' — contradiction.
+
+      In both cases, if a valid pair exists, the algorithm
+      finds it (possibly a DIFFERENT valid pair with an even
+      smaller distance). So the algorithm is correct."
+
+  ──────────────── 49:00 — HashMap vs Map vs Object (4 phút) ────────────
+
+  👤 "In JavaScript, why use Map instead of a plain object?"
+
+  🧑 "Three important reasons.
+
+      First, TYPE SAFETY. Object keys are always converted
+      to strings. So numeric key 1 and string key '1'
+      collide — they map to the same entry. Map preserves
+      key types: Map dot set of 1 and Map dot set of '1'
+      create two separate entries.
+
+      For this problem, if the array contains both the number 1
+      and the string '1,' an Object would incorrectly treat
+      them as duplicates.
+
+      Second, PROTOTYPE POLLUTION. Objects inherit properties
+      from Object dot prototype. Keys like 'constructor,'
+      'toString,' or '__proto__' could cause unexpected behavior.
+      Map has no inherited keys.
+
+      Third, PERFORMANCE. Map is optimized for frequent
+      insertions and deletions. For large datasets,
+      Map typically outperforms Object for hash-table operations.
+
+      In interviews, I always use Map for algorithm problems.
+      It's the right tool for the job."
+
+  ──────────────── 53:00 — Short-circuit evaluation (3 phút) ────────────
+
+  👤 "In your condition, you wrote map.has AND distance check.
+      What if has returns false?"
+
+  🧑 "JavaScript uses SHORT-CIRCUIT evaluation with the
+      logical AND operator. If the left operand is false,
+      the right operand is NEVER evaluated.
+
+      So if map dot has of arr at i returns false,
+      the expression i minus map dot get of arr at i
+      is never computed. This is important because
+      map dot get would return undefined if the key
+      doesn't exist, and arithmetic with undefined
+      gives NaN, which would cause incorrect behavior.
+
+      The short-circuit guarantees safety: I only call
+      map dot get when I KNOW the key exists."
+
+  ──────────────── 56:00 — Absolute value (2 phút) ────────────────
+
+  👤 "You wrote i minus map.get instead of Math.abs.
+      Is that always correct?"
+
+  🧑 "Yes, because I scan LEFT TO RIGHT. The stored index
+      is always from a PREVIOUS iteration, so it's always
+      less than the current i. The difference i minus stored
+      is always non-negative.
+
+      I don't need Math dot abs because the scan direction
+      guarantees the sign. This is a small optimization
+      and also shows awareness of the algorithm's invariants."
+
+  ──────────────── 58:00 — Amortized O(1) (2 phút) ────────────────
+
+  👤 "You said hash operations are O(1) amortized. What does that mean?"
+
+  🧑 "Individual hash operations are O of 1 on average, but
+      occasionally the hash table needs to RESIZE — doubling
+      its capacity and rehashing all entries. That single
+      resize operation is O of n.
+
+      However, resizes happen logarithmically infrequently.
+      When amortized over n operations, the total cost is
+      still O of n, giving O of 1 per operation on average.
+
+      In the worst case — pathological hash collisions —
+      ALL entries could hash to the same bucket, degrading
+      lookups to O of n. But JavaScript's Map implementation
+      uses techniques like open addressing with good hash
+      functions that make this extremely rare in practice."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Contains Duplicate III (5 phút) ────────────────
+
+  👤 "What if instead of exact equality, the values must be
+      within t of each other? LeetCode 220."
+
+  🧑 "That's Contains Duplicate III — the hardest in the trilogy!
+
+      Now I have TWO constraints simultaneously:
+      the absolute difference of values at most t,
+      AND the absolute difference of indices at most k.
+
+      I can't use a simple Set because 'is this exact value
+      in my window' isn't the right question anymore.
+      The question is 'is there ANY value in my window
+      within plus-or-minus t of the current value?'
+
+      The elegant solution: BUCKET SORT.
+      I divide the number line into buckets of size t plus 1.
+      Each bucket can hold at most one value at a time.
+
+      For the current element, I compute its bucket ID:
+      value divided by t plus 1, rounded down.
+
+      If the same bucket already has an entry, the two values
+      are within t of each other — guaranteed.
+      I also check the adjacent buckets — bucket minus 1
+      and bucket plus 1 — and verify the actual difference
+      is at most t.
+
+      To maintain the distance constraint, I use the same
+      sliding window trick: when I've processed more than k
+      elements, I remove the oldest element's bucket.
+
+      Time: O of n. Space: O of k. Beautiful!"
+
+  ──────────────── 65:00 — Two Sum connection (3 phút) ────────────────
+
+  👤 "How does this pattern connect to Two Sum?"
+
+  🧑 "They share the exact same SKELETON!
+
+      Both use a Map for O of 1 lookup to replace an inner loop.
+
+      In Two Sum, the map stores value to index.
+      For each element, I look up target minus current value.
+      If found, I have my pair.
+
+      In Duplicates Within K, the map stores value to last index.
+      For each element, I look up the SAME value.
+      If found AND within distance k, I have my pair.
+
+      The pattern is: scan left to right, at each position
+      ask 'have I seen what I'm looking for?' using a Map.
+      If yes, check additional constraints. If no, store
+      current element for future lookups.
+
+      I call this the 'Retrospective Lookup' pattern —
+      look backwards in O of 1 using a hash table."
+
+  ──────────────── 68:00 — Sliding Window Max connection (4 phút) ────────
+
+  👤 "How does the sliding window here compare to
+      Sliding Window Maximum?"
+
+  🧑 "Both maintain a window of size k,
+      but they ask DIFFERENT questions about the window.
+
+      Duplicates Within K: 'does this value EXIST in the window?'
+      Membership query. A Set is perfect — O of 1 lookup.
+
+      Sliding Window Maximum: 'what is the LARGEST value
+      in the window?'
+      Extremum query. A Set doesn't support this efficiently.
+      I need a monotonic deque that maintains decreasing order.
+
+      The window MAINTENANCE is the same: as the window slides,
+      add the new element on the right, remove the expired
+      element on the left. But the DATA STRUCTURE inside
+      the window depends on what question I'm asking.
+
+      Set for membership. Deque for extremum.
+      TreeSet for nearest-neighbor. Bucket Map for range query.
+
+      Recognizing which internal structure fits which query
+      is the transferable skill here."
+
+  ──────────────── 72:00 — Count duplicates within k (3 phút) ────────────
+
+  👤 "What if instead of boolean, you need to COUNT
+      all pairs within distance k?"
+
+  🧑 "That changes the problem significantly!
+
+      With the HashMap approach, when I find a duplicate
+      within k, I CAN'T stop early — I need to keep counting.
+      And I can only count against the last occurrence,
+      which might miss pairs with earlier occurrences.
+
+      For an exact count, I'd need the Map to store a LIST
+      of all previous indices for each value.
+      For each new occurrence, I'd count how many stored
+      indices are within k distance.
+
+      But that could be O of n squared in the worst case
+      if all elements are the same.
+
+      A smarter approach: use a sliding window and count.
+      Maintain a Map of value to frequency within the window.
+      Each time a new element arrives, the number of new pairs
+      it forms equals its current frequency in the window.
+      Add that to the total count, then update the frequency.
+
+      That's O of n time because each element enters
+      and leaves the window exactly once."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Abuse detection (5 phút) ────────────────
+
+  👤 "Where does this 'duplicate within distance k' pattern
+      appear in real systems?"
+
+  🧑 "It's everywhere in security and operations!
+
+      First — DUPLICATE REQUEST DETECTION.
+      In API gateways, I detect if a user sends the exact same
+      request within a short time window. This prevents
+      double-charging, double-posting, or replay attacks.
+      The 'value' is the request hash, and 'k' is a time
+      window of maybe 5 seconds.
+
+      Second — SESSION ANOMALY DETECTION.
+      If a user's session token appears from two different
+      IP addresses within a few minutes, it might indicate
+      token theft. The 'value' is the session ID plus IP hash,
+      and 'k' is a time-based window.
+
+      Third — IDEMPOTENCY KEYS.
+      Payment systems use idempotency keys to prevent
+      double charges. When a client retries a payment,
+      the server checks if the same key was seen recently.
+      This is literally 'duplicate within distance k.'
+
+      Fourth — LOG DEDUPLICATION.
+      In distributed systems, the same log message might
+      arrive multiple times due to retries. I deduplicate
+      by checking if the same message hash appeared
+      within the last k entries.
+
+      In all these cases, the sliding window Set approach
+      is preferred because memory is bounded — I only keep
+      the last k entries regardless of total traffic volume."
+
+  ──────────────── 80:00 — Distributed sliding window (5 phút) ────────
+
+  👤 "How would you handle this at scale across
+      multiple servers?"
+
+  🧑 "In a distributed setting, the sliding window can't live
+      in a single process's memory.
+
+      Option 1: CENTRALIZED CACHE.
+      Use Redis with a sorted set where the score is
+      the timestamp. For each request, do a range query
+      to find recent duplicates. Redis handles the
+      sliding window eviction with ZRANGEBYSCORE
+      and ZREMRANGEBYSCORE.
+
+      Option 2: CONSISTENT HASHING.
+      Route all requests with the same value to the same
+      server. Then each server maintains its own local
+      sliding window for its assigned keys. This is
+      horizontally scalable but requires a consistent
+      hash ring.
+
+      Option 3: BLOOM FILTER with rotation.
+      For approximate detection, use a Bloom filter that
+      resets every k units. This gives false positives
+      but never false negatives, uses very little memory,
+      and requires no coordination between servers.
+
+      The choice depends on the tolerance for false positives,
+      memory constraints, and latency requirements.
+      For payment deduplication, I'd use exact matching
+      with Redis. For log deduplication, the Bloom filter
+      is often good enough."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, the HASH LOOKUP pattern. Whenever I see an inner
+      loop searching for a value, I ask: 'can I replace this
+      with a hash lookup?' This single optimization converts
+      O of n squared to O of n in countless problems —
+      Two Sum, Contains Duplicate, Subarray Sum Equal K.
+      It's possibly the most broadly applicable technique
+      in algorithm design.
+
+      Second, the GREEDY insight of 'only check the nearest.'
+      When a comparison is monotonic — closer is always
+      better or equal — I only need to compare against
+      the optimal candidate. This eliminates storing full
+      history. The same reasoning applies to jump game,
+      stock buy-sell, and interval scheduling.
+
+      Third, the SPACE-TIME tradeoff progression:
+      Brute force O of 1 space, O of n-k time.
+      HashMap O of n space, O of n time.
+      Sliding Window O of k space, O of n time.
+      Each step trades differently. Knowing all three
+      and being able to articulate WHEN to use each
+      is what makes a senior engineer."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — does your product have rate-limiting or
+      deduplication needs? I'm curious how you handle
+      the 'duplicate within window' pattern at scale.
+
+      Second — when evaluating space complexity in code reviews,
+      does your team consider the O of n versus O of k
+      distinction meaningful, or is it treated as
+      'both are acceptable'?
+
+      Third — how does your team approach the Contains
+      Duplicate III follow-up in interviews?
+      Do candidates typically reach the bucket sort solution?"
+
+  👤 "Great questions! I really liked how you progressed
+      from brute force through HashMap to sliding window,
+      and explained the greedy reasoning clearly.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Dup Within K)      ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Frame as TWO simultaneous constraints
+     ✅ "This problem has two conditions that must hold
+         at the same time: same VALUE and close POSITION.
+         If I only had the value constraint, it's just
+         Contains Duplicate with a Set. Adding the distance
+         constraint means I need a Map to track indices."
+
+  📌 MẸO #2: Derive HashMap from brute force
+     ✅ "The inner loop scans k elements for a match.
+         That's a SEARCH operation — exactly what hash tables
+         are for. I replace the O of k scan with an O of 1
+         map dot has lookup."
+
+  📌 MẸO #3: Explain overwrite with a BREAKING example
+     ❌ "I always update the map."
+     ✅ "Consider [1, 0, 1, 1] with k equal 1.
+         Without overwriting index 0 to 2, I'd miss
+         the valid pair at indices 2 and 3.
+         The overwrite ensures I compare against the nearest
+         occurrence, which is the optimal candidate."
+
+  📌 MẸO #4: Connect to Contains Duplicate trilogy
+     ✅ "This is the middle problem in a trilogy:
+         I — any duplicate — Set.
+         II — duplicate within k — Map.
+         III — value within t AND index within k — Bucket Map.
+         Each level adds a constraint and upgrades the data structure."
+
+  📌 MẸO #5: Sliding Window — explain WHY Set suffices
+     ✅ "In the HashMap approach, I need the index to compute
+         distance. In the sliding window, the window structure
+         GUARANTEES distance at most k. So I only need to ask
+         'is this value present?' — a Set, not a Map."
+
+  📌 MẸO #6: Emphasize the OPERATION ORDER
+     ✅ "The order is: check, then add, then evict.
+         If I add before checking, Set dot has always returns
+         true for the element I just added.
+         If I evict before adding, the window might shrink
+         below k elements."
+
+  📌 MẸO #7: Quantify the space savings
+     ✅ "With n equal a million and k equal ten,
+         the HashMap uses about 80 megabytes.
+         The sliding window Set uses about 560 bytes.
+         That's a 99.999 percent reduction."
+
+  📌 MẸO #8: Name the transferable pattern
+     ✅ "I call this the 'Retrospective Lookup' pattern:
+         scan left to right, at each step ask
+         'have I seen what I need?' via hash lookup.
+         Same skeleton works for Two Sum, Subarray Sum equal K,
+         and all 'find pair with condition' problems."
 ```
 
 ### Pattern & Liên kết

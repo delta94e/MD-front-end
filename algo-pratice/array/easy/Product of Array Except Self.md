@@ -682,112 +682,720 @@ Test Cases:
 
 ## 🗣️ Interview Script
 
-> 🎙️ *"The key insight is to decompose the product-except-self into two parts: the product of all elements to the left (prefix) and all elements to the right (suffix). I compute prefixes left-to-right into the result array, then sweep right-to-left with a running suffix multiplier. Two passes, O(n) time, O(1) extra space, no division needed."*
+### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
-### Think Out Loud — Quá trình suy nghĩ
-
-```
-  🧠 BƯỚC 1: Đọc đề → phát hiện keywords
-    "product except self" → tích TẤT CẢ trừ chính nó
-    "without division" → KHÔNG CHIA!
-    → Cần cách khác → prefix × suffix!
-
-  🧠 BƯỚC 2: Brute force
-    "Với mỗi i, nhân tất cả j ≠ i → O(n²)"
-    → Nói: "I can brute force in O(n²) but let me optimize."
-
-  🧠 BƯỚC 3: Optimize
-    "res[i] = tích bên trái × tích bên phải"
-    "→ prefix[i] × suffix[i]"
-    "→ 2 passes: left-to-right, right-to-left"
-    "→ O(n) time, O(n) space"
-
-  🧠 BƯỚC 4: O(1) space
-    "Lưu prefix VÀO res[], dùng 1 biến suffix"
-    "→ O(n) time, O(1) extra space"
-
-  🧠 BƯỚC 5: Edge cases
-    "Zero? → handled tự nhiên, 0 propagate qua tích"
-    "Negative? → hoạt động bình thường"
-    "n=2? → trivial case"
-
-  🎙️ Interview phrasing:
-    "For each position, the answer is the product of everything
-     to its left times everything to its right. I store prefix
-     products in my output array, then multiply by a running
-     suffix product in a second pass. No division needed, works
-     with zeros. O(n) time, O(1) extra space."
-```
-
-### Biến thể & Mở rộng
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
 
 ```
-  Biến thể phổ biến:
-
-  1. SUM except self (dễ hơn!)
-     → totalSum - arr[i]
-     → Nhưng phép chia analog = totalProduct / arr[i]
-        thì KHÔNG ĐƯỢC vì có 0!
-
-  2. Có phép chia + KHÔNG CÓ số 0
-     → totalProduct / arr[i] → 1 pass!
-     → Nhưng phỏng vấn luôn cấm chia!
-
-  3. Có phép chia + CÓ thể có 0
-     → Đếm số lượng 0:
-       0 zeros: totalProduct / arr[i]
-       1 zero:  res[i]=0 nếu arr[i]≠0, res[i]=product_others nếu arr[i]=0
-       2+ zeros: tất cả res[i] = 0
-
-  4. Product of all subarrays containing index i
-     → Khác bài! Cần counting technique
-
-  5. Maximum product subarray
-     → Track max VÀ min (vì âm × âm = dương!)
-     → Kadane's variant!
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
 ```
 
-### So sánh với bài liên quan
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Tell me about yourself and a time you decomposed
+      a problem into left and right components."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I was building a pricing dashboard
+      where each product's 'relative weight' was defined as
+      the product of all OTHER products' prices.
+
+      My first approach calculated the total product,
+      then divided by each price. But some products had
+      price zero — on clearance — causing division by zero.
+
+      I realized I could split the problem: for each product,
+      compute the product of everything to its LEFT
+      and the product of everything to its RIGHT.
+      Multiply those two. No division needed.
+
+      I precomputed prefix products left-to-right,
+      then swept right-to-left with a running suffix.
+      Two passes, zero handled naturally, constant extra space.
+
+      That's the exact algorithm for Product of Array
+      Except Self."
+
+  👤 "Perfect setup. Let's formalize that."
+```
 
 ```
-  ┌──────────────────────────────────────────────────────────┐
-  │  Bài toán              Technique           Complexity    │
-  │  ────────────────────────────────────────────────        │
-  │  Product Except Self ⭐ Prefix × Suffix    O(n)         │
-  │  Prefix Sum            Running sum          O(n)         │
-  │  Trapping Rain Water   Prefix max + Suffix  O(n)         │
-  │  Range Sum Query       Prefix Sum array     O(1) query   │
-  │  Max Product Subarray  Kadane variant       O(n)         │
-  └──────────────────────────────────────────────────────────┘
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  KEY INSIGHT:
-  → "Bỏ phần tử" = prefix × suffix
-  → "Tính trước từ 2 chiều" = prefix + suffix pattern
-  → Trapping Rain Water CÙNG pattern! (max thay vì product)
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
+
+  👤 "Given an array, construct a result array where result at i
+      is the product of all elements except arr at i.
+      You cannot use division."
+
+  🧑 "Let me clarify the requirements.
+
+      For each index i, I need the product of ALL other elements.
+      Division is explicitly BANNED.
+      This is the most important constraint because
+      without it, I'd just compute total product divided by
+      arr at i — trivial.
+
+      Can the array contain zeros?
+      Yes — and this is another reason division fails.
+      If arr at i is zero, dividing by zero is undefined.
+
+      Can it contain negative numbers?
+      Yes, but negatives don't affect the algorithm.
+      Negative times negative is positive — it works naturally.
+
+      What about the output array — does it count
+      toward space complexity?
+      No — output space is free. So O of 1 'extra' space
+      is achievable.
+
+      Array size is at least 2."
+
+  ──────────────── 09:00 — The Assembly Line Analogy (3 phút) ──
+
+  🧑 "I like to think of this as an ASSEMBLY LINE.
+
+      Imagine standing at position i on a conveyor belt.
+      I can look LEFT and see everything before me.
+      I can look RIGHT and see everything after me.
+
+      The product-except-self at position i equals
+      everything-to-my-left TIMES everything-to-my-right.
+      I'm simply excluded by the split.
+
+      For arr equal [10, 3, 5, 6, 2], standing at index 2:
+      Left products: 10 times 3 equals 30.
+      Right products: 6 times 2 equals 12.
+      Result: 30 times 12 equals 360.
+
+      This decomposition is the KEY insight.
+      Product except self equals prefix times suffix."
+
+  ──────────────── 12:00 — Approach 1: Brute Force (3 phút) ────────
+
+  🧑 "Let me start with brute force.
+
+      For each index i, multiply all elements where j is
+      not equal to i. That's a nested loop: outer loop
+      picks i, inner loop multiplies everything else.
+
+      Time: O of n squared. Space: O of 1.
+
+      This is correct but too slow. For n equals 100,000,
+      that's 10 billion operations. I need O of n."
+
+  ──────────────── 15:00 — Approach 2: Two Arrays (5 phút) ────────
+
+  🧑 "From the assembly line insight:
+      result at i equals prefix at i times suffix at i.
+
+      I precompute two arrays:
+
+      Prefix at i equals the product of all elements
+      from index 0 to i minus 1.
+      Prefix at 0 equals 1 — nothing to the left.
+      Prefix at i equals prefix at i minus 1 times arr at i minus 1.
+
+      Suffix at i equals the product of all elements
+      from index i plus 1 to n minus 1.
+      Suffix at n minus 1 equals 1 — nothing to the right.
+      Suffix at i equals suffix at i plus 1 times arr at i plus 1.
+
+      Then result at i equals prefix at i times suffix at i.
+
+      Let me trace with arr equal [10, 3, 5, 6, 2]:
+
+      Prefix: [1, 10, 30, 150, 900].
+      Prefix at 2 equals 30 equals 10 times 3. Correct —
+      that's the product of everything to the left of index 2.
+
+      Suffix: [180, 60, 12, 2, 1].
+      Suffix at 2 equals 12 equals 6 times 2. Correct —
+      product of everything to the right.
+
+      Result: [1 times 180, 10 times 60, 30 times 12,
+      150 times 2, 900 times 1]
+      equals [180, 600, 360, 300, 900].
+
+      Time: O of n — three passes.
+      Space: O of n — for the two auxiliary arrays.
+
+      Can I reduce space?"
+
+  ──────────────── 20:00 — Approach 3: O(1) Space (6 phút) ────────
+
+  🧑 "Yes! The key trick: use the OUTPUT array as my buffer.
+
+      Pass 1 — left to right:
+      Store prefix products directly INTO the result array.
+      result at 0 equals 1.
+      result at i equals result at i minus 1 times arr at i minus 1.
+
+      After pass 1, result contains all prefix products.
+
+      Pass 2 — right to left:
+      Maintain a SINGLE variable called suffix, starting at 1.
+      For i from n minus 1 down to 0:
+      result at i times-equals suffix.
+      suffix times-equals arr at i.
+
+      At each step, result at i — which was the prefix —
+      gets multiplied by the running suffix.
+      So result at i becomes prefix times suffix.
+
+      Let me trace with arr equal [10, 3, 5, 6, 2]:
+
+      After pass 1: result equals [1, 10, 30, 150, 900].
+
+      Pass 2, suffix starts at 1:
+      i equals 4: result at 4 times-equals 1 gives 900.
+      suffix becomes 1 times 2 equals 2.
+
+      i equals 3: result at 3 times-equals 2 gives 300.
+      suffix becomes 2 times 6 equals 12.
+
+      i equals 2: result at 2 times-equals 12 gives 360.
+      suffix becomes 12 times 5 equals 60.
+
+      i equals 1: result at 1 times-equals 60 gives 600.
+      suffix becomes 60 times 3 equals 180.
+
+      i equals 0: result at 0 times-equals 180 gives 180.
+
+      Final: [180, 600, 360, 300, 900]. Correct!
+
+      Time: O of n — two passes.
+      Space: O of 1 extra — just the suffix variable.
+      The output array doesn't count."
+
+  ──────────────── 26:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code is concise.
+
+      [Vừa viết vừa nói:]
+
+      function productExceptSelf of arr.
+      const n equal arr dot length.
+      const res equal new Array of n.
+
+      Pass 1 — prefix into result:
+      res at 0 equal 1.
+      for let i equal 1, i less than n, i plus plus:
+      res at i equal res at i minus 1 times arr at i minus 1.
+
+      Pass 2 — multiply by suffix:
+      let suffix equal 1.
+      for let i equal n minus 1, i greater than or equal 0,
+      i minus minus:
+      res at i times-equal suffix.
+      suffix times-equal arr at i.
+
+      return res.
+
+      Two clean loops. No division anywhere.
+      The suffix variable replaces the entire suffix array."
+
+  ──────────────── 29:00 — Zero Handling (3 phút) ────────────────
+
+  🧑 "Let me trace the zero edge case.
+      arr equal [12, 0].
+
+      Pass 1: result at 0 equals 1.
+      result at 1 equals 1 times 12 equals 12.
+      Result after pass 1: [1, 12].
+
+      Pass 2: suffix equals 1.
+      i equals 1: result at 1 times-equals 1 gives 12.
+      suffix becomes 1 times 0 equals 0.
+
+      i equals 0: result at 0 times-equals 0 gives 0.
+
+      Final: [0, 12]. Correct!
+
+      The zero PROPAGATES naturally through the suffix.
+      Everything to the LEFT of the zero gets multiplied
+      by zero in the suffix pass. Everything to the RIGHT
+      keeps its prefix value because the zero hasn't
+      entered the suffix yet.
+
+      This is EXACTLY why the no-division approach works
+      better than division — zeros are handled for free."
+
+  ──────────────── 32:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Other edge cases.
+
+      Two zeros: arr equal [0, 0].
+      Every product includes at least one zero.
+      Result: [0, 0]. Correct.
+
+      All ones: arr equal [1, 1, 1].
+      Result: [1, 1, 1]. Trivial but correct.
+
+      Negatives: arr equal [minus 1, 2, minus 3].
+      Prefix: [1, minus 1, minus 2].
+      Suffix: [minus 6, minus 3, 1].
+      Result: [1 times minus 6, minus 1 times minus 3,
+      minus 2 times 1] equals [minus 6, 3, minus 2].
+      Verification: minus 1 times 2 times minus 3 equals 6.
+      Product except index 0: 2 times minus 3 equals minus 6. Correct.
+
+      Minimum size n equals 2: arr equal [a, b].
+      Result: [b, a]. Just swap!"
+
+  ──────────────── 35:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n. Two passes through the array.
+      Each pass does exactly n multiplications.
+      Total: 2n multiplications.
+
+      Space: O of 1 extra. The result array is output —
+      doesn't count. The only extra variable is suffix.
+
+      Is O of n optimal? Yes.
+      Lower bound: I must READ every element — at least once.
+      I must WRITE every output — n values.
+      So Omega of n is the lower bound. We match it.
+
+      Number of multiplications: exactly 2n minus 2.
+      Pass 1: n minus 1 multiplications.
+      Pass 2: n multiplications (n suffix updates plus
+      n result updates, but each iteration does 2).
+      This is nearly optimal."
+
+  ──────────────── 38:00 — Why not division? (4 phút) ────────────
+
+  👤 "If division were allowed, how would you handle zeros?"
+
+  🧑 "Good question. With division allowed, I'd compute
+      the total product of all non-zero elements,
+      and count the number of zeros.
+
+      Case 1: zero zeros.
+      result at i equals totalProduct divided by arr at i.
+
+      Case 2: exactly one zero at index j.
+      result at i equals 0 for all i not equal j.
+      result at j equals totalProduct of non-zeros.
+
+      Case 3: two or more zeros.
+      ALL results are 0. Any product includes at least one
+      of the other zeros.
+
+      This works but requires SPECIAL CASING for zeros.
+      The prefix-suffix approach handles ALL cases uniformly.
+      No special cases, no branches, no risk of division
+      by zero. That's the elegance of the approach."
+
+  ──────────────── 42:00 — The output-as-buffer trick (3 phút) ──
+
+  👤 "Why can we reuse the output array?"
+
+  🧑 "Because the output array's initial values don't matter!
+
+      In pass 1, I write prefix products into result.
+      Each result at i depends only on result at i minus 1
+      and arr at i minus 1 — both already computed.
+      I'm writing LEFT to RIGHT, reading LEFT to RIGHT.
+      No conflict.
+
+      In pass 2, I read result at i — which is the prefix —
+      and multiply by suffix. I'm writing RIGHT to LEFT.
+      I read result at i before overwriting it.
+      Again, no conflict.
+
+      This is a general pattern: when building an output
+      incrementally, you can often reuse the output array
+      as workspace if the write direction matches the
+      dependency direction."
 ```
 
-### Kiến thức liên quan
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Connection to Trapping Rain Water (4 phút)
+
+  👤 "How does this relate to Trapping Rain Water?"
+
+  🧑 "They share the SAME pattern — prefix-suffix decomposition!
+
+      Product Except Self:
+      result at i equals prefix PRODUCT times suffix PRODUCT.
+      Operator: multiplication.
+
+      Trapping Rain Water:
+      water at i equals min of prefix MAX and suffix MAX,
+      minus height at i.
+      Operator: max instead of multiply.
+
+      Both problems need information from BOTH directions.
+      Both solve it with two passes: left-to-right builds
+      the prefix, right-to-left builds the suffix.
+
+      The general pattern:
+      'For each position, combine left-aggregate with
+      right-aggregate using some operator.'
+
+      This pattern also appears in:
+      Range minimum queries — prefix and suffix min.
+      Equilibrium index — prefix sum and suffix sum.
+      Best time to buy and sell stock — prefix min,
+      suffix max."
+
+  ──────────────── 49:00 — Overflow analysis (4 phút) ────────────
+
+  👤 "Can the product overflow?"
+
+  🧑 "Yes! Products grow exponentially.
+
+      If all elements are 2 and n equals 100,
+      the prefix product at position 99 is 2 to the 99 —
+      far beyond Number dot MAX_SAFE_INTEGER,
+      which is about 9 times 10 to the 15.
+
+      In JavaScript, numbers are 64-bit floats.
+      They can represent values up to about 1.8 times
+      10 to the 308, but PRECISION is lost after
+      2 to the 53. Products involving large integers
+      will silently lose precision.
+
+      Mitigations:
+      Use BigInt if exact precision is needed.
+      Use logarithms: log of product equals sum of logs.
+      Then exponentiate. But this has floating-point issues.
+
+      In interviews, I'd mention overflow awareness
+      but note that the problem typically constrains
+      values to avoid it. LeetCode 238 guarantees
+      the product fits in a 32-bit integer."
+
+  ──────────────── 53:00 — Logarithmic trick (3 phút) ────────────
+
+  👤 "Tell me about the logarithm approach."
+
+  🧑 "If division is allowed and there are no zeros:
+      log of product-except-i equals totalLogSum minus
+      log of arr at i.
+      Then result at i equals e to the power of that.
+
+      This converts multiplication to addition
+      and division to subtraction.
+      It avoids overflow because we're adding logs
+      instead of multiplying large numbers.
+
+      But there are problems:
+      Floating-point precision — exponentiation amplifies errors.
+      Log of zero is undefined — zeros still break it.
+      Negative numbers — log of negative is complex-valued.
+
+      So it's a theoretical alternative but not practical
+      for this problem. The prefix-suffix approach is
+      universally better — exact, handles zeros,
+      handles negatives."
+
+  ──────────────── 56:00 — Can we do it in one pass? (4 phút) ────
+
+  👤 "Is a one-pass solution possible?"
+
+  🧑 "For the no-division constraint, I believe
+      two passes is the minimum.
+
+      Why? At position i, I need information from BOTH
+      directions — elements to the left AND to the right.
+      A single left-to-right pass can give me the prefix,
+      but not the suffix. I MUST sweep right-to-left
+      at some point.
+
+      I can INTERLEAVE the two passes — simultaneously
+      building prefix from the left and suffix from the right
+      using two pointers converging — but that's still
+      logically two passes, just overlapping.
+
+      With division, one pass suffices: compute the total
+      product, then divide. But the problem forbids division.
+
+      So two passes is both necessary and sufficient."
+```
 
 ```
-  PRODUCT EXCEPT SELF → Prefix/Suffix Decomposition!
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  Lộ trình học (progression):
-  ┌───────────────────────────────────────────────────────────┐
-  │  Prefix Sum (cộng dồn — nền tảng!)                        │
-  │         ↓                                                  │
-  │  Prefix Product (nhân dồn — bài này!)                     │
-  │         ↓                                                  │
-  │  ⭐ Product Except Self (prefix × suffix)                  │
-  │         ↓                                                  │
-  │  Trapping Rain Water (prefix max × suffix max)             │
-  │         ↓                                                  │
-  │  Range queries (segment tree, BIT)                         │
-  └───────────────────────────────────────────────────────────┘
+  ──────────────── 60:00 — Sum Except Self (3 phút) ────────────────
 
-  ⭐ QUY TẮC VÀNG:
-    Khi cần thông tin "2 chiều" (trái + phải, trước + sau):
-    → 2 passes: trái→phải rồi phải→trái!
-    → O(n) thay vì O(n²)!
+  👤 "What about SUM except self?"
+
+  🧑 "Much easier! Division analog works for sum.
+
+      Sum except self at i equals totalSum minus arr at i.
+      One pass to compute totalSum, then one pass to subtract.
+      O of n time, O of 1 space. No prefix-suffix needed.
+
+      Why is sum easier but product harder?
+      Because subtraction — the 'un-do' operation for
+      addition — doesn't have the zero problem.
+      Subtracting zero is fine.
+      But dividing by zero is undefined.
+
+      Also, addition is commutative and has a CLEAN inverse.
+      Multiplication's inverse — division — is partial
+      (undefined at zero). That's the fundamental asymmetry."
+
+  ──────────────── 63:00 — Maximum Product Subarray (4 phút) ────────
+
+  👤 "How about Maximum Product Subarray?"
+
+  🧑 "That's LeetCode 152 — a different problem but related.
+
+      The key complexity: negatives! A negative times
+      a negative is positive. So the MINIMUM product
+      subarray can BECOME the maximum if multiplied
+      by another negative.
+
+      I track BOTH maxSoFar and minSoFar at each position.
+      For each element x:
+      newMax equals max of x, maxSoFar times x, minSoFar times x.
+      newMin equals min of x, maxSoFar times x, minSoFar times x.
+
+      This is a Kadane's variant where I maintain
+      both extremes because of sign flips.
+
+      The connection to our problem: both involve
+      products across array positions. But Max Product
+      Subarray is about CONTIGUOUS subarrays,
+      while Product Except Self considers ALL other elements."
+
+  ──────────────── 67:00 — Product in a Range (4 phút) ────────────
+
+  👤 "What if I need the product of a RANGE?"
+
+  🧑 "For range products — product from index L to R —
+      I precompute prefix products.
+
+      prefixProd at 0 equals 1.
+      prefixProd at i equals prefixProd at i minus 1
+      times arr at i minus 1.
+
+      Then product from L to R equals prefixProd at R plus 1
+      divided by prefixProd at L.
+
+      But this requires DIVISION! And fails with zeros.
+
+      For ranges with zeros, I'd need to count zeros
+      in the range and handle specially.
+      Or use a segment tree that stores products —
+      O of log n per query, handles any range.
+
+      Alternatively, prefix LOG-sums with exponentiation
+      give approximate range products without division."
+
+  ──────────────── 71:00 — 2D Product Except Self (4 phút) ────────
+
+  👤 "Can this extend to 2D?"
+
+  🧑 "For a 2D matrix, the analog would be:
+      for each cell i, j, compute the product of ALL
+      other cells.
+
+      With division: totalProduct divided by matrix at i, j.
+      Without division: much harder.
+
+      I could flatten the matrix to 1D, apply prefix-suffix,
+      and reshape. That works!
+      Time: O of m times n. Space: O of 1 extra.
+
+      For a more interesting 2D variant — product of
+      all elements in the same ROW except self AND
+      same COLUMN except self — I'd apply prefix-suffix
+      independently to each row and each column.
+
+      The prefix-suffix pattern is dimension-agnostic.
+      It works on any 1D sequence."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does this pattern appear in practice?"
+
+  🧑 "Several important domains!
+
+      First — SIGNAL PROCESSING.
+      In audio or image processing, computing
+      'normalized' values where each sample is weighted
+      relative to ALL other samples. The prefix-suffix
+      decomposition enables streaming computation.
+
+      Second — FINANCIAL ANALYTICS.
+      Portfolio diversification metrics often compute
+      'what's the aggregate performance excluding
+      this one asset?' This is exactly product-except-self
+      applied to return multipliers.
+
+      Third — MACHINE LEARNING — Leave-One-Out Cross Validation.
+      Computing the model performance when each data point
+      is left out. If the metric is multiplicative —
+      like likelihood — it's product-except-self.
+
+      Fourth — RECOMMENDER SYSTEMS.
+      Computing 'relevance-except-this-item' scores
+      for diversity metrics. Each item's score accounts
+      for the product of all other items' relevance."
+
+  ──────────────── 80:00 — Parallel computation (5 phút) ────────────
+
+  👤 "Can this be parallelized?"
+
+  🧑 "The two-pass approach is inherently sequential
+      within each pass — each prefix depends on the previous.
+
+      But I can use PARALLEL PREFIX SCAN!
+
+      A parallel prefix product computes all prefix products
+      in O of log n parallel steps using O of n processors.
+      The suffix scan runs in parallel similarly.
+      Then the final multiplication is fully parallel.
+
+      Total: O of log n parallel time.
+
+      For distributed systems with the array split
+      across machines:
+      Each machine computes its local prefix and suffix.
+      Then a REDUCTION step computes the global prefix
+      and suffix boundaries.
+      Each machine multiplies its result by the global
+      context. Communication: O of log P messages
+      where P is the number of machines.
+
+      The prefix-suffix decomposition is fundamentally
+      parallelizable because each element's result
+      depends only on its prefix and suffix —
+      which can be computed via parallel scans."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, PREFIX-SUFFIX DECOMPOSITION as a paradigm.
+      When I need information from both directions,
+      I build two aggregates — one from the left,
+      one from the right — and combine them.
+      This turns O of n squared brute force into O of n.
+
+      Second, CONSTRAINT-DRIVEN creativity.
+      The no-division constraint is the entire point.
+      Without it, the problem is trivial.
+      The constraint forced the insight: split into
+      left and right, multiply without including self.
+
+      Third, OUTPUT ARRAY as workspace.
+      The trick of storing intermediate results
+      in the output array saves space.
+      This is a general technique — whenever the output
+      will be overwritten anyway, use it as a buffer."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — this problem is one of the most frequently
+      asked in Big Tech interviews. Do you use it as
+      a foundational question, or more as a warm-up
+      before harder prefix-suffix problems like
+      Trapping Rain Water?
+
+      Second — the output-as-buffer trick is elegant
+      but can make code harder to read. In production,
+      do you prefer clarity with two explicit arrays,
+      or the space-optimized version?
+
+      Third — the prefix-suffix pattern maps directly
+      to parallel prefix scans. Do your distributed
+      systems use scan-based aggregations?"
+
+  👤 "Excellent questions! Your progression from brute
+      force to two arrays to the output-as-buffer trick
+      was textbook. The zero handling explanation and
+      the Trapping Rain Water connection showed real depth.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Product Except)    ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Name the decomposition immediately
+     ✅ "Product except self at i equals prefix product
+         times suffix product. Left times right.
+         No division needed."
+
+  📌 MẸO #2: Use the assembly line analogy
+     ✅ "Standing at position i: everything to my LEFT
+         times everything to my RIGHT. I'm excluded
+         by the split itself."
+
+  📌 MẸO #3: Present 3 approaches as escalation
+     ✅ "Brute force: O of n squared, nested loops.
+         Two arrays: O of n time, O of n space.
+         Output as buffer: O of n time, O of 1 extra space."
+
+  📌 MẸO #4: Explain the output-as-buffer trick
+     ✅ "Pass 1 stores prefix products INTO the result array.
+         Pass 2 multiplies each by a running suffix variable.
+         The result array does double duty as workspace."
+
+  📌 MẸO #5: Address zeros proactively
+     ✅ "Zeros propagate naturally through multiplication.
+         No special cases needed. The suffix accumulates zero
+         and eliminates everything to its left."
+
+  📌 MẸO #6: Explain why 2 passes are necessary
+     ✅ "I need information from both directions.
+         A single pass can give me prefix OR suffix,
+         not both. Two passes is the minimum without division."
+
+  📌 MẸO #7: Connect to Trapping Rain Water
+     ✅ "Same pattern! Trapping Rain Water uses prefix MAX
+         and suffix MAX instead of prefix PRODUCT.
+         Both decompose into left and right aggregates."
+
+  📌 MẸO #8: Highlight the constraint-driven insight
+     ✅ "The no-division constraint IS the problem.
+         Without it, totalProduct divided by arr at i is trivial.
+         The constraint forces the prefix-suffix decomposition."
 ```
 
 ---

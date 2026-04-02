@@ -735,61 +735,522 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
 ```
-  ──────────────── PHASE 1: Clarify ────────────────
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  👤 Interviewer: "Find the minimum in a sorted, rotated
-                   array with distinct elements."
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  🧑 You: "So the array was originally sorted in ascending
-   order, then rotated some number of positions. The min
-   is at the rotation point — the 'break' where values
-   suddenly decrease. No duplicates. Correct?"
+  👤 "Tell me about yourself and a time you applied
+      binary search to a non-standard sorted structure."
 
-  ──────────────── PHASE 2: Examples ────────────────
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A real example: I was working on a build system that
+      maintained a sorted dependency list which could rotate
+      after overnight re-indexing. I needed to find the
+      baseline (minimum version) in O(log n).
 
-  🧑 You: "[5, 6, 7, 8, 1, 2, 3, 4]. Two sorted halves:
-   [5,6,7,8] and [1,2,3,4]. The break is between 8 and 1.
-   Min = 1 at index 4."
+      Linear scan would be O(n) — too slow for 10 to the 6.
 
-  ──────────────── PHASE 3: Approach ────────────────
+      I realized: a sorted-rotated array consists of exactly
+      two sorted halves. Binary search can determine which
+      half the break point is in by comparing mid to hi.
+      O(log n) — 30 steps for a billion elements.
 
-  🧑 You: "I'll use binary search. The key insight: if
-   arr[mid] > arr[hi], the break point is to the right
-   of mid, so lo = mid + 1. Otherwise, the break is at
-   or to the left of mid, so hi = mid.
+      That is exactly Find Minimum in Sorted Rotated Array."
 
-   Important: I use hi = mid, NOT mid-1, because mid
-   itself could be the minimum.
+  👤 "Perfect parallel. Let's formalize."
+```
 
-   I also add an early exit: if arr[lo] < arr[hi], the
-   subarray is already sorted, so min = arr[lo].
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-   O(log n) time, O(1) space."
+  ──────────────── 05:00 — Clarify (3 phút) ────────────────
 
-  ──────────────── PHASE 4: Code + Verify ────────────────
+  👤 "Find the minimum in a sorted array that has been
+      rotated by some unknown amount. No duplicates."
 
-  🧑 You: [writes code, traces example]
+  🧑 "Let me clarify.
 
-  "[5,6,1,2,3,4]: lo=0,hi=5,mid=2. arr[2]=1 ≤ arr[5]=4
-   → hi=2. lo=0,hi=2,mid=1. arr[1]=6 > arr[2]=1 → lo=2.
-   lo=hi=2 → return arr[2] = 1 ✅."
+      The array was originally sorted in strictly ascending order.
+      Then rotated k positions to the left for some unknown k.
+      k equals 0 means no rotation — array still sorted.
 
-  ──────────────── PHASE 5: Follow-ups ────────────────
+      No duplicates: all distinct elements.
+      This is important — duplicates make it harder.
 
-  👤 "What if there are duplicates?"
-  🧑 "When arr[mid] = arr[hi], I can't tell which side
-      the break is on. I'd do hi-- to shrink by one.
-      Worst case becomes O(n) — that's LeetCode #154."
+      Return the minimum VALUE, not its index?"
 
-  👤 "How would you find a specific target?"
-  🧑 "That's LeetCode #33. I first determine which half
-      is sorted, then check if the target falls in the
-      sorted half. Same O(log n) principle."
+  ──────────────── 08:00 — Broken Ruler Analogy (2 phút) ────
 
-  👤 "Can you also return the rotation count?"
-  🧑 "The rotation count equals the index of the minimum
-      element! So I'd return the index instead of the value."
+  🧑 "I think of this as a BROKEN RULER.
+
+      A full ruler: marks 1 through 8, increasing.
+      Rotated ruler: marks 5, 6, 7, 8 | 1, 2, 3, 4.
+      There is exactly ONE break point where the value drops.
+      The minimum is the mark just after the break.
+
+      Binary search can find this break point efficiently.
+      At each step: look at mid. Is it in the left half
+      (the high part) or the right half (the low part)?
+
+      If arr[mid] > arr[hi]: mid is in the high part.
+      The break is to the RIGHT of mid.
+      If arr[mid] <= arr[hi]: mid is in the low part.
+      The break is at or to the LEFT of mid."
+
+  ──────────────── 10:00 — Brute Force (2 phút) ────────────
+
+  🧑 "Brute force: scan the array, track minimum.
+      Time O(n), Space O(1).
+
+      Or: find the first downward step arr[i] < arr[i-1].
+      That position is the minimum.
+
+      For n equals 10 to the 9: need O(log n).
+      Binary search is the answer."
+
+  ──────────────── 12:00 — Binary Search insight (5 phút) ───
+
+  🧑 "Why binary search works here.
+
+      The key monotonic property:
+      For any index x in [lo, hi]:
+      if arr[x] > arr[hi], then x is in the LEFT sorted half.
+      if arr[x] <= arr[hi], then x is in the RIGHT sorted half.
+
+      This is monotonic: LEFT half has no element <= arr[hi].
+      RIGHT half has no element > arr[hi].
+
+      So comparing arr[mid] to arr[hi] tells us which half
+      mid falls in, and that tells us where the minimum is.
+
+      Why compare to hi, NOT lo?
+      Because when lo < hi, mid < hi always holds.
+      But mid could equal lo (when hi equals lo plus 1).
+      Comparing mid to lo when mid = lo gives arr[lo] vs arr[lo]
+      — always equal, ambiguous. hi is always strictly
+      to the right of mid. Safe."
+
+  ──────────────── 17:00 — Why hi=mid, not mid-1 (3 phút) ──
+
+  🧑 "The most important detail: hi = mid, NOT mid minus 1.
+
+      When arr[mid] <= arr[hi]:
+      mid is in the right (lower) half.
+      Mid COULD BE the minimum.
+
+      If I do hi = mid minus 1:
+      I exclude mid from the search range.
+      If mid is the actual minimum, I miss it.
+
+      Example: [3, 1, 2].
+      lo=0, hi=2, mid=1.
+      arr[1]=1 <= arr[2]=2. Break LEFT. hi = mid = 1.
+      Next: lo=0, hi=1. arr[0]=3 > arr[1]=1. Break RIGHT.
+      lo = 2. lo=hi=1. Return arr[1] = 1. Correct!
+
+      If hi = mid-1 = 0: lo=0, hi=0, return arr[0]=3. WRONG!"
+
+  ──────────────── 20:00 — Why lo < hi, not lo <= hi (2 phút) ─
+
+  🧑 "The loop condition is lo STRICTLY LESS THAN hi.
+
+      When lo = hi, we have exactly one element.
+      By the invariant: minimum is always in [lo, hi].
+      That single element IS the minimum. Return it.
+
+      If I use lo <= hi with hi = mid:
+      lo = hi = mid. hi = mid = lo. Nothing changes.
+      Infinite loop!
+
+      Strict less-than exits cleanly when lo = hi."
+
+  ──────────────── 22:00 — Write Code (4 phút) ──────────────
+
+  🧑 "The code.
+
+      function findMin of arr:
+        let lo equals 0, hi equals arr.length minus 1.
+
+        While lo strictly less than hi:
+          if arr[lo] strictly less than arr[hi]:
+            return arr[lo]. Already sorted, min at lo.
+
+          let mid equals floor of lo plus hi divided by 2.
+
+          if arr[mid] strictly greater than arr[hi]:
+            lo equals mid plus 1. Break to the right, kill mid.
+          else:
+            hi equals mid. Break at or left of mid, keep mid.
+
+        return arr[lo]."
+
+  ──────────────── 26:00 — Trace example (5 phút) ───────────
+
+  🧑 "Trace [5, 6, 7, 8, 1, 2, 3, 4].
+
+      lo=0, hi=7. arr[0]=5 > arr[7]=4. NOT sorted.
+      mid=3. arr[3]=8 > arr[7]=4. Break RIGHT.
+      lo = 4.
+
+      lo=4, hi=7. arr[4]=1 < arr[7]=4. SORTED!
+      return arr[4] = 1. Only 2 steps!
+
+      Second trace [5, 6, 1, 2, 3, 4]:
+      lo=0, hi=5. arr[0]=5 > arr[5]=4. NOT sorted.
+      mid=2. arr[2]=1 <= arr[5]=4. Break LEFT.
+      hi = 2.
+
+      lo=0, hi=2. arr[0]=5 > arr[2]=1. NOT sorted.
+      mid=1. arr[1]=6 > arr[2]=1. Break RIGHT.
+      lo = 2.
+
+      lo=2, hi=2. Return arr[2] = 1."
+
+  ──────────────── 31:00 — Edge Cases (4 phút) ───────────────
+
+  🧑 "Edge cases.
+
+      Not rotated: [1, 2, 3, 4, 5].
+      First iteration: arr[lo]=1 < arr[hi]=5.
+      Return arr[0] = 1 immediately. O(1) exit!
+
+      Single element: [5].
+      lo=hi=0. Loop does not execute. Return arr[0] = 5.
+
+      Two elements: [2, 1].
+      lo=0, hi=1. arr[0]=2 > arr[1]=1. NOT sorted.
+      mid=0. arr[0]=2 > arr[1]=1. lo=1.
+      lo=hi=1. Return arr[1] = 1."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Prove the invariant (5 phút) ──────
+
+  👤 "Prove that the minimum is always in [lo, hi]."
+
+  🧑 "Formal invariant proof.
+
+      Base case: lo=0, hi=n-1.
+      Min is somewhere in the array. Min is in [0, n-1]. Done.
+
+      Inductive step for lo = mid+1:
+      We enter this branch when arr[mid] > arr[hi].
+      This means arr[mid] is in the larger left sorted half.
+      All elements from lo_old to mid are >= arr[mid] > arr[hi].
+      So all of [lo_old, mid] are LARGER than arr[hi].
+      arr[hi] is in the right half.
+      The minimum is <= arr[hi] < all of [lo_old, mid].
+      So min is in [mid+1, hi]. Setting lo = mid+1 is safe.
+
+      Inductive step for hi = mid:
+      We enter when arr[mid] <= arr[hi].
+      Mid is in the smaller right half.
+      Mid could be the minimum. Setting hi = mid keeps it.
+      Min is in [lo, mid].
+
+      By induction, invariant holds throughout. QED."
+
+  ──────────────── 50:00 — Termination proof (3 phút) ────────
+
+  👤 "Prove the loop always terminates."
+
+  🧑 "The interval [lo, hi] strictly shrinks each iteration.
+
+      Case lo = mid+1:
+      mid = floor((lo+hi)/2) < hi when lo < hi.
+      So lo strictly increases.
+
+      Case hi = mid:
+      mid = floor((lo+hi)/2) < hi when lo < hi.
+      So hi strictly decreases.
+
+      In both cases, hi minus lo strictly decreases.
+      Started at n-1, reaches 0, then exits.
+      Total steps at most log base 2 of n. QED."
+
+  ──────────────── 53:00 — Compare to lo instead (4 phút) ────
+
+  👤 "Why not compare arr[mid] to arr[lo] instead of arr[hi]?"
+
+  🧑 "When lo plus 1 equals hi, mid equals lo.
+      Then arr[mid] equals arr[lo].
+
+      Example: [2, 1]. lo=0, hi=1.
+      mid = floor((0+1)/2) = 0 = lo.
+      arr[mid] = arr[lo] = 2.
+      The comparison arr[mid] > arr[lo] gives 2 > 2 = false.
+      We would set hi = mid = 0.
+      Return arr[0] = 2. WRONG! Minimum is 1.
+
+      With arr[mid] vs arr[hi]:
+      arr[0]=2 > arr[1]=1. lo = mid+1 = 1.
+      lo=hi=1. Return arr[1] = 1. Correct!
+
+      hi is always strictly greater than mid index when lo < hi.
+      lo can equal mid. hi cannot. Comparing to hi is safe."
+
+  ──────────────── 57:00 — Min index = rotation count (2 phút) ─
+
+  👤 "How do you derive the rotation count?"
+
+  🧑 "The minimum element is at the rotation point.
+      It's the first element of the original sorted array.
+      Its index lo tells you how many positions were rotated.
+
+      Concretely: [5, 6, 7, 8, 1, 2, 3, 4].
+      Minimum at index 4. The array was rotated left 4 times.
+      To get back the original: arr.slice(lo) + arr.slice(0, lo).
+
+      Just change return arr[lo] to return lo."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — With duplicates (#154) (5 phút) ────
+
+  👤 "What if the array can have duplicates?"
+
+  🧑 "That is LeetCode #154, rated Hard.
+
+      The problem: when arr[mid] equals arr[hi],
+      we cannot tell which side the minimum is on.
+
+      Example: [2, 2, 2, 0, 2].
+      mid=2, arr[2]=2, arr[4]=2. Equal.
+      Is min at left or right? Here min is at index 3
+      (right), but we cannot distinguish.
+
+      Solution: when equal, do hi-- to shrink by one.
+      This eliminates one duplicate from consideration.
+
+      Worst case: [2, 2, 2, 2, 2] — all equal.
+      Every step gives arr[mid]=arr[hi], so hi-- each time.
+      n steps total. O(n) worst case.
+
+      With distinct elements (this problem): always O(log n)."
+
+  ──────────────── 65:00 — Search for target (#33) (4 phút) ──
+
+  👤 "How would you search for a specific target?"
+
+  🧑 "LeetCode #33. Different logic but same O(log n).
+
+      Key insight: at any mid, ONE of the two halves is sorted.
+      I determine which half is sorted.
+      Then check if the target falls within the sorted half.
+      Search that half if yes, the other if no.
+
+      While lo <= hi:
+        if arr[mid] = target: return mid.
+        if arr[lo] <= arr[mid]: left half is sorted.
+          if arr[lo] <= target < arr[mid]: hi = mid-1.
+          else: lo = mid+1.
+        else: right half is sorted.
+          if arr[mid] < target <= arr[hi]: lo = mid+1.
+          else: hi = mid-1.
+
+      Note: uses lo <= hi unlike findMin which uses lo < hi."
+
+  ──────────────── 69:00 — Max in rotated (3 phút) ────────────
+
+  👤 "What about finding the MAXIMUM?"
+
+  🧑 "The maximum is just before the minimum.
+      Its index is (minIdx - 1 + n) mod n.
+
+      Direct search: flip the comparison.
+      If arr[mid] < arr[hi]: max is to the left. hi = mid-1.
+      If arr[mid] >= arr[hi]: max is at or right. lo = mid.
+
+      Termination: while lo < hi, return arr[lo].
+      Same O(log n), mirror logic."
+
+  ──────────────── 72:00 — Without early exit (2 phút) ───────
+
+  👤 "What if you remove the arr[lo] < arr[hi] early exit?"
+
+  🧑 "Still correct, just slower for sorted arrays.
+
+      Without early exit on [1, 2, 3, 4, 5]:
+      lo=0, hi=4. mid=2. arr[2]=3 <= arr[4]=5. hi=2.
+      lo=0, hi=2. mid=1. arr[1]=2 <= arr[2]=3. hi=1.
+      lo=0, hi=1. mid=0. arr[0]=1 <= arr[1]=2. hi=0.
+      lo=hi=0. Return arr[0]=1. Correct!
+
+      Takes O(log n) steps instead of O(1).
+      Early exit is an OPTIMIZATION, not a correctness fix."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────
+
+  👤 "Where does this matter in real systems?"
+
+  🧑 "Several important scenarios.
+
+      First — CIRCULAR BUFFER MANAGEMENT.
+      A circular log buffer where writes wrap around.
+      The oldest entry is the minimum timestamp — the read
+      pointer. Finding it in O(log n) instead of O(n)
+      matters when the buffer has millions of entries.
+
+      Second — VERSION CONTROL SYSTEMS.
+      A sorted-by-version dependency list that gets rotated
+      after re-indexing. Find the baseline version quickly.
+
+      Third — DISTRIBUTED CONSISTENT HASHING.
+      A sorted ring of node IDs. Find the first node quickly
+      when the ring is stored as a rotated sorted array.
+
+      Fourth — GENOMICS SEQUENCE ANALYSIS.
+      Circular DNA sequences where finding the origin
+      (globally minimum marker) requires O(log n) search."
+
+  ──────────────── 80:00 — Scaling (5 phút) ────────────────
+
+  👤 "How would you scale to n = 10⁹ elements?"
+
+  🧑 "O(log n) binary search: log base 2 of 10 to the 9
+      equals approximately 30 iterations.
+      Runs in microseconds on any hardware.
+
+      Bottleneck shifts to data access patterns.
+      For in-memory array: trivial.
+
+      For disk-based or distributed array:
+      each index access is a disk read or network call.
+      30 iterations = 30 random accesses.
+      If each is 10ms: 300ms total.
+
+      Optimization: exponential search first.
+      Check indices 1, 2, 4, 8, 16... until we bracket
+      the break point. Then binary search within.
+      Reduces seeks when break point is near the start.
+
+      For sharded distributed array:
+      binary search over shard boundaries first,
+      then binary search within the target shard."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What's the single hardest conceptual point here?"
+
+  🧑 "Three things.
+
+      First, COMPARE MID TO HI, NOT LO.
+      Comparing to lo is ambiguous when mid equals lo.
+      hi is always strictly to the right of mid.
+      This makes the comparison unambiguous.
+
+      Second, hi = MID, NOT MID MINUS 1.
+      Mid can be the minimum when arr[mid] <= arr[hi].
+      hi = mid minus 1 excludes mid and skips the answer.
+      Most common off-by-one bug in this problem.
+
+      Third, WHILE lo < hi, NOT lo <= hi.
+      When lo equals hi: one element, which IS the minimum.
+      lo <= hi with hi=mid causes infinite loop
+      when lo = hi = mid."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — you mentioned distributed systems.
+      Does your infrastructure use circular buffers or
+      consistent hashing rings? Have you needed to find
+      the pivot point in such a structure at scale?
+
+      Second — the duplicate case degrades to O(n) worst case.
+      Is your data guaranteed to have distinct values,
+      or would you need the O(n) variant for safety?
+
+      Third — rotation count equals the min's index.
+      In your systems, do you track how out-of-order
+      a dataset is? This could be a useful diagnostic."
+
+  👤 "Excellent work! The broken ruler analogy made
+      the two-halves structure immediately clear.
+      The formal invariant proof was rigorous.
+      The hi=mid vs hi=mid-1 distinction showed
+      you truly internalized the correctness requirement.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN (Min in Sorted Rotated)              ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Broken ruler analogy immediately
+     ✅ "Two sorted halves with exactly one break point.
+         Minimum is the first element of the right half."
+
+  📌 MẸO #2: Compare mid vs HI (not LO)
+     ✅ "mid can equal lo when hi = lo+1.
+         lo is ambiguous. hi is always strictly > mid."
+
+  📌 MẸO #3: arr[mid] > arr[hi] → lo = mid+1
+     ✅ "Mid is in the large left half.
+         Break is to the right. Safely EXCLUDE mid."
+
+  📌 MẸO #4: arr[mid] <= arr[hi] → hi = mid
+     ✅ "Mid is in the small right half.
+         Mid could be the minimum. KEEP mid in range."
+
+  📌 MẸO #5: while lo < hi (not <=)
+     ✅ "lo=hi → one element → that IS the minimum.
+         lo <= hi with hi=mid → infinite loop."
+
+  📌 MẸO #6: Early exit arr[lo] < arr[hi]
+     ✅ "Subrange is already sorted.
+         Minimum is arr[lo]. O(1) exit."
+
+  📌 MẸO #7: Duplicates → hi--
+     ✅ "arr[mid]=arr[hi]: cannot tell which side.
+         hi-- shrinks range by one. Worst case O(n). (#154)"
+
+  📌 MẸO #8: Min index = rotation count
+     ✅ "Return lo instead of arr[lo] for rotation count.
+         Connects to LC #33 (search) and rotation analysis."
 ```
 
 ---

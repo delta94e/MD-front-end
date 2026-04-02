@@ -833,71 +833,699 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
 ```
-  ──────────────── PHASE 1: Clarify ────────────────
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  👤 Interviewer: "Count the number of triplets from an
-                   array that can form valid triangles."
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  🧑 You: "Let me clarify:
-   1. Triangle inequality: sum of any two sides must be
-      strictly greater than the third.
-   2. All values are positive integers.
-   3. I return the count, not the actual triplets.
-   4. Duplicate values at different indices are distinct triplets."
+  👤 "Tell me about yourself and a time you used
+      constraint reduction to simplify a problem."
 
-  ──────────────── PHASE 2: Examples ────────────────
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I built a component validation
+      system where each UI card had three configurable
+      dimension constraints — width, height, and diagonal.
 
-  🧑 You: "arr = [4, 6, 3, 7]. After sorting: [3, 4, 6, 7].
-   Valid triangles: [3,4,6], [3,6,7], [4,6,7] → 3 total.
-   Note: [3,4,7] fails because 3+4=7, not strictly greater."
+      Initially we validated all three independently —
+      cubic complexity over the constraint space.
+      Then I realized: if we SORT the dimensions
+      smallest to largest, only one constraint can fail.
+      The two larger dimensions always satisfy
+      the other two checks.
 
-  ──────────────── PHASE 3: Approach ────────────────
+      That reduced the validation from three checks
+      to one. Same idea as triangle inequality:
+      sort, then only check if the two smaller sides
+      sum to more than the largest.
 
-  🧑 You: "Brute force is O(n³) with three nested loops.
+      That's exactly Count Possible Triangles."
 
-   Key insight: after sorting, if a ≤ b ≤ c, we only need
-   to check a + b > c. The other two conditions are automatically
-   satisfied since c is the largest.
+  👤 "Nice constraint reduction. Let's formalize."
+```
 
-   So I sort, then fix the largest side c = arr[i] and use
-   two pointers (left=0, right=i-1) to count pairs where
-   arr[left] + arr[right] > arr[i].
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-   When the sum exceeds c, ALL elements from left to right-1
-   paired with arr[right] also satisfy the condition — so I
-   add right-left to the count. This is batch counting.
+  ──────────────── 05:00 — Clarify (3 phút) ────────────────
 
-   O(n²) time after O(n log n) sort."
+  👤 "Count the number of triplets from an array
+      that can form valid triangles."
 
-  ──────────────── PHASE 4: Code + Verify ────────────────
+  🧑 "Let me clarify.
 
-  🧑 You: [writes code, traces [4,6,3,7] example]
+      Triangle inequality: the sum of ANY two sides
+      must be STRICTLY greater than the third.
+      Three conditions: a+b greater than c,
+      a+c greater than b, b+c greater than a.
 
-  "Important details:
-   - Sort with numeric comparator: (a,b) => a-b
-   - Strictly greater: >, not >=
-   - count += right-left, NOT count++"
+      STRICTLY greater — not equal. So [1, 2, 3]
+      fails because 1+2 equals 3, not greater.
 
-  ──────────────── PHASE 5: Follow-ups ────────────────
+      All values are positive integers (greater than 0).
+      This is important for the proof later.
 
-  👤 "Why fix the largest side, not the smallest?"
-  🧑 "If I fix the smallest side a, then b+c > a is always
-      true since b,c ≥ a > 0. No filtering power! Fixing
-      the largest side c gives a+b > c which can actually fail,
-      so the two pointers can prune effectively."
+      I return the COUNT, not the actual triplets.
+      Triplets at different indices are distinct
+      even if values are the same."
 
-  👤 "Can we do better than O(n²)?"
-  🧑 "No, because the answer itself can be O(n²) — for example,
-      an array of all 1s has C(n,3) ≈ n³/6 triangles. We need
-      at least O(n²) to count them."
+  ──────────────── 08:00 — Wooden Sticks Analogy (3 phút) ────────
+
+  🧑 "I think of this as the WOODEN STICKS analogy.
+
+      I have a pile of sticks of different lengths.
+      Can I pick three sticks and form a triangle?
+
+      The key physical constraint: the two SHORTER
+      sticks, laid end to end, must be LONGER than
+      the longest stick. Otherwise they can't 'reach'
+      to close the triangle.
+
+      If I sort the sticks by length: a is at most b
+      is at most c. Then c is the longest.
+      Can a and b together reach past c? That's a+b greater than c.
+
+      The other two conditions are automatically satisfied:
+      a+c is at least a+b (since c is at least b),
+      which is greater than b.
+      b+c is at least 2a (since b and c are at least a),
+      which is greater than a.
+
+      SORT REDUCES THREE CHECKS TO ONE."
+
+  ──────────────── 11:00 — Brute Force (2 phút) ────────────────
+
+  🧑 "The brute force: three nested loops.
+
+      For each triplet (i, j, k) where i less than j
+      less than k: check all three triangle conditions.
+
+      Time: O of n cubed.
+      For n equals 10 to the 3: 10 to the 9 operations.
+      Way too slow."
+
+  ──────────────── 13:00 — Sort insight (3 phút) ────────────────
+
+  🧑 "First key insight: SORT the array.
+
+      After sorting a is at most b is at most c,
+      I only need to check a + b greater than c.
+
+      Proof:
+      Condition 2: a + c greater than b.
+      Since c is at least b: a + c is at least a + b.
+      Since a is greater than 0: a + b is greater than b.
+      So a + c is greater than b. Always true.
+
+      Condition 3: b + c greater than a.
+      Since b is at least a and c is at least a:
+      b + c is at least 2a, which is greater than a.
+      Always true.
+
+      Only condition 1 can fail. ONE check instead of three."
+
+  ──────────────── 16:00 — Fix + Two Pointers (6 phút) ────────
+
+  🧑 "Second key insight: FIX the largest side
+      and use two pointers.
+
+      I iterate i from n-1 down to 2.
+      arr at i is the LARGEST side (since sorted).
+      I use two pointers in [0, i-1]:
+      left equals 0, right equals i-1.
+
+      If arr at left plus arr at right is greater
+      than arr at i:
+      Then arr at left is the SMALLEST in the range.
+      If the smallest works, every value between
+      left and right-1 also works (since they're all
+      at least arr at left, and sorted).
+      So ALL pairs from left to right-1, paired with
+      arr at right, form valid triangles.
+      That's right minus left pairs. BATCH COUNTING.
+      Then right--.
+
+      If arr at left plus arr at right is at most
+      arr at i:
+      The sum is too small. I need a bigger left value.
+      left++.
+
+      Let me trace [4, 6, 3, 7]. After sort: [3, 4, 6, 7].
+
+      Fix c equals 7 (i=3). left=0, right=2.
+      3 + 6 equals 9 greater than 7. YES.
+      count plus-equals 2 minus 0 equals 2. right becomes 1.
+      3 + 4 equals 7 greater than 7? NO (equal, not greater).
+      left becomes 1. left equals right. Stop.
+
+      Fix c equals 6 (i=2). left=0, right=1.
+      3 + 4 equals 7 greater than 6. YES.
+      count plus-equals 1 minus 0 equals 1. right becomes 0.
+      left equals right. Stop.
+
+      Total: 2 + 1 equals 3. Correct!"
+
+  ──────────────── 22:00 — Why right-left not right-left+1 (3 phút)
+
+  👤 "Why right minus left, not right minus left plus 1?"
+
+  🧑 "Because I'm counting pairs WITH arr at right.
+
+      The valid pairs are:
+      (arr at left, arr at right),
+      (arr at left+1, arr at right),
+      ...
+      (arr at right-1, arr at right).
+
+      From left to right-1: that's right-1 minus left plus 1
+      equals right minus left values.
+
+      I'm NOT counting (arr at right, arr at right)
+      because I can't pair an element with itself.
+
+      If I used right minus left plus 1, I'd
+      over-count by 1 — including the element paired
+      with itself."
+
+  ──────────────── 25:00 — Why fix largest, not smallest (2 phút) ──
+
+  👤 "Why fix the largest side instead of the smallest?"
+
+  🧑 "If I fix the smallest side a:
+      The condition b + c greater than a is ALWAYS TRUE
+      (since b and c are both at least a, so b + c
+      is at least 2a, greater than a).
+      No filtering power.
+
+      If I fix the largest side c:
+      The condition a + b greater than c CAN FAIL.
+      Two smaller values might not sum to enough.
+      This gives the two pointers actual work to do —
+      they separate valid from invalid pairs."
+
+  ──────────────── 27:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code.
+
+      [Vừa viết vừa nói:]
+
+      function countTriangles of arr.
+      const n equals arr dot length.
+      arr dot sort of (a, b) arrow a minus b.
+      let count equals 0.
+
+      for let i equals n minus 1; i greater-or-equal 2; i--:
+        let left equals 0.
+        let right equals i minus 1.
+
+        while left less than right:
+          if arr at left plus arr at right greater than arr at i:
+            count plus-equals right minus left.
+            right--.
+          else:
+            left++.
+
+      return count.
+
+      Key details:
+      Numeric comparator in sort. Not default lexicographic.
+      Strictly greater, not greater-or-equal.
+      Count plus-equals right minus left, not count++."
+
+  ──────────────── 30:00 — Verify with examples (3 phút) ────────
+
+  🧑 "Verify with [1, 2, 3]. Sort: [1, 2, 3].
+
+      Fix c equals 3 (i=2). left=0, right=1.
+      1 + 2 equals 3. Greater than 3? NO.
+      left becomes 1. left equals right. Stop.
+
+      Count equals 0. Correct — 1+2 equals 3,
+      not strictly greater.
+
+      Verify with [3, 3, 3]. Sort: [3, 3, 3].
+
+      Fix c equals 3 (i=2). left=0, right=1.
+      3 + 3 equals 6 greater than 3. YES.
+      count plus-equals 1 minus 0 equals 1. right becomes 0.
+      Stop. Count equals 1. Correct — equilateral triangle."
+
+  ──────────────── 33:00 — Edge Cases (2 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      Less than 3 elements: return 0 immediately.
+      The loop condition i greater-or-equal 2 handles this.
+
+      All equal elements [1,1,1,1]:
+      Every triplet is valid (1+1 equals 2 greater than 1).
+      Count should be C of 4 choose 3 equals 4.
+
+      Let me verify: i=3, then i=2.
+      i=3: left=0, right=2. 1+1=2 greater than 1.
+      count+=2. right=1. 1+1=2 greater than 1.
+      count+=1. right=0. Stop. count=3.
+      i=2: left=0, right=1. 1+1=2 greater than 1.
+      count+=1. right=0. Stop. count=4. Correct!"
+
+  ──────────────── 35:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n squared.
+      Sort: O of n log n.
+      Main loop: outer runs n-2 times.
+      Inner two pointers: at most i-1 steps per outer.
+      Total inner: sum from 1 to n-2 equals n(n-1)/2.
+      So O of n squared dominates.
+
+      Space: O of 1. Sort in-place.
+      Only a few variables: count, left, right.
+
+      Can we do better? NO.
+      The answer itself can be O of n squared.
+      For n equal elements: C(n,3) is roughly n cubed
+      over 6. We need at least O of n squared
+      to compute the count.
+      O of n squared is optimal."
+
+  ──────────────── 38:00 — Connection to Three Sum (4 phút) ────────
 
   👤 "How does this relate to Three Sum?"
-  🧑 "Same pattern! Three Sum fixes one element and uses two
-      pointers to find pairs summing to a target. Here I fix
-      the largest side and find pairs whose sum exceeds it.
-      The batch counting trick (right-left) is the same idea."
+
+  🧑 "Same pattern! Sort plus fix one plus two pointers.
+
+      Three Sum (#15): fix arr at i, find two pointers
+      where a + b equals negative arr at i.
+      Both pointers move: if sum too small, left++.
+      If too large, right--. If equal, record and move both.
+
+      Count Triangles: fix arr at i (largest side),
+      find two pointers where a + b greater than arr at i.
+      BATCH counting: if the sum exceeds, count right-left
+      pairs at once instead of one at a time.
+
+      Three Sum Closest (#16): fix one, minimize distance
+      to target. Same two-pointer motion.
+
+      The 'fix one element, two-pointer the rest'
+      is a universal technique for triplet problems
+      on sorted arrays."
 ```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Formal invariant proof (5 phút) ────────
+
+  👤 "Prove the two-pointer approach is correct."
+
+  🧑 "For a fixed c equals arr at i, define the search
+      space as all pairs (a, b) with indices in [0, i-1]
+      where a less than b.
+
+      INVARIANT: at each step, ALL valid pairs (a, b)
+      where b is greater than right have ALREADY been counted.
+      ALL invalid pairs where a is less than left have been
+      correctly excluded.
+
+      Case 1: arr at left plus arr at right greater than c.
+      Since arr is sorted, for any k in [left, right-1]:
+      arr at k is at least arr at left.
+      So arr at k plus arr at right is at least
+      arr at left plus arr at right, which exceeds c.
+      All pairs (k, right) for k in [left, right-1] are valid.
+      Count right minus left. Advance right.
+
+      Case 2: arr at left plus arr at right at most c.
+      Since arr is sorted, for any k in [left, right]:
+      arr at k is at most arr at right.
+      So arr at left plus arr at k is at most
+      arr at left plus arr at right, which doesn't exceed c.
+      All pairs (left, k) for k in [left+1, right] are invalid.
+      Advance left.
+
+      COMPLETENESS: every pair is either counted in Case 1
+      or excluded in Case 2. No pair is missed.
+      TERMINATION: each step advances left or right.
+      Gap decreases by 1. At most i-1 steps. QED."
+
+  ──────────────── 50:00 — Why not binary search? (3 phút) ────────
+
+  👤 "Could you use binary search instead of two pointers?"
+
+  🧑 "Yes! After sorting, for each pair (i, j),
+      binary search for the largest k where
+      arr at i plus arr at j greater than arr at k.
+      All elements from j+1 to k form valid triangles
+      with arr at i and arr at j.
+
+      Time: O of n squared log n.
+      Outer two loops: O of n squared.
+      Binary search: O of log n each.
+
+      This is WORSE than two pointers (O of n squared).
+      Two pointers avoid the log n factor by amortizing
+      the search across all pairs sharing the same
+      fixed element.
+
+      Binary search is simpler to reason about
+      but less efficient here."
+
+  ──────────────── 53:00 — Count vs enumerate (3 phút) ────────────
+
+  👤 "What if you needed to LIST all valid triangles?"
+
+  🧑 "If I need to enumerate, the inner loop changes.
+      When arr at left plus arr at right exceeds c:
+      I loop through left to right-1 and output each
+      triplet (arr at k, arr at right, c).
+
+      This adds O of K work where K is the number of valid
+      triangles. Total: O of n squared plus K.
+
+      K can be up to C(n, 3) which is O of n cubed.
+      So enumeration is inherently O of n cubed worst case.
+
+      Counting is faster because batch counting
+      skips the enumeration: right minus left
+      instead of right minus left individual outputs."
+
+  ──────────────── 56:00 — Degenerate triangles (4 phút) ────────────
+
+  👤 "What if we change to non-strict inequality (a + b >= c)?"
+
+  🧑 "This includes DEGENERATE triangles — triangles
+      that collapse to a straight line.
+
+      [1, 2, 3]: 1 + 2 equals 3, which is at least 3.
+      With non-strict: this counts as valid.
+      With strict: this doesn't count.
+
+      In the code, I change the comparison from
+      strictly-greater to greater-or-equal.
+      Everything else stays the same.
+
+      The batch counting logic is identical:
+      if arr at left plus arr at right is at least arr at i,
+      then all values between left and right-1 also satisfy
+      (since they're at least arr at left).
+
+      The difference is tiny in code but meaningful
+      in geometry. The interviewer's intent matters."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Largest Perimeter Triangle (#976) (3 phút)
+
+  👤 "What about finding the triangle with the
+      largest perimeter?"
+
+  🧑 "LeetCode 976. Sort DESCENDING.
+      Check consecutive triplets: arr at i, arr at i+1,
+      arr at i+2. The first valid one has the largest
+      perimeter.
+
+      Why consecutive? After descending sort,
+      arr at i is the largest. If arr at i+1 plus
+      arr at i+2 exceeds arr at i, that's a valid
+      triangle with the maximum possible perimeter.
+
+      If not, skip arr at i — no pair of smaller elements
+      can exceed it. Move to i+1.
+
+      O of n log n for sort, O of n for scan.
+      Much simpler than counting because I only need
+      ONE valid triangle, not all of them."
+
+  ──────────────── 63:00 — Valid Triangle Number (#611) (2 phút) ──
+
+  👤 "What about LeetCode 611?"
+
+  🧑 "LeetCode 611 — Valid Triangle Number.
+      IDENTICAL to this problem. Same approach:
+      sort, fix largest, two pointers, batch counting.
+
+      The only difference: the function signature.
+      The algorithm is line-for-line the same."
+
+  ──────────────── 65:00 — Four sides: quadrilateral? (4 phút) ────
+
+  👤 "What about counting valid quadrilaterals?"
+
+  🧑 "A quadrilateral requires that no single side
+      is at least the sum of the other three.
+      After sorting a is at most b is at most c is at most d:
+      only need to check a + b + c greater than d.
+
+      I'd fix d (the largest), then for the remaining
+      three elements I need to count triplets (a, b, c)
+      where a + b + c exceeds d.
+
+      This reduces to a Three Sum variant:
+      for each fixed c (the third largest), use two pointers
+      to count pairs (a, b) where a + b exceeds d minus c.
+
+      Time: O of n cubed. Outer loop for d is O of n.
+      Inner: O of n squared for the triplet counting.
+      Total: O of n cubed.
+
+      Same pattern, one more nesting level."
+
+  ──────────────── 69:00 — Count with constraint on type (3 phút) ──
+
+  👤 "What if you need to count RIGHT triangles
+      or OBTUSE triangles?"
+
+  🧑 "For right triangles: a squared plus b squared
+      equals c squared. After sorting, fix c,
+      use two pointers to find pairs where
+      a squared plus b squared equals c squared.
+      Same as Three Sum with target c squared.
+
+      For obtuse triangles: a squared plus b squared
+      less than c squared AND a + b greater than c.
+      Two conditions. I'd count all valid triangles
+      minus right and acute triangles.
+
+      For acute triangles: a squared plus b squared
+      greater than c squared AND a + b greater than c.
+      Same two-pointer framework with two conditions.
+
+      Each variant modifies the comparison but keeps
+      the sort-plus-fix-plus-two-pointers structure."
+
+  ──────────────── 72:00 — Probabilistic variant (3 phút) ────────
+
+  👤 "If sides are drawn randomly from [1, n],
+      what fraction form valid triangles?"
+
+  🧑 "For large n, the probability that three random
+      values form a valid triangle converges to 1/2.
+
+      Intuitively: after sorting, a + b greater than c.
+      For uniformly random values, half the time
+      the two smaller values sum to more than the largest.
+
+      The exact probability for integers from 1 to n
+      involves counting the lattice points satisfying
+      the inequality. For continuous uniform [0, 1]:
+      it's exactly 1/2 by symmetry.
+
+      This is a classic probability result that connects
+      geometry to combinatorics."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does this pattern appear in real systems?"
+
+  🧑 "Several domains!
+
+      First — STRUCTURAL ENGINEERING.
+      When designing trusses or frames, engineers
+      verify that member lengths can form valid triangles.
+      The triangle inequality is a fundamental constraint
+      in finite element analysis and structural stability.
+
+      Second — NETWORK TOPOLOGY.
+      In mesh networks, three nodes can form a triangle
+      route if the latencies satisfy a triangle-like inequality.
+      Counting valid triangles in a network graph helps
+      analyze network redundancy and routing efficiency.
+
+      Third — GPS TRIANGULATION.
+      Position estimation requires three satellite signals.
+      The distances must satisfy triangle-like constraints
+      for a solution to exist. Invalid triangles indicate
+      measurement errors or insufficient signal coverage.
+
+      Fourth — GAME DEVELOPMENT.
+      Triangle mesh validation in 3D rendering.
+      Degenerate triangles (where a+b equals c exactly)
+      cause rendering artifacts. Counting and filtering
+      invalid triangles is part of mesh cleanup."
+
+  ──────────────── 80:00 — Scaling the counting (5 phút) ────────
+
+  👤 "How would you handle very large arrays?"
+
+  🧑 "For huge arrays where n is millions:
+
+      The O of n squared approach requires n squared
+      over 2 operations. For n equals 10 to the 6:
+      that's 5 times 10 to the 11 — too slow.
+
+      Optimization strategies:
+
+      1. SAMPLING: pick a random subset, count triangles,
+      extrapolate statistically. Gives an approximate count.
+
+      2. BUCKETING: group values into buckets.
+      For values in the same bucket, count combinatorially.
+      For cross-bucket pairs, use the two-pointer approach
+      on bucket boundaries.
+
+      3. PARALLEL PROCESSING: partition the outer loop
+      across processors. Each processor handles a range
+      of i values. The two-pointer work is independent
+      per i, so it parallelizes well.
+
+      4. If values are bounded (say max value M),
+      I can use a FREQUENCY ARRAY and iterate over
+      unique values instead of all n elements.
+      This reduces n to the number of distinct values."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, CONSTRAINT REDUCTION.
+      Sorting reduced three inequality checks to one.
+      This is a general principle: preprocessing
+      can dramatically simplify the core logic.
+      Always ask 'what does sorting buy me?'
+
+      Second, BATCH COUNTING.
+      Instead of counting pairs one by one,
+      count right minus left at once.
+      This is what reduces O of n cubed to O of n squared.
+      The insight: if the SMALLEST value in a range
+      satisfies a condition, all larger values do too.
+      Monotonicity enables batch counting.
+
+      Third, the FIX-ONE-PLUS-TWO-POINTERS pattern.
+      It applies to Three Sum, Count Triangles,
+      Three Sum Closest, and many more.
+      Fix one variable, reduce to a two-pointer
+      subproblem. The same skeleton, different conditions."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — the triangle inequality is a metric space
+      requirement. Does your system deal with metric
+      validation in search or recommendation ranking?
+
+      Second — batch counting (right minus left)
+      is a form of 'monotonicity exploitation.'
+      Do your analytics pipelines use similar
+      sorted-array tricks to avoid inner loops?
+
+      Third — the quadrilateral extension requires
+      O of n cubed. Does your team encounter
+      higher-order constraint counting problems
+      where you've found practical shortcuts?"
+
+  👤 "Excellent! The constraint reduction from three
+      conditions to one via sorting was clearly explained.
+      The batch counting insight — 'if the smallest works,
+      all larger work too' — was the highlight.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Count Triangles)  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: State the constraint reduction immediately
+     ✅ "After sorting a ≤ b ≤ c, the three triangle
+         conditions reduce to ONE: a + b > c.
+         The other two are automatically satisfied."
+
+  📌 MẸO #2: Explain why fix the largest side
+     ✅ "Fix the smallest → b+c > a is always true, useless.
+         Fix the largest → a+b > c can fail. Real filtering."
+
+  📌 MẹO #3: Articulate batch counting clearly
+     ✅ "If arr[left] + arr[right] > c, then
+         every element from left to right-1 paired with
+         arr[right] also satisfies. Count all at once:
+         right minus left pairs."
+
+  📌 MẸO #4: Explain right-left not right-left+1
+     ✅ "Pairs: (left, right), (left+1, right), ...,
+         (right-1, right). That's right-1 minus left plus 1
+         equals right minus left. Not including (right, right)."
+
+  📌 MẸO #5: Strict vs non-strict
+     ✅ "[1, 2, 3]: 1+2 = 3, NOT strictly greater.
+         Zero valid triangles. The > is critical, not >=."
+
+  📌 MẸO #6: Map to Three Sum family
+     ✅ "Three Sum: fix one, two pointers for sum = target.
+         Count Triangles: fix largest, two pointers for sum > target.
+         Same skeleton, different condition."
+
+  📌 MẸO #7: Prove O(n²) is optimal
+     ✅ "For n equal elements, the answer is C(n,3) ≈ n³/6.
+         We need at least O(n²) to compute this count.
+         Cannot beat O(n²) for a counting problem."
+
+  📌 MẸO #8: Don't forget the sort comparator
+     ✅ "JavaScript default sort is lexicographic.
+         [10, 3, 7].sort() gives ['10', '3', '7'].
+         MUST use (a, b) => a - b for numeric sort."
+```
+
 
 ---
 

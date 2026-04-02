@@ -1028,93 +1028,648 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
-```
-  👤 Interviewer: "Rotate an array to the right by d positions, in-place."
-
-  🧑 You: "Let me clarify — right rotate by d means the last d elements
-   move to the front, and the rest shift right. And I need O(1) space.
-   Let me also handle d > n by taking d mod n."
-
-  👤 Interviewer: "Correct."
-
-  🧑 You: "The brute force would be to shift all elements right by one,
-   d times. That's O(n × d) which is O(n²) in the worst case.
-
-   I can do better with the Reversal Algorithm. The key insight is that
-   rotation is essentially swapping two blocks: [A, B] becomes [B, A].
-
-   If I reverse the entire array, A and B swap positions but their
-   internal order gets reversed. Then I reverse each block independently
-   to restore their internal order.
-
-   Concretely for right rotate by d:
-   1. Reverse entire array
-   2. Reverse first d elements
-   3. Reverse remaining n-d elements
-
-   This is O(n) time — about n total swaps across three reverse calls —
-   and O(1) space since reverse is in-place."
-
-  👤 Interviewer: "Can you prove why it works?"
-
-  🧑 You: "Sure. Let our array be [A, B] where B is the last d elements.
-   Reversing gives [rev(B), rev(A)]. Now B is in front but reversed.
-   Reversing rev(B) gives B — correct order. Reversing rev(A) gives A.
-   Result: [B, A], which is exactly right rotation by d."
-
-  👤 Interviewer: "How about left rotation?"
-
-  🧑 You: "Left rotate d equals right rotate n-d. Or I can swap the
-   order: reverse A first, then B, then the whole array. Same three
-   reverses, just different order."
-```
-
-### Pattern & Liên kết
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
 
 ```
-  REVERSAL ALGORITHM pattern:
-
-  Dùng REVERSE làm building block cho:
-    Right Rotate by d → reverse(all) + reverse(0..d-1) + reverse(d..n-1)
-    Left Rotate by d  → reverse(0..d-1) + reverse(d..n-1) + reverse(all)
-    Right Rotate by d = Left Rotate by (n - d)!
-
-  Liên kết:
-    Array Reverse (#344)    → foundation
-    Rotate Array (#189)     → classic application
-    Rotate String (#796)    → string version (s + s contains rotated)
-    Rotate Image (#48)      → 2D matrix version (transpose + reverse rows)
-```
-
-### Skeleton code — Reversal Pattern template
-
-```javascript
-// TEMPLATE: Block Swap via Reversal
-// Đổi chỗ 2 khối [A, B] thành [B, A] in-place
-
-function blockSwap(arr, splitIndex) {
-  const n = arr.length;
-  // [A = arr[0..split-1], B = arr[split..n-1]]
-  // → [B, A]
-
-  reverse(arr, 0, n - 1); // [B', A']
-  reverse(arr, 0, n - splitIndex - 1); // [B, A']
-  reverse(arr, n - splitIndex, n - 1); // [B, A]
-}
-
-// Right rotate d: blockSwap(arr, n - d)
-// Left rotate d:  blockSwap(arr, d)
-// Swap halves:    blockSwap(arr, n/2)
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
 ```
 
 ```
-  🧠 Reversal Algorithm là BUILDING BLOCK!
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  Ứng dụng đổi chỗ 2 block bất kỳ:
-  ┌──────────────────────────────────────────────────┐
-  │  Right rotate d    → split at (n - d)            │
-  │  Left rotate d     → split at d                  │
-  │  Swap first/second → split at n/2                │
-  │  Move prefix to end → split at prefix_len        │
-  └──────────────────────────────────────────────────┘
+  👤 "Tell me about yourself and a time you used
+      block swapping or the reversal trick."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I implemented a carousel component
+      that displayed product cards in an infinite scroll.
+
+      When the user swiped right, the last few cards
+      needed to appear at the front — essentially
+      a RIGHT ROTATION of the card array.
+
+      Initially I used splice and unshift —
+      O of n per swipe, causing jank on large lists.
+
+      Then I realized rotation is just a block swap:
+      [A | B] becomes [B | A]. I used three in-place
+      reverses: reverse all, reverse first d, reverse rest.
+      O of n, O of 1 space. Buttery smooth.
+
+      That's the Reversal Algorithm — LeetCode 189."
+
+  👤 "Great connection. Let's formalize."
 ```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
+
+  👤 "Right rotate an array by d positions, in-place."
+
+  🧑 "Let me clarify.
+
+      Right rotation by d means the last d elements
+      move to the FRONT, and the remaining n minus d
+      elements shift to the back.
+
+      The array is [A | B] where A has n minus d elements
+      and B has d elements. After rotation: [B | A].
+
+      First normalization: d equals d mod n.
+      Rotating by n is a full circle — back to start.
+      d equals 0 means no rotation.
+      d greater than n means I only need the remainder.
+
+      In-place means O of 1 extra space.
+      I can modify the array but not allocate a new one.
+
+      Example: arr equals [1, 2, 3, 4, 5, 6], d equals 2.
+      Last 2 elements [5, 6] move to front.
+      Result: [5, 6, 1, 2, 3, 4]."
+
+  ──────────────── 09:00 — Conveyor Belt Analogy (3 phút) ────────
+
+  🧑 "I think of this as a CONVEYOR BELT.
+
+      The array is a belt. Right rotation means
+      the belt moves to the right by d positions.
+      Items that fall off the right end wrap around
+      to the left end.
+
+      Alternatively: I cut the belt at position n minus d.
+      I have two pieces: A on the left, B on the right.
+      I simply swap them: paste B in front of A.
+
+      The question is: how to swap two contiguous blocks
+      in-place without extra memory?"
+
+  ──────────────── 12:00 — Brute Force: One by One (3 phút) ────────
+
+  🧑 "The naive approach: rotate one position at a time,
+      repeat d times.
+
+      Each rotation: save the last element,
+      shift all elements right by one,
+      put the saved element at the front.
+
+      Each shift is O of n. Repeat d times: O of n times d.
+      Worst case d equals n over 2: O of n squared.
+
+      This helps build intuition but is too slow
+      for large inputs."
+
+  ──────────────── 15:00 — Temp Array (2 phút) ────────────────
+
+  🧑 "Better: use a temporary array.
+
+      Copy the last d elements to the front of temp.
+      Copy the first n minus d elements to the back.
+      Copy temp back to arr.
+
+      O of n time, O of n space.
+      Fast but uses extra memory.
+      The interviewer will ask: can you do O of 1 space?"
+
+  ──────────────── 17:00 — Reversal Algorithm (6 phút) ────────────
+
+  🧑 "The optimal approach: the REVERSAL ALGORITHM.
+      Three in-place reverses achieve the rotation!
+
+      For RIGHT rotation by d:
+      Step 1: Reverse the ENTIRE array.
+      Step 2: Reverse the first d elements.
+      Step 3: Reverse the remaining n minus d elements.
+
+      Let me trace with [1, 2, 3, 4, 5, 6], d equals 2:
+
+      A equals [1, 2, 3, 4], B equals [5, 6].
+
+      Step 1 — reverse ALL: [6, 5, 4, 3, 2, 1].
+      Now B is in front but reversed: [6, 5] equals rev(B).
+      And A is in back but reversed: [4, 3, 2, 1] equals rev(A).
+
+      Step 2 — reverse first 2: [5, 6, 4, 3, 2, 1].
+      Now B is correct: [5, 6].
+
+      Step 3 — reverse last 4: [5, 6, 1, 2, 3, 4].
+      Now A is correct: [1, 2, 3, 4].
+
+      Result: [5, 6, 1, 2, 3, 4] equals [B, A]. Done!
+
+      Time: O of n — about n total swaps.
+      Space: O of 1 — just the reverse helper."
+
+  ──────────────── 23:00 — Algebraic Proof (4 phút) ────────────
+
+  👤 "Can you prove why this works?"
+
+  🧑 "Yes! Algebraically.
+
+      Original: [A, B].
+      After reverse ALL: [rev(B), rev(A)].
+      This is because reversing concatenated blocks
+      reverses the order of blocks AND reverses each block.
+
+      After reverse first d (which is rev(B)):
+      [B, rev(A)]. Because rev(rev(B)) equals B.
+
+      After reverse last n minus d (which is rev(A)):
+      [B, A]. Because rev(rev(A)) equals A.
+
+      The identity: reversing twice restores the original.
+      The full reverse swaps the block positions.
+      The partial reverses fix the internal orders.
+
+      This generalizes: for ANY split point,
+      three reverses swap the two blocks.
+      It's a universal in-place block swap!"
+
+  ──────────────── 27:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code.
+
+      [Vừa viết vừa nói:]
+
+      function rotateRight of arr, d.
+      const n equal arr dot length.
+      if n equals 0, return.
+      d modulo-equal n.
+      if d equals 0, return.
+
+      reverse arr from 0 to n minus 1.
+      reverse arr from 0 to d minus 1.
+      reverse arr from d to n minus 1.
+
+      The reverse helper: two pointers, start and end.
+      While start less than end: swap and converge.
+
+      Three lines of core logic.
+      The guard clauses handle all edge cases."
+
+  ──────────────── 30:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      d equals 0: no rotation. Return immediately.
+
+      d equals n: d mod n equals 0. Full circle.
+      Same as no rotation.
+
+      d greater than n: d mod n normalizes it.
+      d equals 14, n equals 6: 14 mod 6 equals 2.
+
+      Single element: d mod 1 equals 0. No rotation.
+
+      Two elements, d equals 1: [a, b] becomes [b, a].
+      Reverse all: [b, a]. Reverse first 1: [b, a].
+      Reverse last 1: [b, a]. Correct!
+
+      All same values: any rotation is a no-op visually."
+
+  ──────────────── 33:00 — Left vs Right Duality (3 phút) ────────
+
+  👤 "What about left rotation?"
+
+  🧑 "Left rotate by d equals right rotate by n minus d!
+
+      For left rotation, the reversal ORDER flips:
+      Step 1: Reverse the first d elements.
+      Step 2: Reverse the remaining n minus d.
+      Step 3: Reverse the ENTIRE array.
+
+      Right: ALL first, then parts.
+      Left: parts first, then ALL.
+
+      Or I can reuse the right rotate function:
+      rotateLeft of d equals rotateRight of n minus d.
+      One function handles both directions."
+
+  ──────────────── 36:00 — Complexity Analysis (3 phút) ────────
+
+  🧑 "Reversal algorithm:
+      Time: O of n. Three reverses, each at most n over 2 swaps.
+      Total swaps: floor of d over 2 plus floor of (n minus d)
+      over 2 plus floor of n over 2. Approximately n.
+
+      Space: O of 1. The reverse function uses only
+      two index variables and the swap temp.
+
+      Is O of n optimal? Yes. Every element must move
+      at least once — Omega of n lower bound.
+      The reversal algorithm matches this.
+
+      Compared to juggling: juggling does exactly n moves
+      (each element moves once). Reversal does about n swaps
+      (each swap touches 2 elements). Roughly equivalent."
+
+  ──────────────── 39:00 — Juggling Overview (4 phút) ────────────
+
+  🧑 "The juggling algorithm — for bonus points.
+
+      Each element at index i moves to (i plus d) mod n.
+      Following this chain creates a CYCLE.
+      The number of independent cycles equals GCD of n and d.
+
+      For n equals 6, d equals 2: GCD equals 2.
+      Two cycles, each processing 3 elements.
+      Cycle 0: positions 0, 2, 4.
+      Cycle 1: positions 1, 3, 5.
+
+      Each element moves exactly once. Total: n moves.
+
+      The advantage: one pass, exactly n moves.
+      The disadvantage: cache-unfriendly jumps by d,
+      harder to implement, easier to introduce bugs.
+
+      In practice, reversal wins: simpler code,
+      sequential memory access, same asymptotic complexity."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Swap count analysis (4 phút) ────────────
+
+  👤 "How many swaps does the reversal algorithm perform?"
+
+  🧑 "Precisely:
+      Step 1 reverse ALL: floor of n over 2 swaps.
+      Step 2 reverse first d: floor of d over 2 swaps.
+      Step 3 reverse last n minus d: floor of (n minus d) over 2.
+
+      Total: floor of n over 2 plus floor of d over 2
+      plus floor of (n minus d) over 2.
+
+      For n equals 6, d equals 2:
+      3 plus 1 plus 2 equals 6 swaps.
+
+      Each swap is 3 assignments (using a temp variable)
+      or 1 destructuring in JavaScript.
+      Total assignments: about 3n in the worst case.
+
+      Compared to the temp array approach:
+      exactly 2n copy operations (write to temp, write back).
+      So reversal does about 50 percent more assignments,
+      but uses ZERO extra memory.
+
+      The trade-off: slightly more work for O of 1 space."
+
+  ──────────────── 49:00 — Cache behavior (3 phút) ────────────────
+
+  👤 "Which approach is most cache-friendly?"
+
+  🧑 "Reversal is the most cache-friendly among
+      the O of 1 space approaches.
+
+      Each reverse sweeps linearly through a contiguous
+      segment. The CPU prefetcher handles this perfectly.
+      Three sequential passes.
+
+      Juggling jumps by d positions each step.
+      For large d, these jumps cross cache lines,
+      causing misses. One pass but poor locality.
+
+      Temp array: sequential copies — great locality —
+      but doubles memory usage, potentially evicting
+      useful data from L1/L2 cache.
+
+      In benchmarks, reversal typically wins for
+      arrays larger than L1 cache."
+
+  ──────────────── 52:00 — Common mistakes deep dive (4 phút) ────
+
+  👤 "What are the most common bugs?"
+
+  🧑 "Four critical mistakes.
+
+      First: FORGETTING d mod n.
+      If d equals 8, n equals 6, and I call reverse from 0
+      to 7 — out of bounds! Always normalize first.
+
+      Second: WRONG reverse order for left vs right.
+      Right: ALL, first d, last n minus d.
+      Left: first d, last n minus d, ALL.
+      Swapping these gives the wrong rotation direction.
+
+      Third: SHIFT direction in the naive approach.
+      Right shift must iterate BACKWARDS — from end to start.
+      Forward iteration overwrites values before reading them.
+
+      Fourth: reverse helper using less-than-or-equal
+      instead of less-than. When start equals end,
+      swapping a single element with itself is harmless
+      but wasteful. Use strict less-than."
+
+  ──────────────── 56:00 — Block swap template (4 phút) ────────────
+
+  👤 "Can you generalize the reversal algorithm?"
+
+  🧑 "Yes! It's a universal BLOCK SWAP template.
+
+      Given an array [A, B] split at some index,
+      to swap them into [B, A]:
+
+      function blockSwap of arr, splitIndex.
+      reverse arr from 0 to n minus 1.
+      reverse arr from 0 to n minus splitIndex minus 1.
+      reverse arr from n minus splitIndex to n minus 1.
+
+      Right rotate d: splitIndex equals n minus d.
+      Left rotate d: splitIndex equals d.
+      Swap halves: splitIndex equals n over 2.
+      Move prefix to end: splitIndex equals prefix length.
+
+      Any time I need to rearrange two contiguous blocks
+      in-place, I reach for this template.
+      Three reverses, O of n, O of 1."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Rotate String (#796) (3 phút) ────────────
+
+  👤 "How does this relate to string rotation?"
+
+  🧑 "String rotation is the same problem!
+
+      Left rotating 'abcdef' by 2 gives 'cdefab'.
+      Same reversal algorithm applies to character arrays.
+
+      A classic follow-up: 'Is s2 a rotation of s1?'
+      The trick: s2 is a rotation of s1 if and only if
+      s2 is a SUBSTRING of s1 concatenated with s1.
+
+      'cdefab' in 'abcdefabcdef'? Yes! At position 2.
+
+      This works because s1 plus s1 contains ALL possible
+      rotations as substrings. O of n using KMP or
+      indexOf for the substring search."
+
+  ──────────────── 63:00 — Rotate Image (#48) (3 phút) ────────────
+
+  👤 "What about 2D matrix rotation?"
+
+  🧑 "Rotating a matrix 90 degrees clockwise:
+      Step 1: Transpose (swap rows and columns).
+      Step 2: Reverse each row.
+
+      This is the 2D analog of our reversal algorithm!
+      The transpose changes the structure,
+      and the row reversal fixes the order.
+
+      For counterclockwise: transpose, then reverse columns.
+      Or: reverse rows first, then transpose.
+
+      The underlying principle is the same:
+      REVERSAL as a building block for rearrangement."
+
+  ──────────────── 66:00 — Negative d and combined rotations (3 phút)
+
+  👤 "What about negative d or combining rotations?"
+
+  🧑 "Negative d means the opposite direction.
+      Right rotate by minus 2 equals left rotate by 2.
+      Implementation: d equals ((d mod n) plus n) mod n.
+
+      Combining rotations: rotating right by a, then right by b,
+      is the same as rotating right by (a plus b) mod n.
+      Rotations are COMPOSABLE and COMMUTATIVE.
+
+      This is the mathematical structure of the
+      cyclic group Z sub n. Rotation by d is an element
+      of this group. The identity is d equals 0.
+      Every rotation has an inverse: rotate by n minus d."
+
+  ──────────────── 69:00 — Multiple rotation queries (3 phút) ────
+
+  👤 "What if I have multiple queries?"
+
+  🧑 "If each query asks for the rotated array:
+      Naive: O of n per query.
+
+      Optimal: use VIRTUAL ROTATION.
+      Don't modify the array. Track the cumulative offset.
+      After all rotations, the total offset is
+      the sum of all d values, mod n.
+
+      To read element at index j after rotation:
+      return arr at (j minus totalOffset plus n) mod n.
+      O of 1 per element access.
+
+      Apply the physical rotation only once at the end
+      if the final result is needed."
+
+  ──────────────── 72:00 — Rotate linked list (3 phút) ────────────
+
+  👤 "What about rotating a linked list?"
+
+  🧑 "LeetCode 61 — Rotate List.
+
+      For a linked list, rotation is EASIER.
+      I make the list circular by connecting tail to head.
+      Then I find the new tail at position n minus d.
+      Break the circle at that point.
+
+      O of n to traverse and find the new tail.
+      O of 1 space — no reversal needed.
+
+      The key: linked lists support O of 1 head/tail
+      pointer manipulation. The hard part is finding
+      the right position — O of n traversal.
+
+      For arrays, pointer manipulation isn't possible,
+      so we use reversal instead."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does array rotation appear in production?"
+
+  🧑 "Many critical systems!
+
+      First — CIRCULAR BUFFERS in network IO.
+      TCP receive buffers are ring buffers.
+      When the consumer reads data, the head advances —
+      effectively a rotation. Linearizing the buffer
+      for processing uses the reversal algorithm.
+
+      Second — CRYPTOGRAPHIC CIRCULAR SHIFTS.
+      SHA-256 and AES use circular left and right shifts
+      on 32-bit and 64-bit registers as core operations.
+      Rotation diffuses bits across the register.
+
+      Third — CAROUSEL UI COMPONENTS.
+      Image carousels, product sliders, tab bars —
+      all implement circular rotation of items.
+      The data model is a rotated array.
+
+      Fourth — TIME SERIES WINDOW SLIDING.
+      Maintaining a fixed-size window of recent measurements.
+      When a new measurement arrives, the oldest rotates out.
+      This is rotation by 1 at each time step."
+
+  ──────────────── 80:00 — Distributed rotation (5 phút) ────────
+
+  👤 "Can rotation be done in a distributed setting?"
+
+  🧑 "In a distributed system with P partitions:
+
+      The VIRTUAL approach scales best.
+      Each partition keeps its local data unchanged.
+      A global offset variable tracks the rotation amount.
+      Reading element at index j: compute
+      (j minus offset) mod n, then route to the
+      appropriate partition.
+
+      No data movement at all! O of 1 metadata update.
+
+      If physical rotation is required:
+      Rotation by d may require cross-partition data movement.
+      Elements near the split point need to migrate.
+
+      The amount of cross-partition traffic depends on d
+      relative to partition boundaries. In the worst case,
+      O of d elements move between adjacent partitions.
+
+      The reversal algorithm doesn't parallelize as naturally
+      for distributed systems because the full reverse
+      requires all-to-all communication. Virtual rotation
+      is strongly preferred."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, REVERSAL AS A BUILDING BLOCK.
+      Three reverses swap any two contiguous blocks
+      in-place. This pattern appears in rotation,
+      string manipulation, and matrix operations.
+      Master the reversal template, solve a family
+      of rearrangement problems.
+
+      Second, NORMALIZE FIRST — d mod n.
+      Circular operations always have a period.
+      Reducing d modulo n eliminates redundant work
+      and prevents out-of-bounds errors.
+      This principle applies to any cyclic structure.
+
+      Third, the LEFT-RIGHT DUALITY.
+      Right by d equals left by n minus d.
+      The reversal order flips between directions.
+      Knowing one direction gives the other for free.
+      This is the structure of cyclic groups —
+      beautiful mathematics underlying a simple algorithm."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — the reversal algorithm is elegant but
+      requires three passes. In your codebase,
+      do you ever use the juggling approach for
+      single-pass rotation when cache isn't a concern?
+
+      Second — rotation is fundamental to circular buffers.
+      Do your backend services use ring buffers for
+      request queuing or log buffering?
+
+      Third — combining rotations is algebraically clean:
+      rotate by a then b equals rotate by a plus b mod n.
+      Do you test for this kind of mathematical reasoning
+      in your interviews, or favor more applied questions?"
+
+  👤 "Excellent! Your algebraic proof was the strongest part —
+      most candidates memorize the three steps but can't
+      explain WHY it works. The block swap generalization
+      showed real depth. We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Rotate Array)      ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Normalize d immediately
+     ✅ "First: d modulo n. Rotation is circular.
+         d equals n is a full circle — no-op.
+         d greater than n is redundant."
+
+  📌 MẸO #2: Frame as block swap
+     ✅ "The array is [A | B]. Rotation gives [B | A].
+         The problem reduces to swapping two contiguous
+         blocks in-place."
+
+  📌 MẸO #3: State and prove the reversal identity
+     ✅ "Reverse ALL gives [rev(B), rev(A)].
+         Then reverse rev(B) to get B,
+         reverse rev(A) to get A.
+         Result: [B, A]. Three reverses, done."
+
+  📌 MẸO #4: Escalate approaches clearly
+     ✅ "One-by-one: O of n times d — too slow.
+         Temp array: O of n, O of n — extra space.
+         Reversal: O of n, O of 1 — optimal.
+         Juggling: O of n, O of 1 — bonus GCD insight."
+
+  📌 MẸO #5: State the left-right duality
+     ✅ "Right by d equals left by n minus d.
+         The reversal order flips:
+         Right: ALL, first, last.
+         Left: first, last, ALL."
+
+  📌 MẸO #6: Use the conveyor belt analogy
+     ✅ "Items on a belt. Right rotation: items fall off
+         the right end and wrap to the left.
+         Cut the belt and reattach the pieces."
+
+  📌 MẸO #7: Mention the block swap template
+     ✅ "Reversal is a universal block swap.
+         Right rotate: split at n minus d.
+         Left rotate: split at d.
+         Swap halves: split at n over 2."
+
+  📌 MẸO #8: Connect to string and matrix rotation
+     ✅ "String rotation uses the same reversal.
+         'Is s2 a rotation of s1?' Check if s2
+         is in s1 plus s1. Matrix rotation:
+         transpose plus reverse rows."
+```
+
+---
+

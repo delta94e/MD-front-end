@@ -1156,50 +1156,783 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
 ```
-  👤 Interviewer: "Find the first equilibrium index — where the sum
-                   of elements on the left equals the sum on the right."
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  🧑 You: "Let me clarify — the element at index i itself is NOT
-   included in either the left or right sum, correct? And if no
-   equilibrium exists, I return -1?"
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  👤 Interviewer: "Correct."
+  👤 "Tell me about yourself and a time you optimized
+      a computation that seemed inherently quadratic."
 
-  🧑 You: "My brute force would be: for each index i, compute
-   leftSum by iterating [0, i-1] and rightSum by iterating [i+1, n-1].
-   That's O(n) per index, O(n²) total.
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      One relevant project: I was building a data visualization
+      dashboard that displayed running totals across time-series
+      segments. Users could click any point on the timeline
+      and see whether the data to the left of that point
+      and the data to the right were 'balanced.'
 
-   But I notice that leftSum only changes by arr[i-1] each step —
-   it's a running sum! And rightSum can be DERIVED:
-   rightSum = total - leftSum - arr[i].
+      My initial implementation computed the left sum and right
+      sum separately for each click — two array traversals
+      per query. With thousands of data points and high
+      interaction frequency, this was noticeably laggy.
 
-   So my optimized approach:
-   1. Compute total sum in one pass.
-   2. Iterate left to right, maintaining a running leftSum.
-   3. At each index, rightSum = total - leftSum - arr[i].
-   4. If leftSum equals rightSum, return i.
-   5. Then add arr[i] to leftSum for the next iteration.
+      I realized that the total sum was fixed. If I precomputed
+      it once, I could derive the right sum as total minus
+      the left sum minus the clicked element — turning each
+      query from O of n to O of 1.
 
-   Key detail: I add arr[i] to leftSum AFTER the check, because
-   arr[i] shouldn't be part of either sum.
+      Then I took it further: as the user dragged along the
+      timeline, the left sum changed by just one element
+      per step. So I maintained a running accumulation
+      instead of recomputing from scratch.
 
-   O(n) time, O(1) space."
+      That 'complement identity' — right equal total minus left
+      minus current — is exactly the core of the equilibrium
+      index problem."
 
-  👤 Interviewer: "Why add arr[i] to leftSum after the check?"
+  👤 "Great context. Let's dive in."
+```
 
-  🧑 You: "At index i, leftSum should represent sum of arr[0..i-1] —
-   elements strictly BEFORE i. If I added arr[i] beforehand, leftSum
-   would include the pivot element, and rightSum would be computed
-   incorrectly — arr[i] would effectively be subtracted twice from
-   the total."
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  👤 Interviewer: "What about edge cases?"
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
 
-  🧑 You: "For a single element, leftSum=0 and rightSum=0, so it's
-   always an equilibrium. For all zeros, every index works, but I
-   return the first (index 0). Negative numbers work fine since the
-   formula is algebraic — no absolute values involved."
+  👤 "Find the first index where the sum of elements to its left
+      equals the sum of elements to its right."
+
+  🧑 "Let me make sure I understand the definition precisely.
+
+      For an index i, the LEFT sum is the sum of all elements
+      from index 0 to i minus 1. The RIGHT sum is the sum
+      of all elements from index i plus 1 to n minus 1.
+
+      The element at index i itself is NOT included in either sum.
+      It acts as a PIVOT — a divider between two halves.
+
+      If no such index exists, I return negative 1.
+
+      A few edge cases to confirm: for a single-element array,
+      the left sum is 0 — empty sum — and the right sum is also 0.
+      So a single element is always an equilibrium index.
+
+      For i equal 0, the left sum is 0.
+      For i equal n minus 1, the right sum is 0.
+      Both boundaries are valid candidates.
+
+      And the array can contain negative numbers?"
+
+  👤 "Correct on all points, including negatives."
+
+  ──────────────── 09:00 — Brute Force (3 phút) ────────────────
+
+  🧑 "The brute force approach: for each index i, I compute
+      two separate sums.
+
+      Left sum: iterate from 0 to i minus 1 and accumulate.
+      Right sum: iterate from i plus 1 to n minus 1 and accumulate.
+
+      If left sum equal right sum, return i.
+
+      Each sum computation is O of n, and I do this for each
+      of n indices. Total: O of n squared.
+
+      For n equal a million, that's a trillion operations.
+      I need to do better."
+
+  ──────────────── 12:00 — Key Insight bằng LỜI (5 phút) ────────────────
+
+  🧑 "Here's my key observation.
+
+      The total sum of the array is FIXED. I can compute it
+      once in O of n. Call it total.
+
+      Now, at any index i:
+      total equal left sum plus arr at i plus right sum.
+
+      Rearranging: right sum equal total minus left sum
+      minus arr at i.
+
+      This is a COMPLEMENT IDENTITY — if I know two of the
+      three parts, I can derive the third in O of 1.
+
+      So I don't need to compute the right sum from scratch
+      each time. I just need the left sum, which I can
+      maintain as a RUNNING SUM.
+
+      As I move from index i to i plus 1, the left sum
+      increases by exactly arr at i. It's incremental —
+      one addition per step instead of a full traversal.
+
+      So my algorithm is:
+      Step one: compute total in one pass.
+      Step two: scan left to right with a running left sum.
+      At each index, derive right sum equal total minus
+      left sum minus arr at i.
+      If left sum equal right sum, return i.
+      Then add arr at i to left sum for the next step.
+
+      Two passes total: O of n time, O of 1 space."
+
+  👤 "Why do you add arr at i to left sum AFTER the check?"
+
+  🧑 "Because at index i, the left sum should represent
+      the sum of elements STRICTLY BEFORE i — from 0 to i minus 1.
+      The element at i is the pivot and belongs to neither side.
+
+      If I added arr at i BEFORE the check, left sum would
+      include the pivot. Then the right sum computation:
+      total minus left sum minus arr at i
+      would subtract arr at i TWICE — once because it's
+      already in left sum, and once explicitly.
+      The right sum would be wrong.
+
+      So the order is: USE the current left sum to check,
+      THEN update it. I call this the 'use-then-update' pattern.
+      It appears in Fibonacci, sliding window, and any
+      algorithm with a running accumulator."
+
+      📌 MẸO: Nói "use-then-update pattern" — shows you
+      recognize a recurring design principle, not just
+      a one-off trick.
+
+  ──────────────── 17:00 — Trace bằng LỜI (6 phút) ────────────────
+
+  🧑 "Let me trace through an example.
+      Array: one, three, five, two, two. Total equal 13.
+      Left sum starts at 0.
+
+      i equal 0, arr at 0 is 1.
+      Right sum: 13 minus 0 minus 1 equal 12.
+      Is 0 equal 12? No.
+      Update left sum: 0 plus 1 equal 1.
+
+      i equal 1, arr at 1 is 3.
+      Right sum: 13 minus 1 minus 3 equal 9.
+      Is 1 equal 9? No.
+      Update left sum: 1 plus 3 equal 4.
+
+      i equal 2, arr at 2 is 5.
+      Right sum: 13 minus 4 minus 5 equal 4.
+      Is 4 equal 4? YES!
+      Return 2.
+
+      Let me verify: left side is arr at 0 plus arr at 1
+      equal 1 plus 3 equal 4. Right side is arr at 3
+      plus arr at 4 equal 2 plus 2 equal 4.
+      Both equal 4 — correct!"
+
+  🧑 "Now a 'not found' case.
+      Array: one, two, three. Total equal 6.
+
+      i equal 0: right equal 6 minus 0 minus 1 equal 5.
+      0 versus 5? No. Left becomes 1.
+
+      i equal 1: right equal 6 minus 1 minus 2 equal 3.
+      1 versus 3? No. Left becomes 3.
+
+      i equal 2: right equal 6 minus 3 minus 3 equal 0.
+      3 versus 0? No. Left becomes 6.
+
+      Loop ends. Return negative 1.
+
+      The issue: the prefix sum grows faster than the suffix
+      sum shrinks. They never meet. This happens when the array
+      has a 'heavy' right side."
+
+  ──────────────── 23:00 — Negative numbers (4 phút) ────────────────
+
+  🧑 "An important note about negative numbers.
+
+      Array: negative 7, one, five, two, negative 4, three, zero.
+      Total equal 0.
+
+      i equal 0: right equal 0 minus 0 minus negative 7 equal 7.
+      0 versus 7? No. Left becomes negative 7.
+
+      i equal 1: right equal 0 minus negative 7 minus 1 equal 6.
+      Negative 7 versus 6? No. Left becomes negative 6.
+
+      i equal 2: right equal 0 minus negative 6 minus 5 equal 1.
+      Negative 6 versus 1? No. Left becomes negative 1.
+
+      i equal 3: right equal 0 minus negative 1 minus 2
+      equal negative 1.
+      Negative 1 equal negative 1? YES! Return 3.
+
+      Verification: left equal negative 7 plus 1 plus 5
+      equal negative 1. Right equal negative 4 plus 3 plus 0
+      equal negative 1. Correct!
+
+      The formula works with negatives because it's
+      purely algebraic — no absolute values, no sign assumptions.
+      Left sum can DECREASE when adding a negative element.
+      This means left sum is NOT monotonic — I cannot use
+      binary search."
+
+  ──────────────── 27:00 — Viết code, NÓI từng block (3 phút) ────────────
+
+  🧑 "Let me code this up.
+
+      [Vừa viết vừa nói:]
+
+      First, compute the total using reduce with initial
+      value 0. The initial value handles empty arrays —
+      without it, reduce on an empty array throws a TypeError.
+
+      Initialize left sum to 0.
+
+      Loop from i equal 0 to arr dot length minus 1.
+
+      Inside the loop, THE CORE LINE:
+      right sum equal total minus left sum minus arr at i.
+      This is the complement identity — deriving the right
+      from what we already know in O of 1.
+
+      Check: if left sum equal-equal-equal right sum, return i.
+
+      Then update: left sum plus-equal arr at i.
+      This prepares left sum for the next iteration.
+
+      After the loop, return negative 1.
+
+      That's seven lines. Two variables, two passes,
+      one complement formula."
+
+      📌 MẹO: Nói "complement identity" khi viết dòng core.
+      Interviewer sees you understand the MATHEMATICAL principle,
+      not just the code trick.
+
+  ──────────────── 30:00 — Edge Cases (3 phút) ────────────────
+
+  👤 "Walk me through the edge cases."
+
+  🧑 "Single element: [5]. Total equal 5.
+      i equal 0: right equal 5 minus 0 minus 5 equal 0.
+      Left sum 0 equal right sum 0? Yes! Return 0.
+      A single element always has empty left and right — both 0.
+
+      All zeros: [0, 0, 0]. Total equal 0.
+      Every index is an equilibrium!
+      i equal 0: right equal 0 minus 0 minus 0 equal 0.
+      0 equal 0? Yes! Return 0 — the FIRST index.
+
+      Equilibrium at the boundary: [0, 1, negative 1].
+      Total equal 0. i equal 0: right equal 0 minus 0 minus 0
+      equal 0. 0 equal 0? Yes! Return 0.
+      The element at index 0 has no left side — left sum is 0,
+      and right sum is 1 plus negative 1 equal 0.
+
+      No equilibrium: [1, 2, 3]. As I traced earlier,
+      the prefix grows too fast. Return negative 1.
+
+      Floating point: the problem uses integers, so exact
+      comparison is safe. If it used floats, I'd need epsilon
+      comparison — Math dot abs of left minus right less than
+      1e-9. Good to mention but not needed here."
+
+  ──────────────── 33:00 — Complexity (2 phút) ────────────────
+
+  🧑 "Time: O of n. Two passes — one for total, one for scanning.
+      Each pass is O of n. Total: 2n operations.
+
+      Space: O of 1. Just two variables: total and left sum.
+
+      This is provably OPTIMAL for both time and space.
+      For time: I must read every element at least once —
+      if I skip any element, I don't know the total,
+      and I can't compute right sum correctly.
+      For space: O of 1 is the minimum possible."
+
+  ──────────────── 35:00 — Why 2 passes? (3 phút) ────────────────
+
+  👤 "Can you do it in a single pass?"
+
+  🧑 "For this specific approach, no.
+
+      I need the total BEFORE I can derive right sum at any
+      position. Without total, the formula
+      right sum equal total minus left sum minus arr at i
+      simply doesn't work.
+
+      Could I compute total on the fly? The problem is that
+      at index i, I don't yet know the sum of elements after i.
+      I'd need to look ahead, which requires either
+      a second pass or extra space.
+
+      There IS a single-pass approach: compute left sum AND
+      right sum simultaneously, starting from both ends.
+      But this doesn't help with the equilibrium check because
+      the left pointer's sum and the right pointer's sum
+      don't directly compare to what I need.
+
+      Two passes of O of n is still O of n. The constant
+      factor difference is negligible for any practical input."
+
+  ──────────────── 38:00 — Prefix Array alternative (4 phút) ────
+
+  👤 "What if you needed to answer multiple equilibrium queries?"
+
+  🧑 "Great question! If the user can query 'is index i
+      an equilibrium?' many times, the running sum approach
+      requires a full scan for each query — O of n per query.
+
+      Instead, I'd precompute a PREFIX SUM array.
+      prefix at j equal arr at 0 plus arr at 1 plus dot dot dot
+      plus arr at j minus 1.
+
+      Then: left sum at i equal prefix at i.
+      Right sum at i equal total minus prefix at i minus arr at i.
+      Each query is O of 1!
+
+      The trade-off: O of n space for the prefix array,
+      but O of 1 per query instead of O of n.
+
+      For the interview problem — one scan, return first match —
+      the running sum approach is better. No extra space,
+      same O of n time.
+
+      But for a system that handles repeated queries on the same
+      array, the prefix array is the right investment."
+
+  ──────────────── 42:00 — Why not binary search? (3 phút) ────
+
+  👤 "Left sum increases as i moves right. Can you binary search?"
+
+  🧑 "Only if the array contains ALL non-negative numbers!
+
+      With non-negatives, left sum is monotonically increasing
+      and right sum is monotonically decreasing. They have
+      at most one intersection point. Binary search works.
+
+      But with negative numbers, left sum can DECREASE
+      when adding a negative element. It oscillates up and down.
+      There could be zero, one, or MULTIPLE intersection points.
+
+      Example: [10, negative 20, 15, 5, negative 10].
+      Left sum at each index: 0, 10, negative 10, 5, 10.
+      Not monotonic! Binary search would miss intersections.
+
+      So for the general case with negatives:
+      linear scan is necessary. O of n is optimal."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Invariant proof (5 phút) ────────────────
+
+  👤 "Can you prove your algorithm is correct?"
+
+  🧑 "Sure! I'll use a loop invariant.
+
+      My invariant: at the START of iteration i,
+      left sum equal the sum of arr at 0 through arr at i minus 1.
+
+      Base case: i equal 0.
+      Left sum is 0, which is the sum of an empty range.
+      The sum of zero elements is 0. True.
+
+      Inductive step: assume it holds at the start of iteration i.
+      At the end of iteration i, I execute
+      left sum plus-equal arr at i.
+      So at the start of iteration i plus 1:
+      left sum equal sum of arr at 0 through i minus 1
+      plus arr at i
+      equal sum of arr at 0 through i
+      equal sum of arr at 0 through i-plus-1 minus 1.
+      This is exactly the invariant for iteration i plus 1. True.
+
+      Now, given this invariant, at each iteration:
+      right sum equal total minus left sum minus arr at i
+      equal sum of entire array minus sum of arr at 0 through i minus 1
+      minus arr at i
+      equal sum of arr at i plus 1 through n minus 1.
+
+      So left sum and right sum are EXACTLY the left and right
+      partition sums at index i. The comparison is correct.
+
+      And since I iterate all indices from 0 to n minus 1,
+      I check every possible equilibrium point.
+      If one exists, I find it. QED."
+
+  ──────────────── 50:00 — Strict equality (3 phút) ────────────────
+
+  👤 "You used triple equals. Why not double equals?"
+
+  🧑 "In JavaScript, double equals performs TYPE COERCION.
+      For example, 0 double-equal false is true,
+      and '' double-equal 0 is true.
+
+      For this problem, both left sum and right sum are always
+      numbers, so double equals would actually work correctly.
+      But using triple equals is a DEFENSIVE practice —
+      it prevents subtle bugs if the types ever diverge
+      due to refactoring or unexpected inputs.
+
+      In code reviews and interviews, triple equals signals
+      that I'm deliberate about type safety. It costs nothing
+      and prevents an entire category of bugs."
+
+  ──────────────── 53:00 — Reduce with initial value (3 phút) ────────────
+
+  👤 "You said reduce needs an initial value. Can you elaborate?"
+
+  🧑 "If I call arr dot reduce with just a callback and no
+      initial value, it uses the first element as the accumulator
+      and starts from the second element. For a non-empty array,
+      this gives the correct sum.
+
+      BUT for an EMPTY array, there's no first element to use
+      as accumulator. JavaScript throws a TypeError:
+      'Reduce of empty array with no initial value.'
+
+      By passing 0 as the initial value, the accumulator starts
+      at 0 and the callback processes all elements from index 0.
+      For an empty array, the callback never runs, and reduce
+      returns the initial value 0.
+
+      This makes the code robust: total equal 0 for an empty array,
+      the loop doesn't execute, and I correctly return negative 1.
+
+      It's a small detail, but in production it prevents
+      uncaught exceptions on edge-case inputs."
+
+  ──────────────── 56:00 — Complement pattern family (4 phút) ────────────
+
+  👤 "You called this a 'complement identity.' Where else
+      does this pattern appear?"
+
+  🧑 "Everywhere!
+
+      Product Except Self — LeetCode 238.
+      Instead of sums, I compute left product and right product.
+      But the complement is trickier: I can't just divide total
+      product by arr at i because arr at i might be zero.
+      So I maintain BOTH left and right product arrays.
+
+      Circular Subarray Sum — LeetCode 918.
+      The maximum circular subarray is the complement of the
+      minimum non-circular subarray. If total sum is S
+      and min subarray sum is M, then max circular equal S minus M.
+      Same complement identity!
+
+      Subarray Sum Equal K — LeetCode 560.
+      I look for a prefix sum such that current prefix minus
+      some earlier prefix equal k. That's complement:
+      earlier prefix equal current prefix minus k.
+      I use a HashMap to look up the complement.
+
+      The GENERAL PATTERN: if I know the WHOLE and one PART,
+      I can derive the OTHER PART in O of 1.
+      Whole minus known part equal unknown part.
+      This avoids recomputing the unknown part from scratch."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — All equilibrium indices (3 phút) ────────────────
+
+  👤 "What if you need ALL equilibrium indices, not just the first?"
+
+  🧑 "Simple modification: instead of returning immediately,
+      I push each matching index into a results array
+      and return it at the end.
+
+      The time complexity stays O of n — I still visit each
+      element once. Space becomes O of k where k is the number
+      of equilibrium indices.
+
+      The interesting question is: how many equilibrium indices
+      can an array have? For an all-zeros array of length n,
+      EVERY index is an equilibrium — left sum 0 equal right sum 0.
+      So k can be as large as n."
+
+  ──────────────── 63:00 — Weighted equilibrium (4 phút) ────────────────
+
+  👤 "What if elements have weights, and you want the weighted
+      sum on each side to be equal?"
+
+  🧑 "If each element has a separate weight, I'd compute
+      weighted sum as arr at i times weight at i.
+      The complement identity still holds:
+      weighted right equal weighted total minus weighted left
+      minus arr at i times weight at i.
+
+      Same algorithm, just with weighted sums.
+
+      A more interesting variant: what if I want the left AVERAGE
+      to equal the right AVERAGE? That's a different constraint.
+      Left sum over i equal right sum over n minus 1 minus i.
+      Cross-multiplying: left sum times the count on the right
+      equal right sum times the count on the left.
+      Still solvable in O of n with running sums."
+
+  ──────────────── 67:00 — Split array into 3 equal parts (4 phút) ────
+
+  👤 "What about splitting the array into three equal sum parts?"
+
+  🧑 "LeetCode 1013! Now I need two split points instead of one.
+
+      The total sum must be divisible by 3. If not, impossible.
+      Target for each part: total divided by 3.
+
+      I scan left to right with a running sum. Each time the running
+      sum reaches the target, I increment a counter and reset.
+
+      But I need TWO splits, so I need the counter to reach 2
+      before the last element — the third part is implied.
+
+      The key difference from equilibrium: equilibrium has ONE
+      pivot point with the pivot excluded from both sums.
+      Three-way split has TWO cut points with ALL elements
+      belonging to some part.
+
+      Same underlying technique: prefix sum and complement.
+      But the logic for dividing into parts is more involved."
+
+  ──────────────── 71:00 — Product Except Self (4 phút) ────────────────
+
+  👤 "How does this relate to Product Except Self?"
+
+  🧑 "Product Except Self — LeetCode 238 — is the MULTIPLICATIVE
+      analog of equilibrium!
+
+      For equilibrium: right sum equal total minus left sum
+      minus arr at i. Division-free.
+
+      For Product Except Self: you might think
+      result at i equal total product divided by arr at i.
+      But this fails when arr at i is zero!
+
+      So instead, I build left products and right products:
+      left at i equal product of arr at 0 through i minus 1.
+      right at i equal product of arr at i plus 1 through n minus 1.
+      result at i equal left at i times right at i.
+
+      I can optimize space to O of 1 by:
+      First pass: fill result with left products.
+      Second pass: traverse right to left with a running
+      right product, multiplying into result.
+
+      The structural parallel is clear:
+      Equilibrium: left SUM and right SUM.
+      Product Except Self: left PRODUCT and right PRODUCT.
+      Both decompose the array at each index into
+      'what's before me' and 'what's after me.'"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Load balancing (5 phút) ────────────────
+
+  👤 "Where does the equilibrium concept appear in system design?"
+
+  🧑 "Several places!
+
+      First — DATA PARTITIONING.
+      When sharding a database, I want to split the data so
+      that each shard handles roughly equal 'load.'
+      If load is proportional to the number of records,
+      finding the equilibrium point tells me where to split
+      so the left shard and right shard have equal work.
+
+      Second — LOAD BALANCER SPLITTING.
+      Given a list of servers with different capacities,
+      I can model their weights as an array. The equilibrium
+      index tells me where to split the server list so that
+      the total capacity on each side is balanced.
+
+      Third — AUDIO and VIDEO PROCESSING.
+      In audio normalization, I might want to find the point
+      where the 'energy' — sum of amplitudes — on the left
+      equals the energy on the right. This helps identify
+      silences, transitions, or natural break points.
+
+      Fourth — FINANCIAL ANALYSIS.
+      Given a sequence of daily profits and losses,
+      the equilibrium index represents the day where
+      the cumulative profit before equals cumulative profit after.
+      It's a 'break-even' point."
+
+  ──────────────── 80:00 — Streaming prefix sums (5 phút) ────────────────
+
+  👤 "What if the data is streaming and you need to maintain
+      the equilibrium dynamically?"
+
+  🧑 "This is significantly harder!
+
+      If I append a new element to the end of the array,
+      the total changes, which affects the right sum
+      at every position. Left sums are unaffected,
+      but the equilibrium point can shift.
+
+      For a stream of length n, naively recomputing the
+      equilibrium after each append is O of n per update.
+
+      A better approach: maintain the prefix sum array
+      and the total. When a new element arrives:
+      new total equal old total plus new element.
+      Append new prefix sum equal old prefix sum plus new element.
+
+      But I still need to RE-SCAN to find where
+      prefix at i equal half of new total minus arr at i.
+      That's O of n per query in the worst case.
+
+      For amortized constant-time updates, I'd need
+      a balanced BST or segment tree on the prefix sums
+      to binary search for the equilibrium condition.
+      But that only works for non-negative arrays
+      where prefix sums are monotonic.
+
+      For general arrays with negatives, maintaining the
+      equilibrium dynamically is fundamentally O of n
+      per update because the prefix sums aren't sorted."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, the COMPLEMENT IDENTITY pattern.
+      If I know the whole and one part, I can derive the other
+      part in O of 1 without recomputing. This converts
+      O of n per query to O of 1 per query,
+      and O of n squared overall to O of n.
+      The same pattern drives Product Except Self,
+      circular subarray, and Subarray Sum Equal K.
+
+      Second, 'USE-THEN-UPDATE' ordering in accumulator loops.
+      The left sum must be checked BEFORE being updated
+      because the current element is the pivot, not part of
+      either side. This sequencing issue appears everywhere:
+      Kadane's extends before or after checking,
+      sliding windows check before adding,
+      and counting sorts accumulate before querying.
+      Getting the ORDER right is often more important
+      than getting the FORMULA right.
+
+      Third, the importance of NEGATIVE NUMBERS as a
+      disqualifier for binary search. My first instinct
+      with any 'find the crossing point' problem is
+      to binary search. But negatives make the prefix sum
+      non-monotonic, which breaks binary search.
+      In interviews, this is a key insight to vocalize —
+      it shows I understand the PRECONDITIONS of algorithms."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — does your team work with data partitioning
+      or sharding? I'm curious if a 'balanced split' calculation
+      like this shows up in your infrastructure.
+
+      Second — when you evaluate candidates on this type of problem,
+      what distinguishes a strong answer from a great one?
+      Is it the optimization, the proof, or the edge case handling?
+
+      Third — what's the most interesting use of prefix sums
+      your team has encountered in production?"
+
+  👤 "Excellent questions! I liked how you explained the complement
+      identity as a general principle and connected it to
+      Product Except Self and circular subarray.
+      The invariant proof was thorough.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Equilibrium)       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Name the mathematical principle
+     ❌ "rightSum = total - leftSum - arr[i]."
+     ✅ "This uses the COMPLEMENT IDENTITY — if I know
+         the whole and one part, I derive the rest in O of 1.
+         Total minus left minus pivot equal right."
+
+  📌 MẸO #2: Explain the ordering with a CONCRETE mistake
+     ✅ "If I add arr at i to leftSum BEFORE checking,
+         leftSum includes the pivot. Then rightSum equals
+         total minus left minus arr at i, which subtracts
+         the pivot TWICE. The formula breaks.
+         So: CHECK first, then UPDATE."
+
+  📌 MẸO #3: Trace with narrative, not just numbers
+     ✅ "At index 2, element is 5. Left sum is 4.
+         Right sum: 13 minus 4 minus 5 equal 4.
+         Four equal four! The left side — one plus three —
+         perfectly BALANCES the right side — two plus two."
+
+  📌 MẹO #4: Address negative numbers proactively
+     ✅ "Negative numbers are fine — the formula is purely
+         algebraic. But they mean left sum is NOT monotonic,
+         which DISQUALIFIES binary search.
+         I must scan linearly."
+
+  📌 MẸO #5: Single element = always equilibrium
+     ✅ "A single element has empty left and empty right.
+         Both sums are 0 — the identity element of addition.
+         So it's always an equilibrium. My code handles this
+         naturally: left sum 0 equal right sum 0."
+
+  📌 MẸO #6: Connect to the prefix sum family
+     ✅ "This is part of the PREFIX SUM family:
+         Equilibrium: complement of running sum.
+         Pivot Index #724: identical problem.
+         Product Except Self: multiplicative version.
+         Subarray Sum equal K: prefix plus HashMap.
+         Three Equal Parts: prefix with reset."
+
+  📌 MẸO #7: Explain WHY 2 passes are necessary
+     ✅ "I need the total BEFORE I can derive right sum.
+         Without the total, the complement formula doesn't work.
+         So pass one computes total, pass two scans.
+         Two passes of O of n is still O of n."
+
+  📌 MẸO #8: Articulate the space-time insight
+     ✅ "Prefix array gives O of 1 per query at O of n space.
+         Running sum gives O of n per full scan at O of 1 space.
+         For a single equilibrium search, running sum wins.
+         For repeated queries on the same array, prefix wins.
+         Choosing the right one depends on the access pattern."
 ```
 
 ### Pattern & Liên kết

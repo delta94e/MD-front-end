@@ -729,66 +729,528 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
 ```
-  ──────────────── PHASE 1: Clarify ────────────────
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  👤 Interviewer: "Find the rotation that maximizes
-                   the sum of i times arr[i]."
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  🧑 You: "So I need to try all n rotations of the array
-   and find which one gives the maximum value of
-   Σ(index × element). Correct?"
+  👤 "Tell me about yourself and a time you turned
+      an O(n²) algorithm into O(n) using math."
 
-  ──────────────── PHASE 2: Examples ────────────────
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A concrete example: I was building a chart renderer
+      that needed to find the optimal starting point in
+      a circular dataset to maximize a weighted display score.
 
-  🧑 You: "arr = [8, 3, 1, 2]. Sum = 14.
-   R(0) = 0×8+1×3+2×1+3×2 = 11.
-   R(1) = 0×3+1×1+2×2+3×8 = 29 — much bigger because
-   8 moved to the highest-weight position."
+      Naive: re-compute the score for each starting point.
+      O(n) per start × n starts = O(n²). Too slow for n=10⁶.
 
-  ──────────────── PHASE 3: Approach ────────────────
+      Insight: consecutive starting points share most data.
+      The score changes by a predictable formula.
+      I derived a recurrence: next = curr - sum + elem × n.
+      One multiplication and two additions per step.
+      O(n) total, O(1) space.
 
-  🧑 You: "Brute force is O(n²). But I notice a pattern:
-   when I left-rotate by one, every element except the
-   displaced one drops one index position. The displaced
-   element moves from index 0 to index n-1.
+      That is exactly Max Sum Rotation."
 
-   So the net change is:
-   - Every other element loses its value from the sum
-     (total loss = curSum - arr[rotated_element])
-   - The displaced element gains arr[rotated_element] × (n-1)
+  👤 "Excellent. Let's dive in."
+```
 
-   Simplifying:
-   nextVal = currVal - curSum + arr[i-1] × n
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-   This gives me O(1) per rotation, O(n) total.
-   Space O(1) — just three variables."
+  ──────────────── 05:00 — Clarify (3 phút) ────────────────
 
-  ──────────────── PHASE 4: Code + Verify ────────────────
+  👤 "Given an array of n integers, find the rotation
+      that maximizes the sum of i times arr[i]."
 
-  🧑 You: [writes code, traces [8,3,1,2]]
+  🧑 "Let me clarify.
 
-  "i=1: 11 - 14 + 8×4 = 29.
-   i=2: 29 - 14 + 3×4 = 27.
-   i=3: 27 - 14 + 1×4 = 17.
-   Max = 29 ✅."
+      A rotation: a cyclic left shift of the array.
+      Rotation 0 is the original array.
+      Rotation 1: [a₁, a₂, ..., aₙ₋₁, a₀].
+      There are exactly n distinct rotations.
 
-  ──────────────── PHASE 5: Follow-ups ────────────────
+      The objective: maximize Σ(i × arr_rotated[i])
+      over all n rotations.
 
-  👤 "What if I want the rotation INDEX, not just the value?"
-  🧑 "I'd track the index alongside the max. When res updates,
-      record i as the rotation index."
+      Return the maximum value, not the rotation index?
 
-  👤 "What if rotation is RIGHT instead of LEFT?"
-  🧑 "The formula changes slightly. For right rotation,
-      the last element goes to index 0. The relationship
-      is: nextVal = currVal + curSum - arr[n-i] × n."
+      I also want to know: can array elements be negative?
+      Is n guaranteed at least 1?"
 
-  👤 "Can we use this pattern for other functions?"
-  🧑 "Yes! Any function that changes predictably
-      between rotations can be optimized this way.
-      For example, maximum product of i×arr[i],
-      or weighted circular sums."
+  ──────────────── 08:00 — Elevator Pitch Analogy (2 phút) ──
+
+  🧑 "Think of this as an ELEVATOR WEIGHT PROBLEM.
+
+      n floors, each floor has a weight.
+      The index i is the floor number — higher floor means
+      higher multiplier. You want heavy items on high floors.
+
+      When you rotate left by one:
+      the item on floor 0 rides up to the top floor (n-1).
+      Every other item drops one floor.
+
+      Question: net effect on the total weighted sum?
+      Dropping one floor means losing 1 unit of weight
+      per item (total loss = sum of all items).
+      But one item gained n-1 floors.
+      Net: −sum + item × n.
+
+      That's the recurrence formula!"
+
+  ──────────────── 10:00 — Brute Force (3 phút) ────────────
+
+  🧑 "Brute force: try all n rotations.
+
+      For each rotation r from 0 to n minus 1:
+        compute sum of j times arr[(r + j) mod n]
+        for j from 0 to n minus 1.
+
+      That is O(n) per rotation, O(n) rotations.
+      Total: O of n squared.
+
+      For n equals 10 to the 5: 10 to the 10 operations.
+      Might time out. Let me find the O(n) approach."
+
+  ──────────────── 13:00 — Derive the Recurrence (5 phút) ──
+
+  🧑 "Key observation: when I left-rotate by one,
+      going from rotation k to rotation k plus 1:
+
+      Every element EXCEPT arr[k] had its index decrease by 1.
+      The contribution of each such element drops by arr[m].
+      Total decrease from all 'other' elements: curSum minus arr[k].
+
+      The element arr[k] moved from index 0 to index n minus 1.
+      Its contribution changes from 0 to (n-1) times arr[k].
+      That is a gain of (n-1) times arr[k].
+
+      Net change:
+        R(k+1) = R(k) - (curSum - arr[k]) + (n-1) × arr[k]
+               = R(k) - curSum + arr[k] + (n-1) × arr[k]
+               = R(k) - curSum + n × arr[k]
+
+      In code: for iteration i starting from 1,
+      the element leaving position 0 is arr[i-1].
+      So: currVal = currVal - curSum + arr[i-1] × n."
+
+  ──────────────── 18:00 — Write Code (5 phút) ──────────────
+
+  🧑 "The code.
+
+      function maxSum of arr:
+        const n equals arr.length.
+
+        Compute curSum equals sum of all arr[i]. O(n).
+
+        Compute R(0): currVal equals sum of i times arr[i]. O(n).
+
+        Set res equals currVal.
+
+        For i from 1 to n minus 1:
+          currVal equals currVal minus curSum plus arr[i-1] times n.
+          res equals max of res and currVal.
+
+        Return res.
+
+      Time: O(n). Space: O(1)."
+
+  ──────────────── 23:00 — Trace example (5 phút) ───────────
+
+  🧑 "Trace with [8, 3, 1, 2], n equals 4.
+
+      curSum = 8 + 3 + 1 + 2 = 14.
+      R(0) = 0×8 + 1×3 + 2×1 + 3×2 = 0 + 3 + 2 + 6 = 11.
+      res = 11.
+
+      i=1: currVal = 11 - 14 + arr[0] × 4
+                   = 11 - 14 + 8 × 4
+                   = 11 - 14 + 32 = 29. res = 29. ⭐
+
+      i=2: currVal = 29 - 14 + arr[1] × 4
+                   = 29 - 14 + 3 × 4
+                   = 29 - 14 + 12 = 27. res stays 29.
+
+      i=3: currVal = 27 - 14 + arr[2] × 4
+                   = 27 - 14 + 1 × 4
+                   = 27 - 14 + 4 = 17. res stays 29.
+
+      Return 29.
+
+      Verify rotation 1: [3, 1, 2, 8]
+      → 0×3 + 1×1 + 2×2 + 3×8 = 0 + 1 + 4 + 24 = 29. Correct!"
+
+  ──────────────── 28:00 — Complexity (3 phút) ───────────────
+
+  🧑 "Time: O of n.
+      Three passes: curSum (n adds), R(0) (n muls + n adds),
+      then n minus 1 iterations of the recurrence.
+      Total: about 6n operations.
+
+      Space: O of 1.
+      Just three variables: curSum, currVal, res."
+
+  ──────────────── 31:00 — Edge Cases (4 phút) ───────────────
+
+  🧑 "Edge cases.
+
+      Single element: n equals 1. Only rotation 0.
+      R(0) = 0 times arr[0] = 0. Return 0.
+
+      Already optimal rotation 0:
+      arr = [1, 2, 3], sorted ascending.
+      Largest values already at highest indices.
+      R(0) = 0+2+6 = 8. After rotations: 5, 5. Max is 8.
+
+      All equal elements: arr = [c, c, c].
+      All rotations give the same sum.
+      Return that sum.
+
+      Negative elements: the formula still works.
+      curSum may be negative, but the recurrence is exact."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Why arr[i-1] not arr[i]? (3 phút) ─
+
+  👤 "Why is it arr[i-1] and not arr[i] in the formula?"
+
+  🧑 "The loop variable i represents the rotation number.
+      At rotation i, the element that LEFT position 0
+      to go to position n-1 is the one that was at
+      the front of rotation i minus 1.
+
+      In the ORIGINAL array, that element is arr[i-1].
+      Because after i-1 left-rotations, the array
+      starts at arr[i-1].
+
+      Concretely:
+      Rotation 1: arr[0] leaves position 0. → arr[i-1] with i=1: arr[0]. ✅
+      Rotation 2: arr[1] leaves position 0. → arr[i-1] with i=2: arr[1]. ✅
+
+      Using arr[i] would give the wrong element —
+      one position ahead in the original array."
+
+  ──────────────── 48:00 — Why ×n not ×(n-1)? (4 phút) ──────
+
+  👤 "Why multiply by n and not n minus 1?
+      The element only moved n minus 1 positions up."
+
+  🧑 "Good catch. The element arr[k] moves from index 0 to index n-1.
+      That is a net gain of n minus 1 positions.
+      So its contribution alone changes by arr[k] times (n-1).
+
+      But there's also the loss from the −curSum term.
+      The curSum includes arr[k] itself.
+      When I subtract curSum, I am also subtracting arr[k] once.
+
+      So the total effect on arr[k]:
+      minus arr[k] from the curSum subtraction,
+      plus arr[k] times (n-1) from moving up.
+      Net: arr[k] times (n-1) minus arr[k] = arr[k] times (n-2).
+
+      Wait — let me redo this more carefully.
+
+      nextVal = currVal − (curSum − arr[k]) + arr[k] × (n−1)
+              = currVal − curSum + arr[k] + arr[k] × (n−1)
+              = currVal − curSum + arr[k] × (1 + n − 1)
+              = currVal − curSum + arr[k] × n.
+
+      The ×n comes from combining the +arr[k] rescue
+      with the (n-1) gain. It's a clean algebraic simplification."
+
+  ──────────────── 52:00 — Can we find the rotation index? (4 phút) ─
+
+  👤 "You return the maximum value. What if I need the rotation?"
+
+  🧑 "Easy addition. Track the index when res updates.
+
+      Let resIdx = 0.
+      In the loop: when currVal > res, set resIdx = i.
+
+      At the end: resIdx is the optimal rotation number.
+
+      To reconstruct the rotated array:
+      slice arr from resIdx to end, then arr from 0 to resIdx.
+      O(n) time to reconstruct."
+
+  ──────────────── 56:00 — Proof that formula covers all rotations (2 phút) ─
+
+  👤 "How do you know you covered ALL n rotations?"
+
+  🧑 "R(0) is initialized before the loop — that's rotation 0.
+      The loop runs i from 1 to n minus 1, inclusive.
+      So we compute R(1), R(2), ..., R(n-1).
+      Total: n rotations, all covered.
+
+      After n left-rotations, the array returns to original.
+      So rotations 0 through n-1 are all distinct and exhaustive."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Right rotation (3 phút) ────────────
+
+  👤 "What if we use RIGHT rotation instead of LEFT?"
+
+  🧑 "Right rotation: the LAST element goes to position 0.
+      All others shift right (index increases by 1).
+
+      Net change going from rotation k to k+1 (right):
+        Every element except arr[n-k] gains one index.
+        That means the sum increases by (curSum - arr[n-k]).
+        But arr[n-k] moves from index n-1 to index 0.
+        Its contribution changes from (n-1)×arr[n-k] to 0.
+        Loss: (n-1) × arr[n-k].
+
+      nextVal = currVal + (curSum - arr[n-k]) - (n-1) × arr[n-k]
+             = currVal + curSum - arr[n-k] - (n-1) × arr[n-k]
+             = currVal + curSum - arr[n-k] × n.
+
+      Opposite sign! Always verify left vs right before coding."
+
+  ──────────────── 63:00 — Minimize instead of maximize (2 phút) ─
+
+  👤 "What if I want the MINIMUM weighted sum rotation?"
+
+  🧑 "Track the minimum instead of maximum.
+      Initialize res = currVal.
+      In the loop: res = min of res and currVal.
+      Same formula, same O(n) time.
+
+      The minimum would place the smallest values
+      at the highest indices."
+
+  ──────────────── 65:00 — Connection to Sliding Window (4 phút) ─
+
+  👤 "You mentioned sliding window. Explain the connection."
+
+  🧑 "Both use the 'derive from previous' pattern.
+
+      Sliding Window Fixed Sum:
+        When window slides right by one:
+        add new element on the right, remove old on the left.
+        nextSum = currSum + arr[right] - arr[left].
+        O(1) per slide.
+
+      Max Sum Rotation:
+        When rotation advances by one:
+        one element climbs from index 0 to n-1.
+        All others drop one index.
+        nextVal = currVal - curSum + arr[i-1] × n.
+        O(1) per rotation.
+
+      Both exploit the RECURRENCE between consecutive states.
+      The insight: 'what changes between state k and k+1?'
+      Answer always leads to O(1) per step."
+
+  ──────────────── 69:00 — Circular weighted sum (3 phút) ────
+
+  👤 "What about a CIRCULAR weighted sum variant,
+      where weights also wrap around?"
+
+  🧑 "More complex. If weights also rotate with the array,
+      then consecutive rotations share no simple structure.
+      The formula no longer holds.
+
+      We'd need either O(n²) brute force,
+      or a different mathematical characterization
+      specific to the circular weight pattern.
+
+      For fixed weights i = 0..n-1 (this problem),
+      the recurrence works cleanly."
+
+  ──────────────── 72:00 — Generalize to any aggregation (2 phút) ─
+
+  👤 "Can this pattern generalize beyond weighted sums?"
+
+  🧑 "Yes, for any function that has a tractable recurrence.
+
+      If F(rotation k+1) can be expressed as
+      F(rotation k) plus some O(1) change,
+      then we get O(n) total.
+
+      Examples where this works:
+      XOR-weighted rotations.
+      Cyclic distance sums.
+      Weighted occurrence counts, if the weight structure
+      has a linear recurrence."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────
+
+  👤 "Where would this pattern appear in real products?"
+
+  🧑 "Several areas.
+
+      First — DATA VISUALIZATION.
+      A circular chart (pie, donut) has optimal starting angles.
+      Weighted segments benefit from a particular rotation.
+      The 'weighted sum' models visual prominence by position.
+
+      Second — SCHEDULING WITH POSITION WEIGHTS.
+      A task queue where earlier positions have higher priority
+      (example: urgency × seconds from now).
+      Find the optimal ordering of n tasks to maximize urgency
+      weighted by position. Rotation = circular shift of tasks.
+
+      Third — SIGNAL PROCESSING.
+      Cyclic shift of a discrete signal to maximize
+      correlation with a weight function.
+      The recurrence maps to the cross-correlation formula.
+
+      Fourth — GAME DEVELOPMENT.
+      In turn-based games with n players in a circle,
+      find the starting player that maximizes total
+      value delivered weighted by turn order."
+
+  ──────────────── 80:00 — Scaling (5 phút) ────────────────
+
+  👤 "How would you handle n equals 10⁸?"
+
+  🧑 "The O(n) formula handles 10⁸ in roughly 1-2 seconds.
+      Memory: O(1), so no space concern.
+
+      If needed in a parallel setting:
+      Partition n rotations into chunks.
+      Each core computes curSum for its chunk,
+      then applies the recurrence starting from
+      a precomputed base value.
+
+      The recurrence is data-parallel friendly
+      because each R(i) depends only on R(i-1) and constants.
+      Prefix sum parallelization applies directly.
+
+      For distributed: split the array across nodes,
+      each node owns a range of rotation indices.
+      Broadcast curSum and each node computes its R values."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What's the single biggest insight from this problem?"
+
+  🧑 "Three things.
+
+      First, ASK 'WHAT CHANGES?'
+      When moving from state k to state k plus 1,
+      most of the computation is reused.
+      Only the delta changes. Identify the delta.
+      That turns O(n²) into O(n).
+
+      Second, ALGEBRA IS PART OF CODING.
+      The formula nextVal = currVal - curSum + arr[i-1] × n
+      is derived from first principles, not guessed.
+      Practice expanding and simplifying series to find
+      these O(1) recurrences.
+
+      Third, arr[i-1] NOT arr[i].
+      The index offset is the most common bug here.
+      When i is the rotation number, the element
+      leaving position 0 is at original index i-1.
+      Always verify with a small example."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — the 'derive from previous' pattern
+      is essentially a recurrence relation.
+      Does your team deal with problems where
+      naive brute force was replaced by a mathematical
+      recurrence and made a significant impact?
+
+      Second — the right vs left rotation distinction
+      changes the formula completely.
+      How does your team document such 'directional'
+      constraints to avoid implementation bugs?
+
+      Third — this problem is O(n) time, O(1) space.
+      In practice, does your team encounter
+      algorithms where reducing memory footprint
+      was more important than reducing time complexity?"
+
+  👤 "Excellent session! The elevator analogy made the
+      recurrence immediate and intuitive. The algebraic
+      derivation of ×n instead of ×(n-1) showed
+      real mathematical maturity. We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN (Max Sum Rotation)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Elevator analogy immediately
+     ✅ "Heavy items on highest floors.
+         Rotating brings one item from floor 0 to floor n-1."
+
+  📌 MẸO #2: State the formula with derivation
+     ✅ "nextVal = currVal - curSum + arr[i-1] × n.
+         Loss: curSum (all drop 1). Gain: arr[i-1] × n."
+
+  📌 MẸO #3: Emphasize arr[i-1] not arr[i]
+     ✅ "Rotation i moves arr[i-1] to position n-1.
+         i starts at 1, so the leaving element is arr[i-1]."
+
+  📌 MẸO #4: Init res = R(0), not 0
+     ✅ "R(0) can be the maximum. Initialize res = currVal
+         (which IS R(0)), not 0 or -Infinity for correctness."
+
+  📌 MẸO #5: curSum is invariant
+     ✅ "curSum = Σ arr[i] never changes across rotations.
+         Rotation only reorders elements, not their total."
+
+  📌 MẸO #6: Left vs Right rotation formula
+     ✅ "Left:  nextVal = currVal - curSum + arr[i-1] × n.
+         Right: nextVal = currVal + curSum - arr[n-i] × n."
+
+  📌 MẸO #7: Connect to sliding window
+     ✅ "Same 'derive from previous' pattern.
+         Sliding window: new right, drop left.
+         Rotation: one element climbs, all others drop."
+
+  📌 MẸO #8: Brute force = O(n²), formula = O(n)/O(1)
+     ✅ "State both complexities. Show you know the tradeoff
+         and why the formula approach is strictly superior."
 ```
 
 ---

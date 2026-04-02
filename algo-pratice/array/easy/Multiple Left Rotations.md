@@ -851,94 +851,700 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
-```
-  👤 Interviewer: "Given an array and multiple left-rotation queries,
-                   print the rotated array for each query."
-
-  🧑 You: "Let me clarify — for each query k, I need to print the
-   array after left-rotating by k positions? And the array should
-   remain unchanged between queries?"
-
-  👤 Interviewer: "Correct."
-
-  🧑 You: "My first observation is that actually rotating the array
-   for each query would be wasteful — it modifies the array, making
-   queries dependent on each other.
-
-   Instead, I notice that left rotating by k is equivalent to reading
-   the array starting from index k. For position i in the result,
-   the element comes from arr[(k + i) mod n].
-
-   This uses modular arithmetic to handle the 'wrap-around' when
-   we reach the end. And k mod n handles cases where k >= n.
-
-   This gives O(n) per query, O(1) extra space, and the original
-   array stays untouched so queries are independent."
-
-  👤 Interviewer: "What if k is very large, like 10^9?"
-
-  🧑 You: "No problem — k mod n reduces it to at most n-1.
-   For n=5 and k=10^9, we compute 10^9 mod 5 = 0, so no rotation.
-   The modulo operation is O(1)."
-
-  👤 Interviewer: "Is there an alternative approach?"
-
-  🧑 You: "Yes — I could duplicate the array: temp = arr + arr.
-   Then for each query, slice temp from k%n to k%n+n.
-   This trades O(n) space for simpler indexing — no modulo needed
-   inside the loop. But for this problem, modular indexing is
-   more space-efficient and equally fast."
-```
-
-### Pattern & Liên kết
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
 
 ```
-  MODULAR INDEXING pattern: Bất kỳ bài "circular" → dùng % n!
-
-  ┌──────────────────────────────────────────────────────────────┐
-  │  Circular Array/Buffer  → read/write pointer % capacity     │
-  │  Rotate queries         → (k + i) % n                       │
-  │  Josephus Problem       → modular elimination                │
-  │  Clock arithmetic       → hours % 12, minutes % 60          │
-  │  Hash Table             → hash(key) % tableSize              │
-  │  Circular Queue         → (front + i) % capacity             │
-  └──────────────────────────────────────────────────────────────┘
-
-  📌 CÔNG THỨC VÀNG:
-    new_position = (current + offset) % size
-    → Luôn nằm trong [0, size - 1]
-    → "Cuộn tròn" tự nhiên!
-```
-
-### Skeleton code — Template cho circular problems
-
-```javascript
-// TEMPLATE: Circular Array Access
-function circularAccess(arr, startOffset) {
-  const n = arr.length;
-  const result = [];
-
-  for (let i = 0; i < n; i++) {
-    // Đọc n phần tử bắt đầu từ offset
-    result.push(arr[(startOffset + i) % n]);
-  }
-
-  return result;
-}
-
-// Left rotate k:   circularAccess(arr, k)
-// Right rotate k:  circularAccess(arr, n - k)
-// Read from pos p: circularAccess(arr, p)
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
 ```
 
 ```
-  🧠 HỌC 1 TEMPLATE → GIẢI ĐƯỢC TẤT CẢ bài circular!
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  Bản chất: mọi bài circular chỉ KHÁC NHAU ở OFFSET:
-  ┌────────────────────────────────────────────────────┐
-  │  Left rotate k:      offset = k                    │
-  │  Right rotate k:     offset = n - k                │
-  │  Circular buffer:    offset = head                  │
-  │  Ring buffer read:   offset = readPointer           │
-  └────────────────────────────────────────────────────┘
+  👤 "Tell me about yourself and a time you worked with
+      circular data structures."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I built a chat application with
+      a message buffer. We had a fixed-size buffer of 1000
+      messages arranged in a ring. When a new message arrived
+      and the buffer was full, it would overwrite the oldest
+      message and the 'start' pointer would advance.
+
+      Displaying the messages meant reading from the start
+      pointer and wrapping around using modulo.
+      The key insight: I never moved any messages.
+      I just changed WHERE I started reading.
+
+      A user scrolling through message history was effectively
+      performing 'rotations' — shifting the view window.
+      Each scroll amount was a different rotation query
+      on the same underlying circular buffer.
+
+      That's exactly this problem: multiple rotation queries
+      on the same array, without actually rotating."
+
+  👤 "Great analogy. Let's dive in."
 ```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
+
+  👤 "Given an array and multiple left-rotation queries,
+      print the rotated array for each query."
+
+  🧑 "Let me clarify the requirements.
+
+      Left rotation by k means: shift every element k positions
+      to the left. Elements that 'fall off' the left end
+      wrap around to the right end.
+
+      Multiple queries means: for each query value k,
+      I print the result of rotating the ORIGINAL array
+      by k positions. The array must REMAIN UNCHANGED
+      between queries.
+
+      This is critical: if I actually rotated the array
+      for query 1, then query 2 would rotate the ALREADY
+      rotated array — wrong!
+
+      k can be larger than n — rotation by n is a full
+      cycle, back to the original. So k mod n gives the
+      effective rotation.
+
+      k can be 0 — return the original array.
+
+      The key constraint: multiple queries on the SAME
+      data. This means I should NOT modify the array.
+      I need a READ-ONLY approach."
+
+  ──────────────── 09:00 — The Carousel Analogy (4 phút) ────────
+
+  🧑 "I like to think of this as a CAROUSEL — a merry-go-round.
+
+      The array elements are seats on the carousel,
+      arranged in a circle: 1, 3, 5, 7, 9.
+
+      The carousel rotates, but the seats don't MOVE
+      from each other's perspective. What changes is
+      WHERE I start looking.
+
+      Left rotation by k means: I start reading from
+      seat number k instead of seat 0.
+
+      For arr equal [1, 3, 5, 7, 9] with k equal 3:
+      Instead of starting at index 0, I start at index 3.
+      I read: 7, 9, then wrap around: 1, 3, 5.
+
+      This is the fundamental insight:
+      ROTATION EQUALS CHANGING THE START POSITION.
+      I don't need to move any elements — I just need
+      to read from a different starting point."
+
+  ──────────────── 13:00 — Modular Indexing (5 phút) ────────────
+
+  🧑 "The mathematical formula follows from the analogy.
+
+      For position i in the rotated result,
+      the element comes from arr at index k plus i mod n.
+
+      Why mod n? Because when k plus i exceeds n minus 1,
+      I need to wrap around to the beginning.
+
+      For k equal 3, n equal 5:
+      i equal 0: index equal 3 plus 0 mod 5 equal 3.
+      arr at 3 equal 7.
+      i equal 1: index equal 3 plus 1 mod 5 equal 4.
+      arr at 4 equal 9.
+      i equal 2: index equal 3 plus 2 mod 5 equal 0.
+      5 mod 5 wraps to 0! arr at 0 equal 1.
+      i equal 3: index equal 3 plus 3 mod 5 equal 1.
+      arr at 1 equal 3.
+      i equal 4: index equal 3 plus 4 mod 5 equal 2.
+      arr at 2 equal 5.
+
+      Result: [7, 9, 1, 3, 5]. Correct!
+
+      This is CLOCK ARITHMETIC. Just like 15 o'clock
+      is 15 mod 12 equal 3 o'clock, index 7 in an array
+      of size 5 is 7 mod 5 equal index 2."
+
+  ──────────────── 18:00 — Why k mod n first? (3 phút) ────────────
+
+  🧑 "Before computing indices, I normalize k.
+
+      k mod n gives the effective rotation.
+      Because rotating by n is a full cycle — every element
+      returns to its original position.
+
+      k equal 14 with n equal 5:
+      14 divided by 5 equals 2 remainder 4.
+      So 14 rotations equal 2 full cycles plus 4 extra steps.
+      The 2 full cycles are no-ops.
+      Effective rotation: 4.
+
+      k equal 0 or k equal n: no rotation.
+      The result is the original array.
+
+      This normalization is O of 1 and prevents
+      large k values from wasting computation.
+      Without it, k equal a billion would still work
+      mathematically but is wasteful."
+
+  ──────────────── 21:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code is minimal.
+
+      [Vừa viết vừa nói:]
+
+      function leftRotate of arr and k.
+      const n equal arr dot length.
+      const result equal empty array.
+      for let i equal 0, i less than n, i plus plus:
+      result dot push of arr at k plus i mod n.
+      return result.
+
+      For multiple queries:
+      for each k in queries:
+      console log leftRotate of arr and k.
+
+      The array is NEVER modified. Each query is independent.
+      O of n per query. O of 1 extra space if I just print."
+
+  ──────────────── 24:00 — Alternative: Duplicate Array (4 phút) ──
+
+  🧑 "An alternative approach: duplicate the array.
+
+      Create temp equal arr concatenated with arr.
+      For arr equal [1, 3, 5, 7, 9]:
+      temp equal [1, 3, 5, 7, 9, 1, 3, 5, 7, 9].
+
+      Now for any rotation k, I just slice temp
+      from k mod n to k mod n plus n.
+
+      k equal 3: temp dot slice from 3 to 8 equal [7, 9, 1, 3, 5].
+
+      Why does this work? By duplicating, I've 'unrolled'
+      the circle into a straight line long enough that
+      ANY window of n consecutive elements is a valid rotation.
+
+      Trade-off: O of n extra space for the duplicate,
+      but no modulo operation INSIDE the loop — just
+      sequential memory access. This can be more
+      CACHE-FRIENDLY on modern CPUs.
+
+      For this problem, modular indexing is preferred
+      because O of 1 space is better."
+
+  ──────────────── 28:00 — Trace bằng LỜI (3 phút) ────────────────
+
+  🧑 "Let me trace a full example.
+      arr equal [1, 3, 5, 7, 9]. Queries: [1, 3, 6, 14].
+
+      Query k equal 1:
+      Read from index 1: arr at 1, 2, 3, 4, 0.
+      Values: 3, 5, 7, 9, 1.
+
+      Query k equal 3:
+      Read from index 3: arr at 3, 4, 0, 1, 2.
+      Values: 7, 9, 1, 3, 5.
+
+      Query k equal 6:
+      k mod 5 equal 1. Same as k equal 1.
+      Values: 3, 5, 7, 9, 1.
+
+      Query k equal 14:
+      k mod 5 equal 4. Read from index 4: arr at 4, 0, 1, 2, 3.
+      Values: 9, 1, 3, 5, 7.
+
+      The original array is UNCHANGED for all queries."
+
+  ──────────────── 31:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      k equal 0: no rotation. Return original array.
+      k mod n is 0, so index starts at 0.
+
+      k equal n: full cycle. Same as k equal 0.
+      k mod n equals n mod n equals 0.
+
+      k much larger than n: k equal a billion, n equal 5.
+      k mod n equal 0. Just return original.
+
+      Single element: [42]. Any rotation returns [42].
+      Rotating a single-element carousel changes nothing.
+
+      Two elements: [a, b]. k equal 1 gives [b, a].
+      k equal 2 gives [a, b] — back to original."
+
+  ──────────────── 34:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n per query. I must output n elements.
+      This is optimal — I can't produce n elements
+      in less than O of n.
+
+      For Q queries: O of Q times n total. Each query
+      independent.
+
+      Space: O of 1 extra — just the loop variable.
+      The output itself is O of n, but that's unavoidable.
+
+      For the duplicate approach: O of n preprocessing space.
+      Then O of n per query for the slice.
+
+      Can I do better than O of n per query?
+      No — because I must output all n elements.
+      The lower bound is Omega of n per query."
+
+  ──────────────── 37:00 — Left vs Right Rotation (4 phút) ────────
+
+  👤 "How would you handle RIGHT rotation?"
+
+  🧑 "Left rotate k equals right rotate n minus k!
+
+      They're DUAL operations.
+
+      Left rotate 3 on [1, 3, 5, 7, 9]:
+      Start at index 3: [7, 9, 1, 3, 5].
+
+      Right rotate 2 on the same array:
+      n minus k equal 5 minus 2 equal 3.
+      Start at index 3: [7, 9, 1, 3, 5]. SAME result!
+
+      Why? Left rotating by k moves each element
+      k positions backwards. Right rotating by r
+      moves each element r positions forward.
+      When k plus r equals n, they produce the same result.
+
+      For LeetCode 189 — Rotate Array — which asks
+      for RIGHT rotation, I just convert:
+      right rotate k maps to left rotate n minus k.
+      Then I use the same modular indexing formula.
+
+      Or equivalently: for right rotation by k,
+      the formula is arr at i minus k plus n mod n,
+      but I need to add n to avoid negative indices
+      in JavaScript."
+
+  ──────────────── 41:00 — JS Negative Modulo (3 phút) ────────────
+
+  👤 "Tell me about negative modulo in JavaScript."
+
+  🧑 "This is a common TRAP!
+
+      In JavaScript, the modulo operator preserves the
+      sign of the DIVIDEND — the left operand.
+
+      Minus 2 mod 5 equals minus 2 in JavaScript.
+      But mathematically, minus 2 mod 5 should be 3.
+
+      This matters for right rotation:
+      i minus k could be negative.
+      For example, i equal 0, k equal 2:
+      0 minus 2 equal minus 2.
+      Minus 2 mod 5 equal minus 2 — a NEGATIVE index!
+
+      The fix: add n before taking modulo.
+      i minus k plus n mod n.
+      0 minus 2 plus 5 mod 5 equal 3 mod 5 equal 3. Correct!
+
+      The general safe pattern:
+      double parens x mod n plus n close paren mod n.
+      This guarantees a non-negative result."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Reversal Algorithm (5 phút) ────────────
+
+  👤 "What if the problem asks you to actually modify the array?"
+
+  🧑 "Then I use the REVERSAL ALGORITHM.
+
+      To left rotate by k IN-PLACE:
+      Step 1: Reverse arr at 0 to k minus 1.
+      Step 2: Reverse arr at k to n minus 1.
+      Step 3: Reverse the ENTIRE array.
+
+      For arr equal [1, 3, 5, 7, 9] with k equal 3:
+      After step 1: reverse [1, 3, 5] gives [5, 3, 1, 7, 9].
+      After step 2: reverse [7, 9] gives [5, 3, 1, 9, 7].
+      After step 3: reverse all gives [7, 9, 1, 3, 5]. Correct!
+
+      Time: O of n — each reversal is linear.
+      Space: O of 1 — reversals are in-place.
+
+      But this MODIFIES the array! For multiple queries,
+      I'd need to restore it after each query — defeating
+      the purpose. That's why modular indexing is better
+      for the multi-query version."
+
+  ──────────────── 50:00 — Why three reversals work (4 phút) ────
+
+  👤 "Prove why the reversal algorithm is correct."
+
+  🧑 "Let me think of the array as two blocks:
+      A equal arr at 0 to k minus 1.
+      B equal arr at k to n minus 1.
+
+      The original array is AB.
+      I want BA — the left-rotated result.
+
+      Step 1: Reverse A. Array becomes A reversed B.
+      Step 2: Reverse B. Array becomes A reversed B reversed.
+      Step 3: Reverse all. By the REVERSAL OF REVERSAL property,
+      reversing A reversed B reversed gives B A.
+
+      Formally: reverse of X reversed Y reversed
+      equals Y X — because reversing a concatenation
+      reverses the order of blocks AND un-reverses each block.
+
+      It's like reading a mirror of a mirror — you get
+      back the original, but in the swapped order.
+
+      This is one of the most elegant algorithms in CS.
+      Three reversals, each O of n, gives O of n total."
+
+  ──────────────── 54:00 — Modulo vs multiplication (3 phút) ────
+
+  👤 "Is the modulo operation expensive?"
+
+  🧑 "On modern CPUs, modulo is a division instruction.
+      Division is typically 3 to 5 times slower than
+      addition or multiplication.
+
+      For n iterations, that's n divisions.
+      In practice, this is negligible for n under a million.
+
+      But there's an optimization: when K is fixed
+      and I'm computing k plus i mod n for consecutive i,
+      I can AVOID modulo entirely:
+
+      Track index equal k. After each step, increment by 1.
+      If index reaches n, reset to 0.
+      This replaces modulo with a comparison and branch.
+
+      In code: index plus plus, then if index equals n,
+      index equals 0.
+
+      This is what the duplicate array approach achieves
+      implicitly — sequential access with no modulo.
+
+      For interview purposes, the modulo version is clearer.
+      I'd mention the optimization only if the interviewer
+      asks about performance."
+
+  ──────────────── 57:00 — Why not just shift? (3 phút) ────────────
+
+  👤 "What's the naive approach and why is it bad?"
+
+  🧑 "The naive approach: for each rotation by 1,
+      save the first element, shift everything left by 1,
+      put the saved element at the end. Repeat k times.
+
+      Each single rotation is O of n — shifting n elements.
+      For k rotations: O of n times k.
+      If k is close to n, that's O of n squared.
+
+      For n equal 100,000 and k equal 50,000:
+      5 times 10 to the 9 operations. Far too slow.
+
+      Even for a single query, the reversal algorithm
+      does O of n. For multiple queries, modular indexing
+      does O of n per query.
+
+      The naive approach also MODIFIES the array,
+      making it unusable for multiple queries."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Rotate a matrix (4 phút) ────────────────
+
+  👤 "How would you extend this to a 2D matrix?"
+
+  🧑 "Matrix rotation is a different but related problem.
+
+      For a 2D matrix, 'rotation' usually means
+      rotating 90 degrees clockwise or counterclockwise.
+
+      The 90-degree clockwise rotation formula:
+      new row equal old column.
+      new column equal n minus 1 minus old row.
+
+      In-place: transpose the matrix then reverse each row.
+      This is the 2D analog of the reversal algorithm.
+
+      For CIRCULAR row or column shifts — rotating each
+      row or column by k — I'd apply the same modular
+      indexing to each row or column independently.
+
+      The key insight: modular indexing works in ANY
+      dimension. For a 1D array, it's k plus i mod n.
+      For a 2D matrix with circular row shift,
+      it's k plus j mod cols for row j."
+
+  ──────────────── 64:00 — Rotate a string (3 phút) ────────────────
+
+  👤 "What about rotating a string?"
+
+  🧑 "Strings are just arrays of characters!
+
+      Left rotate the string 'ABCDE' by 2:
+      Read from index 2: CDEAB.
+
+      In JavaScript, strings are immutable,
+      so I'd convert to an array, apply rotation,
+      and join back. Or use string slicing:
+      str dot slice of k concatenated with
+      str dot slice of 0 to k.
+
+      'ABCDE' dot slice 2 equals 'CDE'.
+      'ABCDE' dot slice 0, 2 equals 'AB'.
+      Concatenate: 'CDEAB'. Correct!
+
+      A classic related problem:
+      'Is string A a rotation of string B?'
+      Answer: A is a rotation of B if and only if
+      A is a substring of B concatenated with B.
+      This uses the duplicate-array insight!"
+
+  ──────────────── 67:00 — Rotate a linked list (3 phút) ────────────
+
+  👤 "What about rotating a linked list?"
+
+  🧑 "LeetCode 61 — Rotate List!
+
+      For a singly linked list, left rotation by k means
+      making the k-th node the new head.
+
+      Steps:
+      1. Find the length n.
+      2. Normalize: k equal k mod n.
+      3. Find the k-th node — it becomes the new tail.
+      4. The k plus 1-th node becomes the new head.
+      5. The original tail points to the old head.
+
+      Time: O of n. Space: O of 1.
+
+      For a circular linked list, it's even simpler —
+      just move the head pointer k positions forward.
+      That's literally the modular indexing approach."
+
+  ──────────────── 70:00 — Rotation as permutation (5 phút) ────────
+
+  👤 "Can you view rotation through the lens of permutations?"
+
+  🧑 "Yes! A rotation is a CYCLIC PERMUTATION.
+
+      Left rotate by 1: every element moves to the position
+      one before it. Element 0 goes to position n minus 1.
+      This is the cyclic permutation open paren 0 1 2 ... n minus 1
+      close paren.
+
+      Left rotate by k: this is the k-th power of that
+      cyclic permutation.
+
+      The cycle structure determines how to implement
+      in-place rotation efficiently. If GCD of n and k
+      equals 1, there's a single cycle of length n.
+      If GCD is greater than 1, there are GCD cycles,
+      each of length n divided by GCD.
+
+      This is the JUGGLING ALGORITHM:
+      perform GCD of n, k right rotations, each cycling
+      through n divided by GCD elements.
+
+      Time: O of n. Space: O of 1.
+      It's in-place and destructive — another option
+      alongside the reversal algorithm."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Circular buffers in practice (5 phút) ──
+
+  👤 "Where does modular indexing appear in real systems?"
+
+  🧑 "It's EVERYWHERE in systems programming!
+
+      First — CIRCULAR BUFFERS / RING BUFFERS.
+      Used in audio processing, network I/O,
+      and producer-consumer queues.
+      Read and write pointers use modular arithmetic
+      to wrap around. Exactly k plus i mod n.
+
+      Second — HASH TABLES.
+      Open addressing with linear probing:
+      probe position equals hash plus i mod tableSize.
+      This is modular indexing applied to collision
+      resolution. The 'rotation' is the probe sequence.
+
+      Third — ROUND-ROBIN SCHEDULING.
+      The OS scheduler cycles through processes:
+      next equals current plus 1 mod numProcesses.
+      Each 'rotation' selects the next process.
+
+      Fourth — LOG-STRUCTURED STORAGE.
+      Write-ahead logs in databases wrap around
+      when they reach the end of the allocated space.
+      The log head and tail use modular arithmetic
+      to manage the circular log."
+
+  ──────────────── 80:00 — High throughput rotation queries (5 phút)
+
+  👤 "What if you had billions of rotation queries?"
+
+  🧑 "Each query is O of n and independent.
+      So I can parallelize queries trivially.
+
+      Key optimizations:
+
+      First — BATCH PROCESSING.
+      Group queries by their k mod n value.
+      Queries with the same effective rotation
+      produce identical output. Deduplicate them.
+
+      Second — PRECOMPUTE ALL ROTATIONS.
+      If n is small, I can precompute all n possible
+      rotations in O of n squared time and space.
+      Then each query is O of 1 lookup.
+
+      Third — MEMORY-MAPPED DUPLICATE ARRAY.
+      Create the duplicate array once as a memory-mapped
+      file. Each query just returns a pointer
+      to the appropriate offset — O of 1 per query,
+      no copying needed.
+
+      Fourth — SIMD VECTORIZATION.
+      The modular indexing loop is trivially vectorizable.
+      Modern CPUs process 4-8 elements per cycle with
+      AVX instructions. For n equal a million,
+      this reduces wall time by 4 to 8 times."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, ROTATION IS NOT MOVEMENT.
+      The insight: left rotation by k equals reading
+      from index k. I don't move any elements —
+      I change the starting point. This transforms
+      an O of n k naive approach into O of n.
+
+      Second, MODULAR ARITHMETIC as the universal tool
+      for circular problems. Any time data wraps around —
+      buffers, tables, schedules — I think modulo.
+      The formula k plus i mod n is my Swiss Army knife.
+
+      Third, READ-ONLY for MULTIPLE QUERIES.
+      When the same data serves multiple queries,
+      I must NOT modify it. Modular indexing is
+      inherently read-only — the array stays pristine
+      for the next query."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — the reversal algorithm is elegant but
+      destructive. In your codebase, do you ever need
+      to ACTUALLY rotate arrays, or is modular indexing
+      always sufficient for read-only access?
+
+      Second — the JS negative modulo trap catches
+      many developers. Do your style guides include
+      a utility function like positiveMod?
+
+      Third — the duplicate-array approach trades space
+      for cache locality. In performance-critical systems,
+      do you find that cache-friendly access patterns
+      outweigh the memory cost?"
+
+  👤 "Excellent questions! Your carousel analogy made
+      the concept immediately clear, and you handled
+      every edge case — including k greater than n and
+      negative modulo. We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Rotations)         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Use the carousel analogy
+     ✅ "A rotation doesn't MOVE elements — it changes
+         where I START READING. Like spinning a carousel
+         and reading from a different seat."
+
+  📌 MẸO #2: State the golden formula
+     ✅ "Position i in the rotated result comes from
+         arr at k plus i mod n. This is modular indexing —
+         clock arithmetic applied to arrays."
+
+  📌 MẸO #3: Normalize k immediately
+     ✅ "First thing: k mod n. Rotating by n is a full cycle.
+         k equal a billion with n equal 5: effective rotation
+         is 0. The mod is O of 1."
+
+  📌 MẸO #4: Emphasize read-only for multiple queries
+     ✅ "Multiple queries on the same array means I CANNOT
+         modify it. Modular indexing is read-only by design.
+         Queries are independent."
+
+  📌 MẸO #5: Know Left-Right duality
+     ✅ "Left rotate k equals right rotate n minus k.
+         They produce the same result. I only need
+         to remember ONE formula."
+
+  📌 MẸO #6: Mention the negative modulo trap
+     ✅ "JavaScript: minus 2 mod 5 equals minus 2, not 3.
+         Always add n before modulo to guarantee
+         a non-negative result."
+
+  📌 MẸO #7: Present the duplicate-array alternative
+     ✅ "Doubling the array eliminates modulo inside the loop.
+         Trade-off: O of n space for sequential access.
+         Good for cache-critical scenarios."
+
+  📌 MẸO #8: Connect to the reversal algorithm
+     ✅ "For DESTRUCTIVE single rotation: reverse first k,
+         reverse last n minus k, reverse all.
+         Three O of n reversals. Elegant but modifies input."
+```
+

@@ -1003,64 +1003,750 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
 ```
-  ──────────────── PHASE 1: Clarify ────────────────
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
 
-  👤 Interviewer: "Find the contiguous subarray with the largest sum."
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  🧑 You: "Let me clarify:
-   1. Subarray must be contiguous — no skipping elements.
-   2. Must contain at least one element — empty subarray not valid.
-   3. Array can contain negative numbers.
-   4. I just need to return the sum, not the subarray itself?"
+  👤 "Tell me about yourself and a project where
+      you optimized something from scratch."
 
-  👤 Interviewer: "Correct."
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      One project that's relevant is a real-time analytics
+      dashboard where I had to compute running aggregations
+      over streaming data — things like 'what's the best
+      performing 30-minute window in the last 24 hours.'
 
-  ──────────────── PHASE 2: Examples ────────────────
+      The challenge was that we couldn't recompute everything
+      from scratch each time a new data point arrived.
+      We needed incremental updates — each new data point
+      should update the answer in constant time.
 
-  🧑 You: "Let me trace an example: [2, 3, -8, 7, -1, 2, 3].
-   Intuitively, [7, -1, 2, 3] = 11 seems optimal.
-   The -8 makes the prefix [2, 3, -8] = -3, which is negative.
-   So we should START FRESH from 7."
+      I ended up using a sliding-window accumulation pattern
+      where at each step, I decided whether to extend
+      the current window or start a new one based on
+      whether adding the new point improved the metric.
 
-  ──────────────── PHASE 3: Approach ────────────────
+      That 'extend or restart' decision is actually the core
+      of Kadane's algorithm, which I suspect we're about
+      to discuss."
 
-  🧑 You: "Brute force: try all O(n²) subarrays. Too slow.
+  👤 "Perfect lead-in. Let's start."
+```
 
-   Better: Kadane's algorithm. At each index, I decide:
-   should I EXTEND the previous subarray or START FRESH?
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-   If the running sum (maxEndingHere) is negative, extending
-   only hurts — any future sum would be LARGER without this
-   negative prefix. So I start over.
+  ──────────────── 05:00 — Clarify (3 phút) ────────────────
 
-   Formula: maxEndingHere = max(arr[i], maxEndingHere + arr[i])
-   Track global max: maxSoFar = max(maxSoFar, maxEndingHere)
+  👤 "Find the contiguous subarray with the largest sum."
 
-   O(n) time, O(1) space."
+  🧑 "Let me make sure I understand the constraints.
 
-  ──────────────── PHASE 4: Code + Verify ────────────────
+      First, CONTIGUOUS — meaning consecutive elements.
+      I can't skip elements. This is a subarray,
+      not a subsequence.
 
-  🧑 You: [writes code, traces example, verifies all-negative case]
+      Second, the subarray must contain at least one element.
+      An empty subarray is not valid.
 
-  "Key detail: I initialize with arr[0], not 0, so all-negative
-   arrays return the least-negative element."
+      Third, the array can contain negative numbers.
+      This is what makes the problem interesting —
+      if all numbers were positive, I'd just take
+      the entire array.
 
-  ──────────────── PHASE 5: Follow-ups ────────────────
+      And I need to return just the SUM, not the actual
+      subarray indices. Though I can track those too
+      if needed."
 
-  👤 "What about circular subarrays? (#918)"
-  🧑 "Two cases: normal Kadane OR totalSum - minSubarraySum.
-      The min subarray is found with a 'min Kadane'."
+  👤 "Correct on all points."
 
-  👤 "What about product instead of sum? (#152)"
-  🧑 "Track both maxProduct AND minProduct at each step.
-      Because negative × negative = positive — the min could
-      become the max after multiplying by a negative number."
+  ──────────────── 08:00 — Brute Force (3 phút) ────────────────
 
-  👤 "Can you return the actual subarray?"
-  🧑 "Yes — I track start/end indices. When I start fresh,
-      I update tempStart. When maxEnd > maxSoFar, I confirm
-      start = tempStart, end = i."
+  🧑 "The brute force approach: try every possible subarray.
+
+      For each starting index i, I iterate through all ending
+      indices j from i to n-minus-1. I maintain a running sum
+      and track the maximum.
+
+      That's two nested loops — O of n-squared time.
+      For n equal a million, that's a trillion operations.
+      Way too slow.
+
+      But this gives me the right intuition. I'm essentially
+      asking: for each position, what's the best subarray
+      that ENDS here? If I can answer that in O of 1
+      per position, the whole problem becomes O of n."
+
+  ──────────────── 11:00 — Key Insight bằng LỜI (5 phút) ────────────────
+
+  🧑 "And that's exactly Kadane's insight!
+
+      At each position i, I have exactly TWO choices:
+
+      Choice 1: EXTEND the previous subarray by including
+      the current element. The sum becomes whatever I had
+      before, plus the current element.
+
+      Choice 2: START FRESH — begin a new subarray consisting
+      of just the current element.
+
+      When should I start fresh? When the previous running sum
+      is NEGATIVE. Because a negative prefix only HURTS
+      any future sum. Adding a negative number to whatever
+      comes next makes it worse. So I throw it away
+      and start over.
+
+      Think of it like this: imagine you're walking and
+      collecting coins. Some coins are positive, some negative.
+      If your bag total goes negative, it's better to DUMP
+      the bag and start collecting fresh. The bag is only
+      worth keeping if it has a positive balance.
+
+      So at each step, I compute:
+      maxEndingHere equal the maximum of the current element alone
+      versus maxEndingHere plus the current element.
+
+      And I separately track the GLOBAL best I've seen:
+      maxSoFar equal the maximum of maxSoFar versus maxEndingHere."
+
+  👤 "Why do you need two separate variables?"
+
+  🧑 "Because maxEndingHere can DECREASE!
+
+      After finding a great subarray, if I encounter a negative
+      element, maxEndingHere goes down. But I don't want to
+      lose the previous best. maxSoFar acts as a 'high-water
+      mark' — it only ever increases.
+
+      maxEndingHere is the CURRENT candidate.
+      maxSoFar is the BEST candidate I've ever seen."
+
+  ──────────────── 16:00 — Trace bằng LỜI (7 phút) ────────────────
+
+  🧑 "Let me trace through an example to make this concrete.
+      Array: two, three, negative-eight, seven, negative-one,
+      two, three.
+
+      I initialize both maxEndingHere and maxSoFar to
+      the first element, which is 2.
+
+      At index 1, element is 3.
+      Extend: 2 plus 3 equal 5.
+      Start fresh: just 3.
+      Maximum of 5 and 3 is 5, so I extend.
+      maxEndingHere equal 5. maxSoFar equal 5.
+
+      At index 2, element is negative 8.
+      Extend: 5 plus negative-8 equal negative-3.
+      Start fresh: just negative-8.
+      Maximum of negative-3 and negative-8 is negative-3.
+      So I extend — the damage is less.
+      maxEndingHere equal negative-3. maxSoFar stays at 5.
+
+      At index 3, element is 7.
+      Extend: negative-3 plus 7 equal 4.
+      Start fresh: just 7.
+      Maximum of 4 and 7 is 7. START FRESH!
+      The negative prefix isn't worth keeping.
+      maxEndingHere equal 7. maxSoFar equal 7.
+
+      At index 4, element is negative 1.
+      Extend: 7 plus negative-1 equal 6.
+      Start fresh: just negative-1.
+      Maximum is 6. Extend — the small negative is worth keeping.
+      maxEndingHere equal 6. maxSoFar equal 7.
+
+      At index 5, element is 2.
+      Extend: 6 plus 2 equal 8.
+      Start fresh: just 2.
+      Maximum is 8. Extend!
+      maxEndingHere equal 8. maxSoFar equal 8.
+
+      At index 6, element is 3.
+      Extend: 8 plus 3 equal 11.
+      Start fresh: just 3.
+      Maximum is 11. Extend!
+      maxEndingHere equal 11. maxSoFar equal 11.
+
+      Final answer: 11.
+      The optimal subarray is seven, negative-one, two, three,
+      starting at index 3. We correctly abandoned the prefix
+      two, three, negative-eight because its sum was negative."
+
+  ──────────────── 23:00 — All-negative case (4 phút) ────────────────
+
+  🧑 "Now, there's a critical edge case: all negative numbers.
+
+      Array: negative-2, negative-4, negative-7, negative-1,
+      negative-5.
+
+      If I initialize maxEndingHere and maxSoFar to ZERO,
+      I'd always start fresh and never accumulate anything.
+      The answer would be zero — which is WRONG because
+      the subarray must contain at least one element.
+
+      By initializing both to arr-at-0, which is negative-2,
+      I'm guaranteeing that I start with a valid subarray.
+
+      Let me trace: maxEndingHere and maxSoFar start at negative-2.
+
+      Index 1: extend gives negative-6, fresh gives negative-4.
+      Start fresh! maxEndingHere equal negative-4.
+      maxSoFar equal max of negative-2 and negative-4 equal negative-2.
+
+      Index 2: extend gives negative-11, fresh gives negative-7.
+      Start fresh! maxEndingHere equal negative-7.
+      maxSoFar stays negative-2.
+
+      Index 3: extend gives negative-8, fresh gives negative-1.
+      Start fresh! maxEndingHere equal negative-1.
+      maxSoFar equal max of negative-2 and negative-1 equal negative-1.
+
+      Index 4: extend gives negative-6, fresh gives negative-5.
+      Start fresh! maxEndingHere equal negative-5.
+      maxSoFar stays negative-1.
+
+      Answer: negative-1 — the least negative element.
+      In the all-negative case, Kadane's effectively finds
+      the single largest element. Every step is a fresh start
+      because the running sum is always negative."
+
+  ──────────────── 27:00 — Viết code, NÓI từng block (4 phút) ────────────
+
+  🧑 "Let me code this up. It's remarkably concise.
+
+      [Vừa viết vừa nói:]
+
+      I initialize two variables: maxEndingHere and maxSoFar,
+      both set to arr-at-0. NOT zero — that's a common mistake.
+
+      Then I loop from index 1 — not 0, since index 0 is
+      already handled by initialization.
+
+      Inside the loop, line one is THE HEART of Kadane's:
+      maxEndingHere equal the max of arr-at-i versus
+      maxEndingHere plus arr-at-i.
+
+      Line two: maxSoFar equal the max of maxSoFar
+      versus maxEndingHere.
+
+      Return maxSoFar.
+
+      That's it — two variables, one loop, two lines of logic.
+      The elegance is that a single max operation captures
+      the entire 'extend or restart' decision."
+
+      📌 MẸO: Nói "THE HEART of Kadane's" khi viết dòng core.
+      Cho interviewer thấy bạn biết ĐÂU LÀ TRỌNG TÂM.
+
+  ──────────────── 31:00 — Edge Cases (4 phút) ────────────────
+
+  👤 "What edge cases should we consider?"
+
+  🧑 "Let me go through them.
+
+      Single element: [5]. The loop doesn't run.
+      I return arr-at-0 equal 5. Correct.
+
+      Single negative: [negative-3]. Same — return negative-3.
+
+      All positive: [1, 2, 3, 4].
+      maxEndingHere never starts fresh because extending
+      is always better. It accumulates to 10.
+      Answer is the sum of the entire array.
+
+      All negative: covered in my earlier trace.
+      Answer is the least-negative element.
+
+      Alternating: [5, negative-2, 7].
+      Should I keep the negative-2?
+      maxEndingHere at index 1: max of negative-2 versus
+      5 plus negative-2 equal 3. I extend because 3
+      is larger. At index 2: 3 plus 7 equal 10.
+      Answer 10, which is greater than just 7 alone.
+      The negative was worth keeping because the prefix
+      was positive enough.
+
+      Compare with [5, negative-9, 6].
+      At index 1: max of negative-9 versus 5 plus negative-9
+      equal negative-4. Start fresh! negative-9 is better
+      than negative-4... wait, actually negative-4 is larger
+      than negative-9, so I extend with negative-4.
+      But then at index 2: negative-4 plus 6 equal 2
+      versus 6 alone. I start fresh with 6.
+      Answer equal max of 5, negative-4, 6 equal 6.
+      Correct — the 5 prefix was 'contaminated' by negative-9."
+
+  ──────────────── 35:00 — Complexity (2 phút) ────────────────
+
+  🧑 "Time: O of n. One pass through the array.
+      Each element is processed exactly once with two
+      constant-time max operations.
+
+      Space: O of 1. Just two variables.
+
+      This is provably optimal. We MUST read every element
+      at least once — if we skip any element, it could be
+      the single-element answer, or it could be a large
+      negative that determines a restart point.
+      So O of n is the lower bound, and Kadane's achieves it."
+
+  ──────────────── 37:00 — Tracking indices (4 phút) ────────────────
+
+  👤 "Can you return the actual subarray, not just the sum?"
+
+  🧑 "Yes! I need three extra variables:
+      start, end, and tempStart.
+
+      When I START FRESH — meaning arr-at-i alone is better
+      than extending — I set tempStart to i.
+      This is a 'candidate' start, not yet confirmed.
+
+      When maxEndingHere exceeds maxSoFar — meaning I just
+      found a new global best — I CONFIRM: start equal tempStart,
+      end equal i.
+
+      The distinction between tempStart and start is subtle
+      but important. I might start fresh at some position
+      but never beat the global max. In that case,
+      the confirmed start and end shouldn't change.
+
+      After the loop, the actual subarray is arr dot slice
+      from start to end plus 1."
+
+  ──────────────── 41:00 — Why init arr[0]? (4 phút) ────────────────
+
+  👤 "You emphasized initializing with arr[0] instead of 0.
+      Can you explain more?"
+
+  🧑 "This is actually the NUMBER ONE mistake people make
+      with Kadane's algorithm.
+
+      If I initialize maxSoFar to 0 and the array is all negative,
+      maxEndingHere resets to 0 every time it goes negative.
+      maxSoFar stays at 0. But 0 represents an EMPTY subarray,
+      which violates the constraint that the subarray must
+      have at least one element.
+
+      Initializing to arr-at-0 guarantees that my answer
+      represents a real, non-empty subarray. Even if arr-at-0
+      is negative, it's a valid answer — it's the subarray
+      consisting of just that one element.
+
+      There IS an alternative initialization: start both at
+      negative infinity and loop from index 0. This also works
+      because the first iteration would pick arr-at-0 as
+      the fresh start. But I prefer arr-at-0 initialization
+      because it's more explicit and less prone to errors."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Formal correctness (5 phút) ────────────────
+
+  👤 "Can you prove Kadane's algorithm is correct?"
+
+  🧑 "Sure! I'll use induction on the loop invariant.
+
+      My invariant after processing index i:
+      maxEndingHere equal the maximum subarray sum
+      ENDING AT index i.
+      maxSoFar equal the maximum subarray sum in the range
+      from 0 to i.
+
+      Base case: i equal 0.
+      maxEndingHere equal arr-at-0, which is the only subarray
+      ending at index 0. True.
+      maxSoFar equal arr-at-0, which is the max in the range
+      from 0 to 0. True.
+
+      Inductive step: assume it holds at i-minus-1.
+      Any subarray ending at i has two forms:
+      Form 1: just arr-at-i alone. Sum is arr-at-i.
+      Form 2: some subarray ending at i-minus-1, extended by arr-at-i.
+      The best such extension has sum maxEndingHere-at-i-minus-1
+      plus arr-at-i — by the inductive hypothesis.
+
+      So the max ending at i equal max of form 1 and form 2
+      equal max of arr-at-i and maxEndingHere plus arr-at-i.
+      That's exactly what the algorithm computes!
+
+      And maxSoFar equal max of the previous maxSoFar
+      and the new maxEndingHere — which gives the global max
+      across all positions 0 to i. QED."
+
+  ──────────────── 50:00 — DP perspective (4 phút) ────────────────
+
+  👤 "Is Kadane's algorithm a form of dynamic programming?"
+
+  🧑 "Absolutely! It's a beautiful example of 1D DP
+      with space optimization.
+
+      The DP recurrence would be:
+      dp-at-i equal max of arr-at-i and dp-at-i-minus-1 plus arr-at-i.
+      The answer is max of all dp-at-i.
+
+      Each dp-at-i represents the max subarray sum ending at i.
+      And dp-at-i only depends on dp-at-i-minus-1 —
+      just the PREVIOUS value, not the whole table.
+
+      So I don't need an array — I just keep one variable,
+      maxEndingHere, which represents dp-at-i.
+      This collapses O of n space to O of 1.
+
+      This pattern — 'DP where only the previous state matters' —
+      appears everywhere: Fibonacci, house robber,
+      climbing stairs, stock buy-sell. Kadane's is the
+      canonical example of this optimization."
+
+  ──────────────── 54:00 — Math.max vs if-else (3 phút) ────────────────
+
+  👤 "You use Math.max for the core decision.
+      Is there an equivalent formulation?"
+
+  🧑 "Yes! The Math.max version:
+      maxEndingHere equal max of arr-at-i and maxEndingHere
+      plus arr-at-i.
+
+      Is equivalent to:
+      if maxEndingHere is less than 0, set maxEndingHere
+      to arr-at-i. Otherwise, add arr-at-i to maxEndingHere.
+
+      Why? When maxEndingHere is negative, arr-at-i alone
+      is always larger than maxEndingHere plus arr-at-i.
+      So the max picks arr-at-i — which is the 'restart.'
+
+      When maxEndingHere is non-negative, extending by adding
+      arr-at-i is at least as good as starting fresh.
+      So the max picks maxEndingHere plus arr-at-i — the 'extend.'
+
+      I prefer the Math.max version because it's one line
+      and the INTENT is crystal clear: 'pick the better option.'
+      The if-else version requires more reasoning to verify."
+
+  ──────────────── 57:00 — Subarray vs subsequence (3 phút) ────────────────
+
+  👤 "What if the problem asked for subsequence instead?"
+
+  🧑 "Max subsequence sum is TRIVIALLY different!
+
+      A subsequence can skip elements. So for a max sum,
+      I just take all POSITIVE elements. Done.
+      If all elements are negative, I take the largest one.
+
+      That's O of n with no algorithm needed — just sum
+      all positives.
+
+      The reason Kadane's algorithm exists is precisely because
+      of the CONTIGUITY constraint. The requirement that
+      elements be adjacent creates a dependency between
+      the 'extend' and 'restart' decisions.
+
+      For subsequences, there's no dependency — each element
+      is independently included or excluded."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Circular subarray (5 phút) ────────────────
+
+  👤 "What about circular subarrays? LeetCode 918."
+
+  🧑 "In a circular array, the subarray can wrap around.
+      For example, in three, negative-2, five, the circular
+      subarray five, three gives sum 8.
+
+      The insight is: a circular subarray that wraps around
+      is the COMPLEMENT of a non-wrapping subarray in the middle.
+
+      If the total sum is S, and the minimum subarray sum is minSum,
+      then the maximum circular subarray equal S minus minSum.
+
+      Why? Removing the minimum 'valley' from the total
+      leaves the maximum 'mountain' that wraps around.
+
+      So the answer is the max of:
+      Case 1: standard Kadane — the max doesn't wrap.
+      Case 2: totalSum minus minKadane — the max wraps.
+
+      For the min Kadane, I just flip the comparison:
+      minEndingHere equal min of arr-at-i and minEndingHere
+      plus arr-at-i.
+
+      One edge case: if ALL elements are negative,
+      case 2 gives totalSum minus totalSum equal zero,
+      which represents an empty subarray. So I must
+      use case 1 when this happens."
+
+  ──────────────── 65:00 — Max product subarray (5 phút) ────────────────
+
+  👤 "What about max product instead of sum? LeetCode 152."
+
+  🧑 "This is a fascinating twist. The key difference:
+      negative times negative equal positive!
+
+      With sums, a negative prefix is ALWAYS bad — drop it.
+      With products, a negative prefix MIGHT become gold
+      if we multiply by another negative.
+
+      So I need to track TWO values at each position:
+      maxProduct — the largest product ending here.
+      minProduct — the smallest product ending here
+      (which is the most negative).
+
+      When I encounter a negative element, the max becomes
+      the min and the min becomes the max — because multiplying
+      by a negative flips signs.
+
+      So before computing, if the current element is negative,
+      I SWAP maxProduct and minProduct. Then I apply the
+      standard Kadane logic to both.
+
+      This is still O of n time, O of 1 space.
+      The key insight is that products require tracking
+      two candidates where sums need only one."
+
+  ──────────────── 70:00 — Stock buy-sell connection (3 phút) ────────────────
+
+  👤 "How does this connect to the stock buy-sell problem?"
+
+  🧑 "LeetCode 121 — buy once, sell once — is actually
+      Kadane's in disguise!
+
+      If I compute the price DIFFERENCES — the change
+      from each day to the next — then the maximum profit
+      is the maximum subarray sum of those differences.
+
+      Why? A profit of buying at day i and selling at day j
+      equal price-at-j minus price-at-i. But that's the same as
+      the SUM of all daily changes from day i to day j.
+
+      So max profit equal max subarray sum of the daily changes.
+      That's exactly Kadane's!
+
+      The 'extend or restart' decision maps to:
+      should I keep holding the stock — extend —
+      or should I sell and buy fresh — restart?
+
+      Most people solve Stock I with a minPrice tracker,
+      which is correct but doesn't reveal this connection.
+      Seeing it as Kadane's shows why it's O of n."
+
+  ──────────────── 73:00 — 2D Kadane (2 phút) ────────────────
+
+  👤 "Can you extend to 2D — max sum rectangle?"
+
+  🧑 "Yes! For a matrix, I fix the top and bottom rows,
+      collapse each column into a single sum, and run
+      Kadane's on that 1D array.
+
+      I iterate over all O of n-squared pairs of top/bottom rows,
+      and for each pair, the column compression plus Kadane's
+      is O of m, where m is the number of columns.
+
+      Total: O of n-squared times m, or O of n-cubed
+      for a square matrix. This is actually optimal for
+      the 2D case — there's no known sub-cubic algorithm."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Streaming Kadane (5 phút) ────────────────
+
+  👤 "What if the data is streaming — numbers arrive one at a time?"
+
+  🧑 "Kadane's is naturally a STREAMING algorithm!
+      Each new element requires just two max operations
+      and updates two variables. O of 1 per element,
+      O of 1 space.
+
+      I don't need to store the entire array — I can process
+      each element as it arrives and maintain the running
+      maxEndingHere and maxSoFar.
+
+      This is exactly what I did in that analytics dashboard
+      I mentioned earlier. Each new metric update triggers
+      one Kadane step, and I always have the current best
+      window available.
+
+      For distributed streams, each node can run Kadane
+      locally. But merging results across nodes is tricky —
+      I'd need to carry additional state: the max prefix sum,
+      max suffix sum, total sum, and max subarray sum
+      for each segment. With these four values,
+      I can merge any two adjacent segments in O of 1.
+
+      This is actually the same state used in the
+      divide-and-conquer approach to max subarray."
+
+  ──────────────── 80:00 — Parallel and batch (5 phút) ────────────────
+
+  👤 "Could you parallelize this?"
+
+  🧑 "Kadane's seems inherently sequential — each step
+      depends on the previous maxEndingHere. But there's
+      a clever parallel approach!
+
+      I split the array into k chunks. For each chunk,
+      I compute four values in parallel:
+      the max prefix sum, max suffix sum, total sum,
+      and max subarray sum.
+
+      Then I merge adjacent chunks. The max subarray
+      across a merge boundary equal left's max suffix
+      plus right's max prefix. The overall max is the
+      max of all chunks' internal max and all merge-boundary
+      values.
+
+      This gives O of n over k plus k work — optimal
+      with k equal square root of n processors.
+
+      In practice, for a billion-element array on 8 cores,
+      each core processes 125 million elements with Kadane,
+      then a single merge pass combines 8 partial results.
+      The speedup is nearly linear."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, the EXTEND-OR-RESTART pattern. This is possibly
+      the most important algorithmic pattern for interviews.
+      At each step, I ask: 'is the accumulated history
+      worth keeping, or am I better off starting fresh?'
+      This same question applies to Kadane's, stock trading,
+      longest increasing subsequence, and many DP problems.
+      In frontend, it's the same decision when managing state:
+      'should I derive from existing state, or reset?'
+
+      Second, INITIALIZATION matters more than logic.
+      The core algorithm is two lines. But initializing
+      with arr-at-0 instead of 0 is the difference between
+      correct and wrong. In production, I've seen more bugs
+      from incorrect initial values than from wrong algorithms.
+
+      Third, the power of SPACE OPTIMIZATION in DP.
+      The full DP table is O of n, but since each state
+      depends only on the previous one, I collapse it to
+      O of 1. This 'rolling variable' technique applies
+      to Fibonacci, house robber, climbing stairs —
+      recognizing when to apply it is a senior-level skill."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — does your team work with real-time data processing?
+      I'm curious if algorithms like Kadane's or sliding-window
+      aggregations show up in your product.
+
+      Second — how do you balance algorithmic elegance
+      with code readability in reviews? Would you prefer
+      the Math.max one-liner or the explicit if-else version?
+
+      Third — what's the most interesting technical challenge
+      your team solved recently?"
+
+  👤 "Great questions! Your trace of the algorithm was
+      very clear, and I liked how you connected it to
+      the stock problem and circular variant.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Kadane's)          ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Bắt đầu bằng BRUTE FORCE INSIGHT
+     ✅ "Brute force checks all n-squared subarrays.
+         But I only need to know, at each position,
+         the best subarray ENDING HERE.
+         If I can compute that in O of 1, the whole problem
+         is O of n."
+     → Derive Kadane's TỪ brute force.
+
+  📌 MẸO #2: Explain "extend or restart" bằng ẩn dụ
+     ❌ "maxEndingHere = max(arr[i], maxEndingHere + arr[i])"
+     ✅ "Think of it as carrying a bag of coins.
+         If the bag total is negative, DUMP it and start fresh.
+         A negative bag only makes future collections worse."
+
+  📌 MẸO #3: Trace with NARRATIVE, not just numbers
+     ✅ "At index 3, element is 7. The running sum is negative-3.
+         Extending gives 4, but starting fresh gives 7.
+         The negative prefix isn't worth keeping — start fresh!
+         This is the RESTART decision in action."
+
+  📌 MẸO #4: ALL-NEGATIVE = highlight the INIT trap
+     ✅ "If I initialize to 0, all-negative arrays return 0.
+         But 0 means 'empty subarray' which isn't valid.
+         Initializing to arr-at-0 guarantees a real answer —
+         even if it's negative."
+
+  📌 MẸO #5: TWO variables — explain WHY both are needed
+     ✅ "maxEndingHere can DECREASE when it hits negatives.
+         maxSoFar is the 'high-water mark' — it only increases.
+         Without maxSoFar, I'd lose the best answer
+         found earlier in the array."
+
+  📌 MẸO #6: Connect to DP family
+     ✅ "This is 1D DP with space optimization.
+         dp-at-i only depends on dp-at-i-minus-1,
+         so I collapse the array to a single variable.
+         Same pattern as Fibonacci, house robber, stock I."
+
+  📌 MẸO #7: Know the VARIANT FAMILY
+     ✅ "Kadane's is a family of five-plus problems:
+         Max subarray — standard Kadane.
+         Circular — Kadane plus min-Kadane.
+         Product — track max AND min (sign flips).
+         Stock I — Kadane on price differences.
+         Longest turbulent — reset counters."
+
+  📌 MẸO #8: Prove OPTIMALITY
+     ✅ "O of n is provably optimal. We must read every element —
+         skipping any one could miss the answer.
+         And O of 1 space is optimal — just two variables.
+         Kadane's achieves both lower bounds."
 ```
 
 ### Pattern & Liên kết

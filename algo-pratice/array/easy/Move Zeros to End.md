@@ -948,100 +948,687 @@ Test Cases:
 
 ### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
 
-```
-  👤 Interviewer: "Move all zeros to the end of array while maintaining
-                   relative order of non-zero elements. In-place."
-
-  🧑 You: "Let me clarify — I need to move ALL zeros to the end,
-   and non-zero elements must keep their relative order. In-place means
-   O(1) extra space. Correct?"
-
-  👤 Interviewer: "Yes."
-
-  🧑 You: "My first thought is using a temp array — copy non-zero
-   elements to a new array pre-filled with zeros, then copy back.
-   That's O(n) time but O(n) space.
-
-   To get O(1) space, I can use TWO POINTERS same direction —
-   a 'reader' pointer i that scans every element, and a 'writer'
-   pointer count that marks where the next non-zero should go.
-
-   When i finds a non-zero, I SWAP it with arr[count]. This works
-   because arr[count] is guaranteed to be 0 (or count == i, which
-   is a no-op swap).
-
-   After the swap, count advances. Zeros naturally accumulate
-   between count and i, and get pushed to the end.
-
-   This gives me O(n) time, O(1) space, single pass."
-
-  👤 Interviewer: "Why swap instead of just overwriting?"
-
-  🧑 You: "If I overwrite arr[count] = arr[i], I lose the value
-   at arr[count]. Then I'd need a second pass to fill zeros.
-   Swap preserves the zero — it moves to position i, effectively
-   'bubbling' toward the end. This eliminates the second pass."
-
-  👤 Interviewer: "What if count equals i?"
-
-  🧑 You: "Then swap(arr[i], arr[i]) is a no-op — harmless.
-   This happens at the beginning before we encounter any zeros.
-   I could add an if (i !== count) check to skip unnecessary
-   swaps, but it doesn't change the O(n) complexity."
-```
-
-### Pattern & Liên kết
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
 
 ```
-  TWO POINTERS — SAME DIRECTION (Reader-Writer) pattern!
-
-  count = "writer" (vị trí ghi tiếp theo)
-  i     = "reader" (duyệt toàn bộ mảng)
-
-  Bài tương tự dùng CÙNG pattern:
-    Remove Duplicates (#26)  → count chỉ vị trí unique tiếp
-    Remove Element (#27)     → count chỉ vị trí valid tiếp
-    Move Zeroes (#283)       → count chỉ vị trí non-zero tiếp
-    Sort Colors (#75)        → 3 pointers (Dutch National Flag)
-
-  → TẤT CẢ dùng "reader" duyệt + "writer" ghi = IN-PLACE partitioning!
-```
-
-### Skeleton code chung cho pattern này
-
-```javascript
-// TEMPLATE: Same Direction Two Pointers (Reader-Writer)
-function partition(arr, condition) {
-  let writer = 0;
-
-  for (let reader = 0; reader < arr.length; reader++) {
-    if (condition(arr[reader])) {
-      // SWAP version (giữ toàn bộ data):
-      [arr[reader], arr[writer]] = [arr[writer], arr[reader]];
-
-      // OVERWRITE version (chỉ cần phần "tốt"):
-      // arr[writer] = arr[reader];
-
-      writer++;
-    }
-  }
-
-  return writer; // = số phần tử thỏa condition
-}
-
-// Move Zeros:        condition = (x) => x !== 0
-// Remove Element:    condition = (x) => x !== val
-// Remove Duplicates: condition = (x) => x !== arr[writer - 1]
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
 ```
 
 ```
-  🧠 HỌC 1 PATTERN → GIẢI ĐƯỢC 4+ BÀI!
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  Chỉ cần thay ĐỔI ĐIỀU KIỆN trong if:
-  ┌──────────────────────────────────────────────────────────┐
-  │  Move Zeros:   arr[i] !== 0          → giữ non-zero     │
-  │  Remove #27:   arr[i] !== val        → giữ khác val     │
-  │  Dedup #26:    arr[i] !== arr[w-1]   → giữ unique       │
-  │  Sort Colors:  arr[i] === target     → nhóm theo giá trị │
-  └──────────────────────────────────────────────────────────┘
+  👤 "Tell me about yourself and a time you optimized
+      an in-place data transformation."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I was working on a log processing
+      pipeline where we needed to compact log entries in-place.
+      'Empty' entries — marked as null — were scattered
+      throughout the buffer and needed to be pushed to the end
+      while keeping valid entries in their original order.
+
+      My first approach created a new buffer, copied valid
+      entries, then filled the rest with nulls. That doubled
+      memory usage.
+
+      Then I realized: I only need two pointers — a 'reader'
+      that scans every entry, and a 'writer' that tracks
+      where the next valid entry should go. When the reader
+      finds a valid entry, I swap it with the writer position.
+      Nulls naturally accumulate at the end.
+
+      One pass, constant extra space, order preserved.
+      That's the exact pattern for Move Zeros."
+
+  👤 "Perfect. Let's formalize that."
 ```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 05:00 — Clarify (4 phút) ────────────────
+
+  👤 "Move all zeros to the end of the array while maintaining
+      the relative order of non-zero elements. In-place."
+
+  🧑 "Let me clarify the requirements.
+
+      I need to move ALL zeros to the end.
+      Non-zero elements must keep their RELATIVE ORDER —
+      this means I can't sort the array.
+      In-place means O of 1 extra space.
+
+      Key questions:
+      Can there be negative numbers? Yes — only zeros
+      are special, everything else stays.
+      What about an array with no zeros? Return unchanged.
+      All zeros? Return unchanged.
+      Empty array or single element? Return unchanged.
+
+      This is fundamentally a PARTITIONING problem.
+      I need to partition the array into two zones:
+      non-zeros first, then zeros.
+      And the partition must be STABLE — relative order
+      of non-zeros is preserved."
+
+  ──────────────── 09:00 — Approach 1: Temp Array (3 phút) ────────
+
+  🧑 "My first approach — the simplest — uses extra space.
+
+      Create a temporary array pre-filled with zeros.
+      Scan the original array. Every time I find
+      a non-zero element, copy it to the next position
+      in the temp array.
+      Then copy temp back to the original.
+
+      Time: O of n. Space: O of n.
+
+      This works but doesn't satisfy the in-place constraint.
+      Can I eliminate the temp array?"
+
+  ──────────────── 12:00 — Approach 2: Overwrite + Fill (4 phút) ──
+
+  🧑 "Yes! Instead of copying to a temp array,
+      I can overwrite the original array directly.
+
+      I use a 'writer' pointer called count, starting at 0.
+      I scan with a 'reader' pointer i.
+      When i finds a non-zero, I write arr at count equals
+      arr at i, then increment count.
+
+      After scanning all elements, arr at 0 through count minus 1
+      contains all non-zeros in order. But the rest of the array
+      still has old values — not zeros.
+
+      So I need a SECOND pass: fill arr at count through n minus 1
+      with zeros.
+
+      Time: O of n. Space: O of 1. But TWO passes.
+
+      Can I do it in one pass?"
+
+  ──────────────── 16:00 — Approach 3: SWAP — One Pass (6 phút) ──
+
+  🧑 "The key insight: if I SWAP instead of overwrite,
+      I don't lose any data. No second pass needed!
+
+      I still use count as the writer and i as the reader.
+      When i finds a non-zero, I SWAP arr at i with arr at count,
+      then increment count.
+
+      Why does this work? Let me think about what arr at count
+      contains when count is less than i.
+
+      Between count and i, there are only ZEROS.
+      Why? Because count only advances when we find a non-zero.
+      Every time we skip a zero, i moves ahead but count stays.
+      The gap between them fills with zeros.
+
+      So when I swap arr at i with arr at count,
+      I'm swapping a non-zero with a zero.
+      The non-zero lands at position count — correct!
+      The zero lands at position i — it'll be processed later
+      or naturally end up at the end.
+
+      When count equals i — which happens before we encounter
+      any zeros — the swap is a no-op. Harmless.
+
+      One pass. O of n time. O of 1 space."
+
+  ──────────────── 22:00 — The 3-Zone Invariant (4 phút) ────────
+
+  🧑 "Let me formalize the INVARIANT that makes this correct.
+
+      At any point during the algorithm, the array has
+      THREE zones:
+
+      Zone 1: arr at 0 through count minus 1.
+      All non-zeros encountered so far, in original order.
+
+      Zone 2: arr at count through i minus 1.
+      All zeros — the 'gap' between writer and reader.
+
+      Zone 3: arr at i through n minus 1.
+      Unprocessed elements.
+
+      This invariant holds at every step because:
+      When we skip a zero, i advances, Zone 2 grows.
+      When we swap a non-zero, Zone 1 grows,
+      Zone 2 stays the same size — the zero moves to i's old
+      spot, but i also advances.
+
+      When i reaches n, Zone 3 is empty.
+      Zone 1 has all non-zeros. Zone 2 has all zeros.
+      Exactly the desired output."
+
+  ──────────────── 26:00 — Trace bằng LỜI (4 phút) ────────────────
+
+  🧑 "Let me trace with arr equal [1, 2, 0, 4, 3, 0, 5, 0].
+      count equal 0.
+
+      i equal 0: arr at 0 is 1, non-zero.
+      Swap arr at 0 with arr at 0 — no-op. count becomes 1.
+
+      i equal 1: arr at 1 is 2, non-zero.
+      Swap arr at 1 with arr at 1 — no-op. count becomes 2.
+
+      i equal 2: arr at 2 is 0. Skip. count stays 2.
+
+      i equal 3: arr at 3 is 4, non-zero.
+      Swap arr at 3 with arr at 2.
+      Array becomes [1, 2, 4, 0, 3, 0, 5, 0]. count becomes 3.
+
+      i equal 4: arr at 4 is 3, non-zero.
+      Swap arr at 4 with arr at 3.
+      Array becomes [1, 2, 4, 3, 0, 0, 5, 0]. count becomes 4.
+
+      i equal 5: arr at 5 is 0. Skip. count stays 4.
+
+      i equal 6: arr at 6 is 5, non-zero.
+      Swap arr at 6 with arr at 4.
+      Array becomes [1, 2, 4, 3, 5, 0, 0, 0]. count becomes 5.
+
+      i equal 7: arr at 7 is 0. Skip.
+
+      Final: [1, 2, 4, 3, 5, 0, 0, 0]. Correct!
+      Non-zeros in original order: 1, 2, 4, 3, 5.
+      All zeros at the end."
+
+  ──────────────── 30:00 — Write Code (3 phút) ────────────────
+
+  🧑 "The code is very concise.
+
+      [Vừa viết vừa nói:]
+
+      function moveZeros of arr.
+      let count equal 0.
+      for let i equal 0, i less than arr dot length, i plus plus.
+      if arr at i is not equal to 0:
+      destructuring swap arr at i, arr at count.
+      count plus plus.
+
+      That's 6 lines. The entire algorithm is in the
+      if block: check non-zero, swap, advance count.
+
+      The destructuring swap is ES6 syntax:
+      bracket arr at i, arr at count bracket equals
+      bracket arr at count, arr at i bracket.
+
+      Equivalent to classic 3-variable swap but cleaner."
+
+  ──────────────── 33:00 — Edge Cases (3 phút) ────────────────
+
+  🧑 "Edge cases.
+
+      No zeros: [1, 2, 3]. count stays equal to i
+      throughout. Every swap is a no-op. Array unchanged.
+
+      All zeros: [0, 0, 0]. No non-zeros found.
+      count stays 0. Array unchanged. Correct — all zeros
+      are already 'at the end.'
+
+      Zeros at beginning: [0, 0, 0, 1, 2].
+      count stays 0 for three iterations.
+      Then swaps 1 to position 0, 2 to position 1.
+      Result: [1, 2, 0, 0, 0].
+
+      Single element: [0] or [5]. Trivially correct.
+
+      Already correct: [1, 2, 3, 0, 0].
+      count equals i for first three elements — no-ops.
+      Zeros at end already. No swaps change anything."
+
+  ──────────────── 36:00 — Complexity (3 phút) ────────────────
+
+  🧑 "Time: O of n. Single pass through the array.
+      Each element is visited exactly once by the reader.
+      Each swap is O of 1. Total: n iterations.
+
+      Space: O of 1. Only the count variable and loop counter.
+      No extra arrays, no recursion.
+
+      Number of swaps: at most n. Actually, exactly equal
+      to the number of non-zero elements.
+      If there are z zeros, n minus z swaps occur —
+      but z of those are no-ops when count equals i.
+
+      Can I reduce swaps? Yes — add if i not equal count
+      before swapping. This avoids no-op swaps when no zeros
+      have been encountered yet. But asymptotic complexity
+      doesn't change."
+
+  ──────────────── 39:00 — Swap vs Overwrite decision (3 phút) ──
+
+  👤 "When would you use overwrite instead of swap?"
+
+  🧑 "Great question. Two strategies, different use cases.
+
+      SWAP: preserves all data. Use when I need the ENTIRE
+      array intact — like this problem, where zeros
+      must appear at the end.
+
+      OVERWRITE: only keeps the 'good' elements.
+      Useful when I DON'T care about what's at the end.
+      LeetCode 27 — Remove Element: return the count of
+      elements not equal to val. The values after count
+      can be anything.
+      LeetCode 26 — Remove Duplicates from Sorted Array:
+      same idea — only the first count elements matter.
+
+      Rule of thumb: need ALL data preserved? SWAP.
+      Only need the 'valid' prefix? OVERWRITE.
+
+      Overwrite is slightly faster — one assignment
+      instead of three — but the asymptotic complexity
+      is the same."
+
+  ──────────────── 42:00 — The skeleton code family (3 phút) ──
+
+  🧑 "This problem is part of a FAMILY that shares
+      the same skeleton code.
+
+      The template:
+      let writer equal 0.
+      for reader from 0 to n minus 1:
+      if condition of arr at reader:
+      swap or overwrite arr at writer with arr at reader.
+      writer plus plus.
+
+      Move Zeros: condition is arr at reader not equal 0.
+      Remove Element: condition is arr at reader not equal val.
+      Remove Duplicates: condition is arr at reader
+      not equal arr at writer minus 1.
+
+      Learn ONE pattern, solve FOUR problems.
+      The only thing that changes is the condition in the if."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Stability of the partition (4 phút) ──
+
+  👤 "Is this partition STABLE?"
+
+  🧑 "Yes! The relative order of non-zero elements is preserved.
+
+      Why? The reader scans LEFT to RIGHT.
+      It encounters non-zeros in their ORIGINAL order.
+      Each non-zero is placed at the writer position,
+      which also advances left to right.
+      So non-zeros appear in the result in the same
+      order they appeared in the input.
+
+      For zeros, stability doesn't matter — all zeros
+      are identical.
+
+      This is important because an UNSTABLE partition
+      would violate the problem's requirement.
+      For example, using two pointers from opposite ends
+      — one from the left and one from the right —
+      would be faster for some cases but could
+      scramble the order of non-zeros."
+
+  ──────────────── 49:00 — Why not two pointers from ends? (4 phút)
+
+  👤 "What about using left and right pointers converging?"
+
+  🧑 "That's the approach for Dutch National Flag or
+      partition in QuickSort. But it's UNSTABLE.
+
+      Example: arr equal [3, 0, 1].
+      With converging pointers:
+      left at 0 finds 3 — non-zero, advance.
+      left at 1 finds 0 — zero.
+      right at 2 finds 1 — non-zero, swap with left.
+      Result: [3, 1, 0].
+
+      Same-direction approach:
+      i equal 0: swap arr at 0 with arr at 0 — [3, 0, 1].
+      i equal 1: zero, skip.
+      i equal 2: swap arr at 2 with arr at 1 — [3, 1, 0].
+
+      Both give [3, 1, 0] — correct!
+      But consider [0, 3, 0, 1]:
+      Converging could give [1, 3, 0, 0] — 1 before 3!
+      Same-direction gives [3, 1, 0, 0] — correct order.
+
+      The converging approach scrambles order because
+      swaps cross the array. Same-direction preserves
+      order because swaps only move elements forward."
+
+  ──────────────── 53:00 — Count as the gap tracker (3 phút) ────
+
+  👤 "What does i minus count represent?"
+
+  🧑 "At any point, i minus count equals the number of zeros
+      encountered so far!
+
+      Every time I skip a zero, i advances but count doesn't.
+      The gap grows by 1.
+      Every time I swap a non-zero, BOTH i and count advance.
+      The gap stays the same.
+
+      So the gap equals the total zeros seen.
+
+      At the end, count equals the number of non-zeros.
+      n minus count equals the number of zeros.
+      i minus count throughout the algorithm equals
+      the running zero count.
+
+      This is a useful observation for related problems.
+      For example, if I wanted to COUNT zeros without
+      extra space, I just return n minus count."
+
+  ──────────────── 56:00 — Can I avoid the swap entirely? (4 phút)
+
+  👤 "Is there a way without ANY swaps?"
+
+  🧑 "The overwrite approach avoids swaps but needs a second pass.
+
+      An alternative: use FILTER and FILL.
+      In JavaScript: arr dot filter of x not equal 0,
+      then concat with new Array of z dot fill of 0,
+      where z is the zero count.
+
+      But this creates a NEW array — it's NOT in-place.
+
+      For truly in-place with no swaps and no second pass...
+      I don't think it's possible. Swaps are the mechanism
+      that simultaneously places non-zeros correctly AND
+      relocates zeros. Without swaps, information is lost
+      and must be recovered in a second pass.
+
+      The swap approach is optimal for single-pass in-place."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Move zeros to BEGINNING (3 phút) ────────
+
+  👤 "What if zeros should go to the BEGINNING?"
+
+  🧑 "Reverse the scan direction!
+
+      Scan from RIGHT to LEFT. Writer starts at n minus 1.
+      When I find a non-zero, swap it to the writer position,
+      then decrement the writer.
+
+      Non-zeros accumulate at the END in reverse order...
+      wait, that would reverse the non-zero order.
+
+      Actually, I should think differently. To move zeros
+      to the beginning while keeping non-zero order:
+      I can scan LEFT to RIGHT, and the writer tracks
+      the next non-zero position FROM THE END.
+
+      Or simpler: reverse the array, apply move-zeros-to-end,
+      reverse again. Three passes but conceptually clean.
+
+      Or: scan RIGHT to LEFT with writer at n minus 1.
+      When I find a non-zero, place it at writer, decrement.
+      Then fill positions 0 to writer with zeros.
+      This mirrors the overwrite approach."
+
+  ──────────────── 63:00 — Sort Colors / Dutch National Flag (4 phút)
+
+  👤 "What about partitioning into THREE groups?"
+
+  🧑 "That's LeetCode 75 — Sort Colors!
+
+      Given an array of 0s, 1s, and 2s, sort them
+      in-place in one pass.
+
+      This requires THREE pointers:
+      low — boundary for 0s.
+      mid — current scanner.
+      high — boundary for 2s.
+
+      When mid finds 0: swap with low, advance both.
+      When mid finds 1: just advance mid.
+      When mid finds 2: swap with high, decrement high.
+      Don't advance mid — the swapped element needs checking.
+
+      This is the Dutch National Flag algorithm by Dijkstra.
+      Our move-zeros problem is a SIMPLER version with
+      only two groups: non-zero and zero.
+
+      The key difference: with two groups, same-direction
+      pointers work. With three groups, we need pointers
+      from both ends."
+
+  ──────────────── 67:00 — Move specific value (3 phút) ────────────
+
+  👤 "What if I need to move a SPECIFIC value to the end,
+      not just zeros?"
+
+  🧑 "That's LeetCode 27 — Remove Element!
+
+      Change the condition from arr at i not equal 0
+      to arr at i not equal val.
+
+      Everything else is identical. Same skeleton code.
+      The writer pointer tracks the next position
+      for elements that AREN'T val.
+
+      The only difference: LeetCode 27 uses OVERWRITE
+      instead of SWAP because the problem only asks
+      for the count and the valid prefix.
+      The values after the valid prefix can be anything.
+
+      If the problem asked to KEEP the target values
+      at the end — which it doesn't — I'd use SWAP."
+
+  ──────────────── 70:00 — Minimize writes (5 phút) ────────────────
+
+  👤 "What if swaps are expensive? Can you minimize them?"
+
+  🧑 "Yes! I can add a guard: only swap when i not equal count.
+
+      When count equals i, the swap is a no-op — wasted work.
+      This happens when no zeros have been encountered yet.
+
+      With the guard, I only swap when there's an actual
+      zero between count and i.
+
+      Number of swaps drops from 'number of non-zeros'
+      to 'number of non-zeros AFTER the first zero.'
+
+      For an array with no zeros: ZERO swaps.
+      For an array with one zero at the end: ZERO swaps.
+      For an array starting with zeros: all swaps are real.
+
+      In the worst case — all zeros at the beginning —
+      it's still O of n swaps. But in practice, the guard
+      reduces unnecessary writes significantly.
+
+      Some interviewers value this optimization because
+      it demonstrates awareness of WRITE costs —
+      relevant for flash memory or SSDs where writes
+      are more expensive than reads."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────────
+
+  👤 "Where does this partition pattern appear in practice?"
+
+  🧑 "Several important domains!
+
+      First — LOG COMPACTION.
+      In databases like Kafka, log segments contain
+      'tombstone' records marking deletions.
+      Compaction moves valid records forward and
+      reclaims space from tombstones — exactly the
+      move-zeros pattern applied to log segments.
+
+      Second — MEMORY DEFRAGMENTATION.
+      Operating systems compact memory by moving
+      allocated blocks to one end and free blocks
+      to the other. This is the same reader-writer
+      pattern, applied to memory pages.
+
+      Third — GARBAGE COLLECTION — Copying Collector.
+      The copying GC scans the heap. Live objects
+      are compacted to the front, dead objects
+      are implicitly collected. The 'writer' pointer
+      tracks the next available slot for live objects.
+
+      Fourth — DATABASE VACUUMING.
+      PostgreSQL's VACUUM process compacts table pages
+      by moving live tuples forward and reclaiming
+      dead tuple space. Same partition pattern."
+
+  ──────────────── 80:00 — Parallel partition (5 phút) ────────────
+
+  👤 "Can this be parallelized?"
+
+  🧑 "The STABLE partition is inherently sequential
+      because the output order depends on scan order.
+      Parallelizing naively could scramble the order.
+
+      However, there are parallel approaches:
+
+      First — PARALLEL PREFIX SUM.
+      Compute a prefix sum of 'is non-zero' flags.
+      This gives each non-zero element its destination
+      index in the result. Then all elements can be
+      placed in parallel.
+      Time: O of n divided by p plus log n.
+      Space: O of n for the prefix sum array.
+
+      Second — BLOCK PARTITION.
+      Divide the array into blocks. Each thread
+      partitions its block independently. Then merge
+      the blocks — interleave non-zero segments
+      from each block.
+
+      Both lose the in-place property. For production
+      systems processing billions of records, the
+      parallel prefix sum approach is common."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What would you take away from this problem?"
+
+  🧑 "Three things.
+
+      First, the READER-WRITER pointer pattern.
+      One pointer scans, one pointer writes.
+      The gap between them accumulates the 'unwanted'
+      elements. This pattern solves Move Zeros,
+      Remove Element, Remove Duplicates — any problem
+      where I partition an array in-place.
+
+      Second, SWAP vs OVERWRITE as a design decision.
+      Need all data? Swap — one pass.
+      Only need the valid prefix? Overwrite — simpler,
+      but may need a cleanup pass.
+      This decision affects both correctness and performance.
+
+      Third, the 3-ZONE INVARIANT as a proof technique.
+      At every step: processed non-zeros, accumulated zeros,
+      unprocessed. The invariant proves the algorithm correct
+      and makes it easy to reason about edge cases."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — this problem tests the same-direction
+      two-pointer pattern. In your interviews, do you
+      use it as a warm-up before harder problems like
+      Sort Colors or Dutch National Flag?
+
+      Second — the swap optimization — skipping no-op swaps
+      when count equals i — is a micro-optimization.
+      Do your engineers care about minimizing writes
+      in practice, or is it purely an interview signal?
+
+      Third — the reader-writer pattern maps directly
+      to log compaction and GC. Do your systems use
+      this pattern in any critical paths?"
+
+  👤 "Those are excellent questions! Your progression from
+      temp array to overwrite to swap was textbook,
+      and the invariant explanation was very clear.
+      We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN TRONG PHỎNG VẤN (Move Zeros)        ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Name the pattern immediately
+     ✅ "This is an in-place STABLE PARTITION problem.
+         I use a reader-writer two-pointer approach.
+         The reader scans, the writer places non-zeros."
+
+  📌 MẸO #2: Present 3 approaches as escalation
+     ✅ "Temp array: O of n space. Overwrite+fill: O of 1 space,
+         2 passes. Swap: O of 1 space, 1 pass. Each step
+         eliminates one inefficiency."
+
+  📌 MẸO #3: State the 3-zone invariant
+     ✅ "At any point: arr at 0 to count minus 1 is non-zeros
+         in order. arr at count to i minus 1 is all zeros.
+         arr at i to n minus 1 is unprocessed."
+
+  📌 MẸO #4: Explain why swap works
+     ✅ "When count is less than i, arr at count is guaranteed
+         to be zero — because count only advances for non-zeros.
+         Swapping non-zero with zero is always correct."
+
+  📌 MẸO #5: Show swap vs overwrite trade-off
+     ✅ "Swap preserves all data — one pass.
+         Overwrite loses data — needs fill pass.
+         Rule: need all data? Swap. Only prefix? Overwrite."
+
+  📌 MẸO #6: Connect to the skeleton code family
+     ✅ "Move Zeros, Remove Element, Remove Duplicates —
+         all use the same template. Only the condition
+         in the if statement changes."
+
+  📌 MẸO #7: Mention the no-op swap optimization
+     ✅ "When count equals i, the swap is a no-op.
+         Adding if i not equal count skips unnecessary swaps
+         and reduces writes — relevant for flash storage."
+
+  📌 MẸO #8: Emphasize stability
+     ✅ "Same-direction scanning preserves relative order.
+         Converging pointers would scramble order.
+         Stability is a REQUIREMENT, not an optimization."
+```
+

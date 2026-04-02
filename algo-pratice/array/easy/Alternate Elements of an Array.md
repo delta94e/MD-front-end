@@ -440,39 +440,506 @@ Test Cases:
 
 ## 🗣️ Interview Script
 
-> 🎙️ *"This is a straightforward indexing problem. I use a for loop with step 2, starting at index 0. Each iteration pushes the current element. Time is O(n), space O(1) not counting output. The recursive approach works but risks stack overflow for large arrays. The functional filter approach is clean but iterates all elements."*
+### 🎙️ Mô phỏng phỏng vấn thực... theo chuẩn Google
 
-### Biến thể & Mở rộng
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Candidate nói không hoàn hảo... có do dự, tự sửa.
+> Interviewer react ngắn, guide bằng câu hỏi, không lecture.
 
 ```
-  Biến thể phổ biến:
+╔══════════════════════════════════════════════════════════════╗
+║  PART 1: INTRODUCTION                                        ║
+╚══════════════════════════════════════════════════════════════╝
 
-  1. Lấy phần tử ở index LẺ
-     for (let i = 1; i < n; i += 2)
-     [10, 20, 30, 40, 50] → [20, 40]
+  👤 "Hi! So... tell me a little about yourself.
+      Your background, what you've been up to recently."
 
-  2. Lấy mỗi phần tử thứ K
-     for (let i = 0; i < n; i += k)
-     k=3: [10, 20, 30, 40, 50] → [10, 40]
+  🧑 "Sure. I'm a frontend engineer, been doing this
+      for a few years. Mostly working on dashboard-type
+      products, data tables, that kind of thing."
 
-  3. Alternate sum (+, -, +, -, ...)
-     let sum = 0;
-     for (let i = 0; i < n; i++) {
-       sum += (i % 2 === 0) ? arr[i] : -arr[i];
-     }
-     [10, 20, 30, 40, 50] → 10 - 20 + 30 - 40 + 50 = 30
+  👤 "Okay, great. Let's get started then."
 
-  4. Interleave 2 mảng
-     [a, b, c] + [1, 2, 3] → [a, 1, b, 2, c, 3]
-     (Two Pointers pattern)
+  🧑 "Yeah, let's do it."
+```
 
-  5. Alternate reverse
-     Reverse elements ở index chẵn, giữ index lẻ:
-     [1, 2, 3, 4, 5, 6, 7] → [7, 2, 5, 4, 3, 6, 1]
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 2: PROBLEM + CLARIFY                                   ║
+╚══════════════════════════════════════════════════════════════╝
 
-  Pattern: BÀI TOÁN INDEX
-    Bất cứ khi nào cần "skip" hoặc "step" → i += step!
-    Bất cứ khi nào check chẵn/lẻ → i % 2
+  👤 "Okay. So here's the problem.
+
+      Given an integer array, write a function that returns
+      every alternate element starting from the first one.
+      So index 0, then index 2, then index 4, and so on.
+
+      For example, if the input is ten, twenty, thirty, forty, fifty,
+      the expected output would be ten, thirty, fifty.
+
+      The array can have any integers, including negatives.
+      And you should return a new array, not modify the original.
+
+      Take a moment to read it. Let me know when you're ready."
+
+  🧑 "[Reads. Pauses.]
+
+      Okay. So, I take every other element starting from
+      the first one... index 0, then 2, then 4.
+
+      Let me ask a few clarifying questions."
+
+  👤 "Sure, go ahead."
+
+  🧑 "Is the starting point always index 0?
+      Or could it vary?"
+
+  👤 "Always index 0 for this problem."
+
+  🧑 "Okay. And what if the array is empty,
+      or just has one element?"
+
+  👤 "Empty returns empty.
+      One element, return it."
+
+  🧑 "Got it. And can I assume the input is always
+      a valid array? Or should I handle null, undefined?"
+
+  👤 "Assume it's always a valid array."
+
+  🧑 "Okay. So... the output would always have
+      ceiling of n over 2 elements.
+      For five elements I'd get three,
+      for six I'd also get three.
+      Does that sound right?"
+
+  👤 "Yes, that's correct."
+
+  🧑 "Okay. Um... should I think about the approach now?"
+
+  👤 "Yes, go ahead."
+```
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 3: APPROACH                                            ║
+╚══════════════════════════════════════════════════════════════╝
+
+  🧑 "[Thinks for a moment.]
+
+      Okay. So, when I think about this...
+      the most direct thing I can think of is
+      just changing the step size in the loop.
+      Like, normally you'd write i-plus-plus
+      and you'd visit every single element.
+      But if I change that to i-plus-equal-2,
+      we'd only ever land on index 0, then 2, then 4.
+
+      Which is exactly what we want.
+      That's... pretty simple. I think that works."
+
+  👤 "Mhm. Is there any other way you could think about it?
+      Even if it's not as efficient?"
+
+  🧑 "Um... yeah. You could do it recursively.
+      So you'd write a helper function
+      that takes the current index,
+      grabs the element at that index,
+      adds it to the result,
+      then calls itself again with index plus 2.
+      Stops when you go out of bounds.
+
+      The logic is the same.
+      But in JavaScript, recursion is risky for large inputs.
+      Each call adds a frame to the call stack...
+      so for a million elements,
+      that's 500,000 recursive calls.
+      You'd hit a stack overflow before you ever finish."
+
+  👤 "Right. So if someone wanted to avoid that risk,
+      is there another way to express the same idea?"
+
+  🧑 "Yeah... there's the functional version.
+      Array dot filter, with a callback that checks
+      if the index is even.
+      It's basically a one-liner.
+
+      [Pauses.]
+
+      Although... filter visits every element, right?
+      Even the ones it's going to reject.
+      So it's doing the work of checking every index,
+      even though we only care about half of them.
+      The for loop with step 2 skips that work entirely."
+
+  👤 "Good observation. So which would you go with?"
+
+  🧑 "The for loop. It's the clearest about what it's doing
+      and it does the least work.
+
+      Um... would it be okay if I walked you through
+      a quick example before writing the code?
+      Just to make sure the logic is solid?"
+
+  👤 "Yeah, go ahead."
+```
+
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 4: TRACE + CODE                                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+  🧑 "Okay, so let me trace through the example first.
+      Ten, twenty, thirty, forty, fifty.
+
+      I start at the first element, ten.
+      I take it. Then I skip the next one, twenty.
+      It never gets looked at.
+
+      I land on thirty. Take it.
+      Skip forty.
+
+      Then fifty. Take it.
+      I'd move forward two more,
+      but there's nothing there, so I stop.
+
+      Right? So I end up with ten, thirty, fifty.
+      That's what we expect."
+
+  👤 "Good. Go ahead and write the code."
+
+  🧑 "Okay. [Starts typing.]
+
+      So... function getAlternateElements,
+      takes arr as the input array.
+
+      Inside, I need somewhere to collect the output.
+      result equals an empty array.
+
+      Now the loop.
+      for, i equals zero...
+
+      And the condition.
+      i less than arr dot length.
+
+      [Pauses.]
+
+      Actually, let me just double-check this.
+      I could write i less than arr.length,
+      or i less than or equal to arr.length minus one.
+      Are those the same thing?"
+
+  👤 "What do you think?"
+
+  🧑 "Yeah, they are.
+      If arr.length is 5, the last valid index is 4.
+      i less than 5 stops when i reaches 5, so max is 4.
+      i less than or equal to 4 also stops at 4.
+      Same behavior.
+
+      I like i less than arr.length better.
+      It reads cleanly, and it's the form I'd expect
+      in any codebase."
+
+  👤 "Mhm."
+
+  🧑 "Okay. And the update... i-plus-equal-2.
+      Inside the loop, result dot push, arr bracket i.
+
+      [Types.]
+
+      And return result."
+
+  👤 "Walk me through each part."
+
+  🧑 "Sure. So...
+      result is an empty array that grows as we collect.
+
+      i starts at 0. That's valid because index 0
+      is always the first element we want.
+
+      i less than arr.length is the bounds check.
+      As soon as i would step past the last element, we stop.
+
+      i-plus-equal-2 is really the key part.
+      Instead of moving one step at a time,
+      we jump two.
+      So we visit 0, then 2, then 4, and on.
+      Every odd position just... never gets reached.
+
+      arr bracket i is the element at position i.
+      We push it into result.
+
+      When the loop finishes, result holds all the even-indexed elements
+      in their original order. Return it."
+
+  👤 "Quick question... what if arr is empty?"
+
+  🧑 "[Pauses.]
+
+      If arr is empty, arr.length is 0.
+      i starts at 0. Condition is 0 less than 0,
+      that's false immediately.
+      Loop never runs. Result is still empty.
+      Return empty.
+
+      So yeah, it handles that correctly.
+      No special case needed."
+
+  👤 "Good. You mentioned filter earlier. Can you show that?"
+
+  🧑 "Yeah. It's one line.
+      arr dot filter, callback takes underscore and i,
+      returns i modulo 2 equal zero.
+      The underscore signals I'm accepting the element parameter
+      but not using it."
+
+  👤 "What does filter do under the hood?"
+
+  🧑 "It visits every element and runs the callback.
+      If the callback returns true, the element stays.
+      If false, it's dropped.
+
+      So for index 0... zero modulo 2 is zero, true, keep it.
+      Index 1... one modulo 2 is one, false, drop it.
+      Index 2... even, keep.
+      And so on.
+
+      The difference is it visits every single index
+      to make that decision,
+      whereas the for loop with step 2 never visits
+      the odd indices at all.
+      So filter does roughly twice the iterations."
+
+  👤 "If you had to pick one for a code review,
+      which would you argue for?"
+
+  🧑 "Depends on context.
+      If it's in a hot path, or a very large array,
+      the for loop is the defensible choice.
+      You can point to the exact iteration count.
+
+      If it's a one-off transformation in application code,
+      filter is more expressive.
+      Anyone reading it immediately understands
+      you're picking elements at even positions.
+
+      I'd probably write filter first,
+      and only switch to the loop if profiling showed it mattered."
+
+  👤 "Okay. Can you trace through the for loop version
+      to verify it's correct?"
+
+  🧑 "Yeah. Let me trace it against the example.
+      Ten, twenty, thirty, forty, fifty.
+
+      i is 0. Less than 5. Grab ten. Push.
+      Jump to 2.
+
+      i is 2. Less than 5. Grab thirty. Push.
+      Jump to 4.
+
+      i is 4. Less than 5. Grab fifty. Push.
+      Jump to 6.
+
+      i is 6. Not less than 5. Loop stops.
+
+      Result is ten, thirty, fifty. Correct."
+
+  👤 "And the time complexity?"
+
+  🧑 "O of n.
+      Technically n over 2 iterations,
+      but Big-O drops constants.
+
+      And the for loop does exactly half the iterations
+      that filter does.
+      For small arrays it's irrelevant,
+      but at scale it matters."
+
+  👤 "Space?"
+
+  🧑 "O of 1 auxiliary. Just the loop variable.
+      The output array is O of n over 2,
+      but we don't usually count the output
+      in space complexity."
+```
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 5: EDGE CASES                                          ║
+╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Can you walk me through some edge cases?
+      Let's start with empty array."
+
+  🧑 "Empty array.
+      arr.length is 0.
+      i starts at 0, condition is 0 less than 0...
+      that's false immediately.
+      Loop never runs. result stays empty. We return it.
+      Correct."
+
+  👤 "Single element."
+
+  🧑 "Single element, like just [7].
+      i is 0. Zero is less than 1, true.
+      We grab it, push it.
+      i becomes 2.
+      2 is not less than 1. Stop.
+      Result is [7]. Correct."
+
+  👤 "Two elements?"
+
+  🧑 "Two elements, like 1 and 2.
+      i is 0. Less than 2, true. Grab 1. Push.
+      i becomes 2. Not less than 2. Stop.
+      Result is [1].
+      We took the first, skipped the second.
+      Which is right."
+
+  👤 "What about an array of all zeros?"
+
+  🧑 "All zeros, like [0, 0, 0].
+      We'd still take every other one.
+      Result would be [0, 0]... just half of them.
+      The values don't affect the logic at all,
+      we're strictly operating on positions."
+
+  👤 "And negative numbers?"
+
+  🧑 "Same deal.
+      We're looking at the index, not the value.
+      Something like minus five, one, minus three, four...
+      you'd get minus five and minus three back.
+      Values are completely irrelevant to the algorithm."
+
+  👤 "Let me give you a larger one.
+      What if the array has a million elements?"
+
+  🧑 "That's the happy path for the for loop.
+      It visits exactly 500,000 positions.
+      Just half the array.
+
+      If you used filter instead, it would visit all million
+      to decide which 500,000 to keep.
+      For a hot path, that difference is real."
+
+  👤 "Does it matter whether the length is odd or even?"
+
+  🧑 "Slightly.
+      For odd length, like five elements...
+      you get indices 0, 2, 4. Three elements back.
+      For even length, like four elements...
+      you get indices 0, 2. Two elements back.
+      The last element sits at an odd index, so it gets skipped.
+
+      General formula: ceiling of n over 2 for the output size.
+      Odd length rounds up, even is exactly n over 2."
+
+  👤 "Are you satisfied all the cases are handled?"
+
+  🧑 "Yeah.
+      Empty... loop never starts, return empty.
+      Single element... grab it and stop.
+      Negative values... no effect.
+      All zeros... no effect.
+      Large n... O of n over 2 iterations, no issues.
+      Odd versus even... ceiling of n over 2 always.
+
+      I'd feel good putting this through a code review."
+
+```
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PART 6: FOLLOW-UP QUESTIONS                                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+  👤 "What if I wanted elements at odd indices instead?
+      Like index 1, 3, 5."
+
+  🧑 "Just change the starting index to 1 instead of 0.
+      Same step size, just shifted by one.
+      So you still jump by 2, you just enter at a different point."
+
+  👤 "What about every kth element, not just every other?"
+
+  🧑 "Just change the step to k.
+      So instead of jumping by 2, you jump by k each time.
+      The output size becomes ceiling of n over k.
+
+      It is the same algorithm, just more general."
+
+  👤 "How would you analyze complexity for that?"
+
+  🧑 "Same as before.
+      O of n time... still visiting every kth element.
+      O of 1 auxiliary, just the loop variable.
+      Output is ceiling of n over k, but we do not count that."
+
+  👤 "What about doing it in-place?
+      Can you modify the original array instead of returning a new one?"
+
+  🧑 "You could.
+
+      Naive way is to remove elements one by one...
+      like splice out the odd-indexed ones.
+      But each removal shifts everything after it.
+      So that is O of n per removal, O of n squared total."
+
+  👤 "Is there a more efficient way?"
+
+  🧑 "Yeah. Two-pointer technique.
+
+      One pointer reads through even indices as normal.
+      The other pointer writes, starting from 0,
+      incrementing by 1 each time.
+
+      Every time the reader picks up an element,
+      the writer places it at its position.
+
+      After the loop, truncate the array to the write count.
+      That is O of n time, O of 1 space.
+      Genuinely in-place."
+
+  👤 "Good. And what is the tradeoff?"
+
+  🧑 "You lose the original data.
+      Once you overwrite those positions,
+      you cannot recover the odd-indexed elements.
+
+      So in-place only makes sense if memory is a real constraint
+      and you are sure nothing else needs the original."
+
+  👤 "Last thing... if the array were sorted,
+      would that change your approach?"
+
+  🧑 "Not for this specific problem.
+      We are picking by position, not by value.
+      Sorted or not, the algorithm is identical.
+
+      It would matter if the problem were something like
+      skip duplicates, or pick every other unique element.
+      But for straight index-stepping, no difference."
+
+  👤 "OK. I think that is everything.
+      Do you have any questions for me?"
+
+  🧑 "Yeah. When your team reviews solutions like this,
+      is there a preference for iterative over recursive?
+      Or is it case by case?"
+
+  👤 "Case by case mostly.
+      We flag anything that could hit performance
+      in a code review.
+
+      OK. I think you did well.
+      Good instincts on the complexity analysis
+      and on the in-place tradeoff. We will be in touch."
+
+  🧑 "Thank you. I enjoyed it."
 ```
 
 ### Kiến thức liên quan

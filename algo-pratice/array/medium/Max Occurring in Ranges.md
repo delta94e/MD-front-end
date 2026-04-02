@@ -625,6 +625,544 @@ flowchart TD
 
 ---
 
+## 🗣️ Interview Script
+
+### 🎙️ Think Out Loud — Mô phỏng phỏng vấn thực
+
+> ⚠️ Script này dạy cách **NÓI**, không phải cách CODE.
+> Mỗi đoạn = cách bạn **PHÁT BIỂU** trong phỏng vấn thực!
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  🕐 FULL INTERVIEW SIMULATION — 1h30 (90 phút)             ║
+  ║                                                              ║
+  ║  00:00-05:00  Introduction + Icebreaker         (5 min)     ║
+  ║  05:00-45:00  Problem Solving                   (40 min)    ║
+  ║  45:00-60:00  Deep Technical Probing            (15 min)    ║
+  ║  60:00-75:00  Variations + Extensions           (15 min)    ║
+  ║  75:00-85:00  System Design at Scale            (10 min)    ║
+  ║  85:00-90:00  Behavioral + Q&A                  (5 min)     ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 1: INTRODUCTION (00:00 — 05:00)                       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  👤 "Tell me about yourself and a time you used an
+      array-based optimization in production."
+
+  🧑 "I'm a frontend engineer with [X] years of experience.
+      A relevant example: I built a campaign analytics
+      dashboard that needed to show which dates were covered
+      by the most active promotions across thousands of
+      overlapping date ranges.
+
+      Naive approach: for each date, loop through all
+      promotions and count overlaps. O(n × days).
+
+      Optimized with a difference array:
+      mark +1 at campaign start, -1 at day after end.
+      Prefix sum gives exact overlap count per day.
+      O(n + days) instead of O(n × days).
+
+      Same pattern as Max Occurring in Ranges."
+
+  👤 "Perfect segue. Let's formalize."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 2: PROBLEM SOLVING (05:00 — 45:00)                   ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 05:00 — Clarify (3 phút) ────────────────
+
+  👤 "Given n ranges [l[i], r[i]], find the integer
+      that appears in the maximum number of ranges.
+      If there's a tie, return the smallest."
+
+  🧑 "Let me clarify.
+
+      Ranges are inclusive: integer x is in range [l, r]
+      if and only if l ≤ x ≤ r.
+
+      Number of ranges: n can be large, say up to 10 to the 5.
+
+      Value bounds: what is the maximum value of r[i]?
+      Up to 10 to the 6? This matters for my approach.
+
+      Output: a single integer, the maximum frequency point.
+      Tie-break: smallest among all maximum-frequency integers."
+
+  ──────────────── 08:00 — Hotel Check-in Analogy (2 phút) ─
+
+  🧑 "Let me visualize this as a HOTEL scenario.
+
+      Each range [l, r] is a guest staying from day l to day r.
+      I want to find which day has the most guests.
+
+      Naive: for each guest, mark every day they stay.
+      O(n × stay_length) — slow if stays are long.
+
+      Smart: record when guests ARRIVE and DEPART.
+      Guest arrives day l: +1 at l.
+      Guest departs after day r: -1 at r plus 1.
+
+      Scan days 0 to maxVal, accumulate +1 and -1.
+      Running total = guests in hotel on that day.
+      Peak of the running total = answer!"
+
+  ──────────────── 10:00 — Brute Force (3 phút) ────────────
+
+  🧑 "Brute force first.
+
+      For each range [l[i], r[i]]:
+        for x from l[i] to r[i]: count[x]++.
+
+      Find argmax(count[x]).
+
+      Time: O of n times average range size.
+      Worst case: all ranges are [0, maxVal],
+      so O of n times maxVal.
+      For n equals 10 to the 5, maxVal equals 10 to the 6:
+      10 to the 11 operations. Way too slow."
+
+  ──────────────── 13:00 — Difference Array insight (4 phút) ─
+
+  🧑 "Key insight: instead of marking EVERY point in a range,
+      just mark the START and STOP.
+
+      For range [l, r]:
+        diff[l] += 1.       Frequency starts at l.
+        diff[r+1] -= 1.     Frequency stops after r.
+
+      Why r+1 not r?
+      Because r IS IN the range — the -1 should
+      apply from r plus 1 onwards, not r itself.
+
+      After all ranges are marked:
+      prefix sum of diff gives frequency at each point.
+
+      Proof: diff[l] = +1, diff[r+1] = -1.
+      prefix[x] = sum of diff[0..x].
+      For x < l: neither +1 nor -1 yet. prefix[x] += 0.
+      For l ≤ x ≤ r: +1 applied, -1 not yet. prefix[x] += 1.
+      For x > r: +1 and -1 both applied. prefix[x] += 0.
+      Exactly 1 if inside range, 0 outside. Correct!"
+
+  ──────────────── 17:00 — Optimize (4 phút) ────────────────
+
+  🧑 "Algorithm:
+      Step 1: find maxVal = max of all r[i]. O(n).
+      Step 2: create diff array of size maxVal plus 2. O(maxVal).
+      Step 3: for each range: diff[l]++, diff[r+1]--. O(n).
+      Step 4: prefix sum + track maximum. O(maxVal).
+
+      Total: O of n plus maxVal.
+      Space: O of maxVal for the diff array.
+
+      Why maxVal plus 2?
+      When r[i] equals maxVal, diff[r[i] plus 1] = diff[maxVal plus 1].
+      Array of size maxVal plus 1 would be out of bounds!
+      Must use maxVal plus 2."
+
+  ──────────────── 21:00 — Write Code (4 phút) ──────────────
+
+  🧑 "The code.
+
+      function maxOccurring of l, r:
+        const n equals l.length.
+        let maxVal equals 0.
+        for i: maxVal equals max of maxVal and r[i].
+
+        const diff equals new Array of maxVal plus 2 filled with 0.
+        for i: diff[l[i]]++; diff[r[i]+1]--.
+
+        let maxFreq equals 0, result equals 0, current equals 0.
+        for x from 0 to maxVal:
+          current plus-equals diff[x].
+          if current STRICTLY GREATER than maxFreq:
+            maxFreq equals current.
+            result equals x.
+
+        return result."
+
+  ──────────────── 25:00 — Trace example (4 phút) ───────────
+
+  🧑 "Trace with l=[1,2,4,3], r=[6,4,8,5].
+
+      maxVal = 8. diff size = 10.
+
+      Range [1,6]: diff[1]++, diff[7]--.
+      Range [2,4]: diff[2]++, diff[5]--.
+      Range [4,8]: diff[4]++, diff[9]--.
+      Range [3,5]: diff[3]++, diff[6]--.
+
+      diff: [0, 1, 1, 1, 1, -1, -1, -1, 0, -1]
+
+      Prefix scan:
+      x=0: current=0.
+      x=1: current=1. 1 > 0 → maxFreq=1, result=1.
+      x=2: current=2. 2 > 1 → maxFreq=2, result=2.
+      x=3: current=3. 3 > 2 → maxFreq=3, result=3.
+      x=4: current=4. 4 > 3 → maxFreq=4, result=4. ⭐
+      x=5: current=3. 3 NOT > 4. Result stays 4.
+      x=6: current=2. Stays 4.
+      x=7: current=1. Stays 4.
+      x=8: current=1. Stays 4.
+
+      Answer = 4. Correct!"
+
+  ──────────────── 29:00 — Tie-break (2 phút) ───────────────
+
+  🧑 "About the tie-break.
+
+      I use STRICT greater-than, not greater-than-or-equal.
+      This means I update result ONLY when current
+      exceeds the previous best. The FIRST index to reach
+      a new maximum is always the SMALLEST such index,
+      because I scan left to right.
+
+      If two indices have the same maximum frequency,
+      I keep the first one seen — the smaller one. Correct!"
+
+  ──────────────── 31:00 — Complexity + Edge Cases (4 phút) ─
+
+  🧑 "Time: O of n plus maxVal.
+      Space: O of maxVal for diff array.
+
+      Edge cases:
+
+      Single range [l, r]: diff[l]++ and diff[r+1]--.
+      Prefix sum gives 1 everywhere in [l,r], 0 outside.
+      Answer = l, the smallest point. Correct.
+
+      Identical ranges [l,r] and [l,r]:
+      diff[l] += 2, diff[r+1] -= 2.
+      All points in range get frequency 2.
+      Answer = l. Correct.
+
+      Point range [x, x]: diff[x]++, diff[x+1]--.
+      Only x has frequency 1. Correct.
+
+      Non-overlapping ranges: max frequency is 1.
+      Answer = smallest l across all ranges. Correct."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 3: DEEP TECHNICAL PROBING (45:00 — 60:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 45:00 — Why not store prefix up front? (3 phút) ─
+
+  👤 "Why not store prefix sums in a separate array first?"
+
+  🧑 "Functionally equivalent! Both give correct frequency.
+
+      Storing separately:
+      prefix[x] = prefix[x-1] + diff[x].
+      More memory: O of maxVal extra.
+
+      Running variable (my approach):
+      current += diff[x]. Same O(maxVal) time.
+      O(1) extra space. Strictly better.
+
+      In an interview I prefer the running variable:
+      cleaner code, one fewer array."
+
+  ──────────────── 48:00 — maxVal + 2 boundary (3 phút) ─────
+
+  👤 "Can you prove the array size must be maxVal + 2?"
+
+  🧑 "Yes.
+
+      When r[i] equals maxVal (the largest endpoint):
+      we write diff[r[i] + 1] = diff[maxVal + 1].
+
+      Array of size maxVal + 1 has valid indices 0 to maxVal.
+      Index maxVal + 1 is OUT OF BOUNDS.
+
+      Array of size maxVal + 2 has valid indices 0 to maxVal + 1.
+      Index maxVal + 1 is valid. Correct.
+
+      The +2 is the minimum safe size for this pattern."
+
+  ──────────────── 51:00 — Correctness of prefix sum (4 phút) ─
+
+  👤 "Prove formally that prefix sum = frequency."
+
+  🧑 "For a single range [l, r]:
+      diff[l] = +1, diff[r+1] = -1, all others 0.
+
+      prefix[x] = sum of diff[0..x].
+
+      Case x < l: no +1 or -1 seen yet. Sum = 0.
+      Case l ≤ x ≤ r: +1 at l seen, -1 at r+1 not yet. Sum = 1.
+      Case x > r: both +1 and -1 seen. Sum = 1 + (-1) = 0.
+
+      So prefix[x] = 1 iff x is in [l, r]. Exactly right.
+
+      For n ranges, prefix sums are linear:
+      prefix[x] = sum over all i of (1 if x in [l[i], r[i]]).
+      = count of ranges containing x. QED."
+
+  ──────────────── 55:00 — Streaming / online query (3 phút) ─
+
+  👤 "What if ranges arrive one at a time in a stream?"
+
+  🧑 "For a streaming setting:
+
+      Maintain the diff array online.
+      As each range [l, r] arrives:
+      diff[l]++ and diff[r+1]--.
+
+      After all ranges: rebuild prefix sum and find max.
+
+      But if I also need to query maximum at any time
+      between arrivals, that requires a more advanced
+      data structure: a Segment Tree with lazy propagation.
+      Point query: O log maxVal.
+      Range update: O log maxVal.
+
+      The difference array only works for batch processing."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 4: VARIATIONS (60:00 — 75:00)                         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 60:00 — Large maxVal: Sweep Line (4 phút) ─
+
+  👤 "What if maxVal is up to 10⁹?"
+
+  🧑 "A diff array of size 10⁹ uses about 4GB RAM.
+      Memory Limit Exceeded.
+
+      Use a Sweep Line instead.
+
+      Convert each range [l, r] into two events:
+      (l, +1) — range starts at l.
+      (r+1, -1) — range ends just after r.
+
+      Sort all 2n events by position.
+      Scan left to right, accumulate delta.
+      Track maximum running sum and its position.
+
+      Time: O of n log n for the sort.
+      Space: O of n for the event list.
+
+      No dependence on maxVal! Works for 10⁹."
+
+  ──────────────── 64:00 — Meeting Rooms II (3 phút) ─────────
+
+  👤 "How does this relate to Meeting Rooms II?"
+
+  🧑 "Identical pattern!
+
+      Meeting Rooms II: given meeting intervals,
+      find minimum number of rooms needed.
+
+      Each meeting [start, end] is a range.
+      +1 when a meeting starts (room needed).
+      -1 when it ends (room freed).
+
+      Maximum overlap at any point
+      = minimum rooms needed simultaneously.
+
+      Difference array or sweep line — same code!
+      Only the semantic meaning differs:
+      here it's 'rooms used', there it's 'ranges covering'."
+
+  ──────────────── 67:00 — Range Addition (#370) (3 phút) ────
+
+  👤 "What about Range Addition — adding different values?"
+
+  🧑 "Same difference array, generalized.
+
+      Instead of diff[l] += 1 and diff[r+1] -= 1,
+      we do diff[l] += val and diff[r+1] -= val.
+
+      Prefix sum gives the actual value at each index
+      after all range additions.
+
+      Time and space same: O of n for updates,
+      O of maxVal for prefix sum.
+
+      Code is nearly identical — just replace 1 with val."
+
+  ──────────────── 70:00 — Dynamic updates (3 phút) ──────────
+
+  👤 "What if ranges can be added AND removed dynamically,
+      and queries happen between updates?"
+
+  🧑 "Difference array only works for batch — no online queries.
+
+      For dynamic: use a Segment Tree with lazy propagation.
+
+      Range update: add delta to [l, r]. O log maxVal.
+      Point query: get frequency at x. O log maxVal.
+      Range max query: find max frequency in [a, b]. O log maxVal.
+
+      Or a Binary Indexed Tree (Fenwick Tree) if only
+      point queries are needed. Simpler to implement."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 5: SYSTEM DESIGN AT SCALE (75:00 — 85:00)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 75:00 — Real-world applications (5 phút) ────
+
+  👤 "Where does this pattern appear in real systems?"
+
+  🧑 "Many domains!
+
+      First — SCHEDULING SYSTEMS.
+      Find the most contended time slot among
+      all meeting or booking requests.
+      Diff array on the time axis.
+
+      Second — NETWORK TRAFFIC ANALYSIS.
+      Each network flow has a start-time and end-time.
+      Find the peak concurrent connection count.
+      Diff array on the timestamp axis.
+
+      Third — ADVERTISEMENT CAMPAIGNS.
+      Find which calendar date has the most
+      overlapping active promotions.
+      The max-overlap date guides resource allocation.
+
+      Fourth — EPIDEMIOLOGY MODELING.
+      Each patient has an infectious period [start, end].
+      Find the day with most concurrent infectious cases.
+      Diff array over the date range."
+
+  ──────────────── 80:00 — Scaling (5 phút) ────────────────
+
+  👤 "How would you scale to billions of ranges
+      with very large values?"
+
+  🧑 "Several strategies.
+
+      1. COORDINATE COMPRESSION:
+         if the number of distinct endpoints is small (say 2n),
+         map them to indices 0 to 2n-1.
+         Diff array of size 2n instead of maxVal.
+         O of n log n for compression.
+
+      2. DISTRIBUTED SWEEP LINE:
+         partition the value axis into shards.
+         Each shard independently processes ranges
+         that overlap with it, using its own diff array.
+         Merge results to find global maximum.
+
+      3. APPROXIMATE COUNTING:
+         for very high cardinality streams,
+         use count-min sketch to approximate
+         frequency at each point in O(1) per update.
+
+      4. OFFLINE BATCH:
+         if all ranges are known upfront,
+         sort by l, use monotonic deque
+         for sliding window maximum queries."
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PART 6: BEHAVIORAL + Q&A (85:00 — 90:00)                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  ──────────────── 85:00 — Reflection (3 phút) ────────────────
+
+  👤 "What is the key insight in this problem?"
+
+  🧑 "Three things.
+
+      First, LAZY MARKING.
+      Instead of updating every point in a range,
+      just mark the boundary: +1 at start, -1 after end.
+      One operation per boundary instead of O(range_size).
+      The 'magic' is that prefix sum reconstructs the intent.
+
+      Second, r+1 NOT r.
+      The most common mistake. Range [l, r] includes r.
+      The neutral point starts at r plus 1, not r.
+      Internalize this with: 'I leave on the day AFTER checkout.'
+
+      Third, STRICT GREATER-THAN for tie-break.
+      Using >= would update result to a larger index
+      when frequencies are equal, breaking the tie-break rule.
+      Using > preserves the first (smallest) index."
+
+  ──────────────── 88:00 — Questions (2 phút) ────────────────
+
+  👤 "Any questions for me?"
+
+  🧑 "A few!
+
+      First — the difference array pattern is powerful
+      for batch range processing.
+      Does your system handle high-cardinality time-range
+      queries, and have you used this pattern in production?
+
+      Second — the tie-break (smallest on equal frequency)
+      is a subtle requirement. Do you typically specify
+      tie-breaking rules explicitly in your problem statements?
+
+      Third — the sweep line extension handles 10⁹ values.
+      Does your team deal with unbounded or very large
+      domains where coordinate compression is needed?"
+
+  👤 "Excellent! The hotel check-in analogy was vivid.
+      The proof that prefix sum equals frequency was rigorous.
+      And the sweep line extension for large maxVal showed
+      adaptability. We'll be in touch!"
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ⭐ 8 MẸO NÓI CHUYỆN (Max Occurring in Ranges)            ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  📌 MẸO #1: Hotel analogy immediately
+     ✅ "+1 when guest arrives, -1 when guest leaves.
+         Running total = guests in hotel on any day."
+
+  📌 MẸO #2: State the key formula
+     ✅ "diff[l]++, diff[r+1]--. Prefix sum = frequency."
+
+  📌 MẸO #3: Emphasize r+1 not r
+     ✅ "r is inclusive in the range.
+         The -1 starts at r+1, not r."
+
+  📌 MẸO #4: Array size = maxVal + 2
+     ✅ "diff[r+1] when r = maxVal needs index maxVal+1.
+         Size must be maxVal + 2."
+
+  📌 MẸO #5: Tie-break = strict >
+     ✅ "Scan left to right, update only on strict >.
+         First (= smallest) index reaching new max."
+
+  📌 MẸO #6: Know the size limit
+     ✅ "maxVal ≤ 10⁶ → Difference Array O(n + maxVal).
+         maxVal > 10⁶ → Sweep Line O(n log n)."
+
+  📌 MẸO #7: Connect to Meeting Rooms II
+     ✅ "Same pattern: +1 meeting starts, -1 ends.
+         Max overlap = min rooms needed."
+
+  📌 MẸO #8: Dynamic = Segment Tree
+     ✅ "Difference array is batch-only.
+         Online queries → Segment Tree with lazy prop."
+```
+
+---
+
 ## ❌ Common Mistakes — Lỗi thường gặp
 
 ```mermaid
