@@ -7,7 +7,7 @@ const MIMO_MODEL = "mimo-v2.5-pro";
 export async function POST(req: Request) {
   try {
     const { content } = await req.json();
-    if (!content) {
+    if (typeof content !== "string" || !content.trim()) {
       return NextResponse.json({ error: "No content provided" }, { status: 400 });
     }
 
@@ -36,10 +36,10 @@ export async function POST(req: Request) {
     });
 
     if (!response.ok) {
-      const errText = await response.text();
+      console.error("[generate-exercises] Mimo API error:", response.status);
       return NextResponse.json(
-        { error: `Mimo API error: ${response.status} - ${errText}` },
-        { status: response.status }
+        { error: "Failed to generate exercises" },
+        { status: 502 }
       );
     }
 
@@ -49,17 +49,21 @@ export async function POST(req: Request) {
     // Extract JSON array from response (may be wrapped in markdown code block)
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      return NextResponse.json({ exercises: [], error: "Invalid AI response format" });
+      return NextResponse.json([]);
     }
 
     try {
       const exercises = JSON.parse(jsonMatch[0]);
+      if (!Array.isArray(exercises)) {
+        return NextResponse.json([]);
+      }
       return NextResponse.json(exercises);
     } catch {
-      return NextResponse.json({ exercises: [], error: "Failed to parse exercises" });
+      console.error("[generate-exercises] Failed to parse AI response as JSON");
+      return NextResponse.json([]);
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[generate-exercises] Unexpected error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

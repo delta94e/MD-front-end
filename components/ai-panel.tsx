@@ -402,6 +402,27 @@ function ExerciseCard({
   );
 }
 
+function isValidExercise(obj: unknown): obj is Exercise {
+  if (!obj || typeof obj !== "object") return false;
+  const e = obj as Record<string, unknown>;
+  if (typeof e.type !== "string" || typeof e.explanation !== "string") return false;
+  if (e.type === "predict-output") {
+    return typeof e.code === "string" && typeof e.question === "string" && typeof e.answer === "string";
+  }
+  if (e.type === "fix-bug") {
+    return typeof e.code === "string" && typeof e.buggyLine === "string" && typeof e.correctCode === "string";
+  }
+  if (e.type === "quiz") {
+    return (
+      typeof e.question === "string" &&
+      Array.isArray(e.options) &&
+      e.options.length === 4 &&
+      typeof e.correctIndex === "number"
+    );
+  }
+  return false;
+}
+
 function ExerciseTab() {
   const { editorContent } = usePKMStore();
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -425,8 +446,15 @@ function ExerciseTab() {
       const data = await res.json();
       if (data.error) {
         setError(data.error);
+      } else if (Array.isArray(data)) {
+        const valid = data.filter(isValidExercise);
+        if (valid.length === 0) {
+          setError("No valid exercises generated. Try again.");
+        } else {
+          setExercises(valid);
+        }
       } else {
-        setExercises(data);
+        setError("Invalid response format");
       }
     } catch {
       setError("Failed to generate exercises");
