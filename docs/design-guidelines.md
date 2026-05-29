@@ -181,7 +181,9 @@ Inside the rendered markdown viewer:
 
 - **Breadcrumb:** `category > filename` at top. Caption size, `text-secondary`.
 - **TOC:** Floating right or integrated. Shows h2/h3 with scroll-spy highlight.
-- **Code blocks:** Syntax highlighting via `rehype-prism-plus` (Prism.js). Copy button top-right.
+- **Code blocks:** Syntax highlighting via `rehype-prism-plus` (Prism.js). Copy button top-right. Play button (Run) visible on hover for JS/TS/JSX/TSX blocks. Clicking Run opens an inline `CodePlayground` panel below the block with sandboxed iframe execution.
+- **Code playground:** Sandboxed iframe (`sandbox="allow-scripts"`). Toolbar with Run/Stop/Clear buttons and collapsible output panel. Captures `console.log/warn/error/info`. 5-second timeout kills infinite loops. TypeScript types stripped via regex before execution. Zero external dependencies.
+- **Mermaid diagrams:** `mermaid` code blocks render inline via `MermaidDiagram` component.
 - **Action bar:** Top-right of viewer. Icon buttons: Edit (pencil), Summarize (sparkles), Translate (globe), AI Explain (bot).
 
 ### 4.3 Markdown Editor (Split-Pane)
@@ -243,6 +245,9 @@ Key icons:
 | Chevron       | `chevron-right` |
 | Copy          | `copy`       |
 | Check         | `check`      |
+| Run/Play      | `play`       |
+| Stop          | `square`     |
+| Clear/Trash   | `trash-2`    |
 
 ---
 
@@ -284,11 +289,15 @@ Key icons:
 ### 8.1 Code Block Styling
 
 ```
-+--[ Copy ]----------------------------------------+
++--[ Run ][ Copy ]----------------------------------+
 |  1 | const x = 42;                                |
 |  2 | function hello() {                           |
 |  3 |   return "world";                            |
 |  4 | }                                            |
++---------------------------------------------------+
+| [Run] [Stop] [Clear]              [collapse]      |
+| > Hello, world!                                   |
+| -> undefined                                      |
 +---------------------------------------------------+
 ```
 
@@ -296,6 +305,8 @@ Key icons:
 - Border: 1px `var(--border)`
 - Line numbers: `text-tertiary`, 40px width, right-aligned
 - Copy button: top-right, ghost icon, shows checkmark on copy
+- Run button: top-right (left of Copy), Play icon, visible on hover for JS/TS/JSX/TSX only. Toggles inline `CodePlayground` below the block
+- Playground output panel: `max-h-64`, scrollable, font-mono `text-xs`. Color-coded: warn=yellow, error=red. Collapsible via chevron toggle
 
 ### 8.2 Heading Anchors
 

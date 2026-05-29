@@ -5,12 +5,25 @@ import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism-plus";
 import rehypeAnnotate from "@/lib/rehype-annotate";
 import { useCallback, useRef, useEffect, type ReactNode } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Play } from "lucide-react";
 import { useState } from "react";
+import { isExecutableLanguage } from "@/lib/code-sandbox";
+import { CodePlayground } from "@/components/code-playground";
 import { slugify } from "@/lib/toc-extractor";
 import { usePKMStore } from "@/lib/store";
 import { AnnotationPopover } from "@/components/annotation-popover";
 import { getAnnotationsAction } from "@/app/actions/annotations";
+import { MermaidDiagram } from "@/components/mermaid-diagram";
+
+function getTextFromChildren(children: ReactNode): string {
+  if (typeof children === "string") return children;
+  if (typeof children === "number") return String(children);
+  if (Array.isArray(children)) return children.map(getTextFromChildren).join("");
+  if (children && typeof children === "object" && "props" in children) {
+    return getTextFromChildren((children as { props: { children?: ReactNode } }).props.children);
+  }
+  return "";
+}
 
 function CodeBlock({
   children,
@@ -18,7 +31,17 @@ function CodeBlock({
   ...props
 }: React.HTMLAttributes<HTMLPreElement> & { children?: ReactNode }) {
   const [copied, setCopied] = useState(false);
+  const [showPlayground, setShowPlayground] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
+
+  const language = className?.replace("language-", "") ?? "";
+  const canExecute = isExecutableLanguage(language);
+
+  // Render mermaid diagrams instead of code blocks
+  if (language === "mermaid") {
+    const chart = getTextFromChildren(children).trim();
+    if (chart) return <MermaidDiagram chart={chart} />;
+  }
 
   const handleCopy = useCallback(() => {
     const code = preRef.current?.querySelector("code")?.textContent ?? "";
@@ -27,8 +50,6 @@ function CodeBlock({
     setTimeout(() => setCopied(false), 2000);
   }, []);
 
-  const language = className?.replace("language-", "") ?? "";
-
   return (
     <div className="relative group my-4">
       {language && (
@@ -36,17 +57,28 @@ function CodeBlock({
           {language}
         </span>
       )}
-      <button
-        onClick={handleCopy}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-accent"
-        aria-label="Copy code"
-      >
-        {copied ? (
-          <Check className="h-3.5 w-3.5 text-green-500" />
-        ) : (
-          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {canExecute && (
+          <button
+            onClick={() => setShowPlayground(!showPlayground)}
+            className={`p-1 rounded hover:bg-accent ${showPlayground ? "bg-accent text-primary" : "text-muted-foreground"}`}
+            aria-label="Run code"
+          >
+            <Play className="h-3.5 w-3.5" />
+          </button>
         )}
-      </button>
+        <button
+          onClick={handleCopy}
+          className="p-1 rounded hover:bg-accent"
+          aria-label="Copy code"
+        >
+          {copied ? (
+            <Check className="h-3.5 w-3.5 text-green-500" />
+          ) : (
+            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+        </button>
+      </div>
       <pre
         ref={preRef}
         className="!bg-muted border border-border rounded-lg p-4 overflow-x-auto"
@@ -54,6 +86,12 @@ function CodeBlock({
       >
         {children}
       </pre>
+      {showPlayground && canExecute && (
+        <CodePlayground
+          code={preRef.current?.querySelector("code")?.textContent ?? ""}
+          language={language}
+        />
+      )}
     </div>
   );
 }
@@ -77,6 +115,44 @@ function createHeading(Tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
   };
 }
 
+/** Check if element is inside a code block */
+function isInsideCodeBlock(node: Node): boolean {
+  let current: Node | null = node;
+  while (current) {
+    if (
+      current instanceof HTMLElement &&
+      (current.tagName === "PRE" || current.tagName === "CODE")
+    ) {
+      return true;
+    }
+    current = current.parentNode;
+  }
+  return false;
+}
+
+/** Calculate text offset using TreeWalker, skipping code blocks */
+function getTextOffset(container: HTMLElement, targetNode: Node, targetOffset: number): number {
+  const walker = document.createTreeWalker(
+    container,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: (node) =>
+        isInsideCodeBlock(node)
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT,
+    }
+  );
+
+  let offset = 0;
+  while (walker.nextNode()) {
+    if (walker.currentNode === targetNode) {
+      return offset + targetOffset;
+    }
+    offset += (walker.currentNode as Text).textContent!.length;
+  }
+  return offset;
+}
+
 interface SelectionState {
   text: string;
   startOffset: number;
@@ -92,7 +168,6 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
   const { activeFile, annotations, setAnnotations } = usePKMStore();
   const [selection, setSelection] = useState<SelectionState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<string>("");
 
   // Load annotations when file changes
   useEffect(() => {
@@ -103,11 +178,6 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
     getAnnotationsAction(activeFile).then(setAnnotations).catch(console.error);
   }, [activeFile, setAnnotations]);
 
-  // Track plain text content for offset calculation
-  useEffect(() => {
-    contentRef.current = content;
-  }, [content]);
-
   const handleMouseUp = useCallback(() => {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.toString().trim()) {
@@ -115,23 +185,15 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
     }
 
     const selectedText = sel.toString().trim();
-
-    // Calculate offsets relative to plain text content
     const container = containerRef.current;
     if (!container) return;
 
-    // Find the range and calculate position
     const range = sel.getRangeAt(0);
     const rect = range.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
 
-    // Approximate offset calculation using text content
-    const plainText = container.textContent || "";
-    const textBefore = plainText.slice(
-      0,
-      plainText.indexOf(selectedText)
-    );
-    const startOffset = textBefore.length;
+    // Use TreeWalker for accurate offset calculation (matches rehype plugin behavior)
+    const startOffset = getTextOffset(container, range.startContainer, range.startOffset);
     const endOffset = startOffset + selectedText.length;
 
     setSelection({
@@ -150,25 +212,25 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
       const container = containerRef.current;
       if (!container) return;
 
-      const plainText = container.textContent || "";
-      const startOffset = plainText.indexOf(text);
-      if (startOffset === -1) return;
-
       const range = window.getSelection()?.getRangeAt(0);
       const rect = range?.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
 
-      setSelection({
-        text,
-        startOffset,
-        endOffset: startOffset + text.length,
-        position: rect
-          ? {
-              x: rect.left - containerRect.left + container.scrollLeft,
-              y: rect.bottom - containerRect.top + container.scrollTop,
-            }
-          : { x: 0, y: 0 },
-      });
+      // Use TreeWalker for offset calculation
+      if (range) {
+        const startOffset = getTextOffset(container, range.startContainer, range.startOffset);
+        setSelection({
+          text,
+          startOffset,
+          endOffset: startOffset + text.length,
+          position: rect
+            ? {
+                x: rect.left - containerRect.left + container.scrollLeft,
+                y: rect.bottom - containerRect.top + container.scrollTop,
+              }
+            : { x: 0, y: 0 },
+        });
+      }
     },
     []
   );
@@ -188,7 +250,6 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
       if (target.classList.contains("annotation-highlight")) {
         const id = target.dataset.annotationId;
         if (id) {
-          // Scroll to annotation in panel or flash the highlight
           target.style.transition = "outline 0.3s";
           target.style.outline = "2px solid currentColor";
           setTimeout(() => {
