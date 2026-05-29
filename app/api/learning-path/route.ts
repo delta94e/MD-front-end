@@ -1,5 +1,6 @@
 import type { TopicFile } from "@/lib/topic-index";
 import type { LearningPath } from "@/lib/learning-path-types";
+import { saveAiOutput } from "@/lib/ai-output-saver";
 
 const MIMO_BASE_URL = "https://token-plan-sgp.xiaomimimo.com/v1";
 const MIMO_MODEL = "mimo-v2.5-pro";
@@ -124,6 +125,12 @@ Create an ordered learning path. Return JSON with this structure:
 
     // Re-number steps after filtering
     result.steps = result.steps.map((step, i) => ({ ...step, order: i + 1 }));
+
+    // Auto-save learning path to ai-outputs/
+    const mdContent = result.steps
+      .map((s) => `${s.order}. **${s.title}** — ${s.rationale}\n   \`${s.path}\`${s.estimatedMinutes ? ` (${s.estimatedMinutes} min)` : ""}`)
+      .join("\n\n");
+    saveAiOutput("learning-path", topic, mdContent).catch(console.error);
 
     return Response.json(result);
   } catch (err) {

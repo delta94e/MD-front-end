@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useCompletion } from "@ai-sdk/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { usePKMStore } from "@/lib/store";
 import { LearningPathTab } from "@/components/learning-path-tab";
+import { saveAiOutput } from "@/lib/ai-output-saver";
 
 function AiResponse({ text, loading }: { text: string; loading: boolean }) {
   const [copied, setCopied] = useState(false);
@@ -59,16 +60,26 @@ function AiResponse({ text, loading }: { text: string; loading: boolean }) {
 }
 
 function SummarizeTab() {
-  const { editorContent } = usePKMStore();
+  const { editorContent, activeFile } = usePKMStore();
   const { completion, complete, isLoading } = useCompletion({
     api: "/api/summarize",
     streamProtocol: "text",
   });
+  const prevLoading = useRef(false);
 
   const handleSummarize = useCallback(() => {
     if (!editorContent) return;
     complete(editorContent);
   }, [editorContent, complete]);
+
+  // Auto-save when completion finishes
+  useEffect(() => {
+    if (prevLoading.current && !isLoading && completion) {
+      const topic = activeFile?.replace(/\.md$/, "").replace(/[-/]/g, " ") || "document";
+      saveAiOutput("summarize", topic, completion).catch(console.error);
+    }
+    prevLoading.current = isLoading;
+  }, [isLoading, completion, activeFile]);
 
   return (
     <div className="space-y-3">
