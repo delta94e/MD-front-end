@@ -4,14 +4,15 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism-plus";
 import rehypeAnnotate from "@/lib/rehype-annotate";
-import { useCallback, useRef, useEffect, type ReactNode } from "react";
+import { useCallback, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { Copy, Check, Play } from "lucide-react";
 import { useState } from "react";
 import { isExecutableLanguage } from "@/lib/code-sandbox";
 import { CodePlayground } from "@/components/code-playground";
 import { slugify } from "@/lib/toc-extractor";
-import { usePKMStore } from "@/lib/store";
+import { usePKMStore, type ExplanationEntry } from "@/lib/store";
 import { AnnotationPopover } from "@/components/annotation-popover";
+import { InlineExplainCard } from "@/components/inline-explain-card";
 import { getAnnotationsAction } from "@/app/actions/annotations";
 import { MermaidDiagram } from "@/components/mermaid-diagram";
 
@@ -31,11 +32,13 @@ function CodeBlock({
   ...props
 }: React.HTMLAttributes<HTMLPreElement> & { children?: ReactNode }) {
   const [copied, setCopied] = useState(false);
-  const [showPlayground, setShowPlayground] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
 
-  const language = className?.replace("language-", "") ?? "";
+  const parts = className?.replace("language-", "").split(/\s+/) ?? [];
+  const language = parts[0] ?? "";
+  const autoRun = parts.includes("run");
   const canExecute = isExecutableLanguage(language);
+  const [showPlayground, setShowPlayground] = useState(autoRun);
 
   // Render mermaid diagrams instead of code blocks
   if (language === "mermaid") {
@@ -90,6 +93,7 @@ function CodeBlock({
         <CodePlayground
           code={preRef.current?.querySelector("code")?.textContent ?? ""}
           language={language}
+          autoRun={autoRun}
         />
       )}
     </div>
@@ -162,9 +166,12 @@ interface SelectionState {
 
 interface MarkdownViewerProps {
   content: string;
+  explanations?: ExplanationEntry[];
+  onSaveExplanation?: (id: string) => void;
+  onDismissExplanation?: (id: string) => void;
 }
 
-export function MarkdownViewer({ content }: MarkdownViewerProps) {
+export function MarkdownViewer({ content, explanations, onSaveExplanation, onDismissExplanation }: MarkdownViewerProps) {
   const { activeFile, annotations, setAnnotations } = usePKMStore();
   const [selection, setSelection] = useState<SelectionState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -177,35 +184,6 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
     }
     getAnnotationsAction(activeFile).then(setAnnotations).catch(console.error);
   }, [activeFile, setAnnotations]);
-
-  const handleMouseUp = useCallback(() => {
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-      return;
-    }
-
-    const selectedText = sel.toString().trim();
-    const container = containerRef.current;
-    if (!container) return;
-
-    const range = sel.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-
-    // Use TreeWalker for accurate offset calculation (matches rehype plugin behavior)
-    const startOffset = getTextOffset(container, range.startContainer, range.startOffset);
-    const endOffset = startOffset + selectedText.length;
-
-    setSelection({
-      text: selectedText,
-      startOffset,
-      endOffset,
-      position: {
-        x: rect.left - containerRect.left + container.scrollLeft,
-        y: rect.bottom - containerRect.top + container.scrollTop,
-      },
-    });
-  }, []);
 
   const handleSelectionFromToolbar = useCallback(
     (text: string) => {
@@ -268,43 +246,103 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
     color: a.color,
   }));
 
+  // Split content by inline-explain markers
+  const EXPLAIN_MARKER_RE = /<!--inline-explain:([a-f0-9-]+)-->/g;
+
+  const contentSegments = useMemo(() => {
+    if (!explanations || explanations.length === 0) {
+      return [{ type: "markdown" as const, content }];
+    }
+
+    const segments: Array<
+      | { type: "markdown"; content: string }
+      | { type: "explain"; id: string }
+    > = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = EXPLAIN_MARKER_RE.exec(content)) !== null) {
+      // Add markdown segment before this marker
+      if (match.index > lastIndex) {
+        segments.push({
+          type: "markdown",
+          content: content.slice(lastIndex, match.index),
+        });
+      }
+      // Add explain segment
+      segments.push({ type: "explain", id: match[1] });
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining markdown
+    if (lastIndex < content.length) {
+      segments.push({ type: "markdown", content: content.slice(lastIndex) });
+    }
+
+    return segments;
+  }, [content, explanations]);
+
+  const sharedComponents = {
+    pre: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement> & { children?: ReactNode }) => (
+      <CodeBlock {...props}>{children}</CodeBlock>
+    ),
+    a: ({ href, children, ...props }: { href?: string; children?: ReactNode }) => (
+      <a
+        href={href}
+        target={href?.startsWith("http") ? "_blank" : undefined}
+        rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+        {...props}
+      >
+        {children}
+      </a>
+    ),
+    h1: createHeading("h1"),
+    h2: createHeading("h2"),
+    h3: createHeading("h3"),
+    h4: createHeading("h4"),
+    h5: createHeading("h5"),
+    h6: createHeading("h6"),
+  };
+
   return (
     <div
       ref={containerRef}
       className="relative markdown-content prose prose-sm dark:prose-invert max-w-none"
-      onMouseUp={handleMouseUp}
       onClick={handleClick}
     >
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[
-          [rehypePrism, { ignoreMissing: true }],
-          [rehypeAnnotate, annotationParams],
-        ]}
-        components={{
-          pre: ({ children, ...props }) => (
-            <CodeBlock {...props}>{children}</CodeBlock>
-          ),
-          a: ({ href, children, ...props }) => (
-            <a
-              href={href}
-              target={href?.startsWith("http") ? "_blank" : undefined}
-              rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-              {...props}
-            >
-              {children}
-            </a>
-          ),
-          h1: createHeading("h1"),
-          h2: createHeading("h2"),
-          h3: createHeading("h3"),
-          h4: createHeading("h4"),
-          h5: createHeading("h5"),
-          h6: createHeading("h6"),
-        }}
-      >
-        {content}
-      </ReactMarkdown>
+      {contentSegments.map((segment, i) => {
+        if (segment.type === "explain") {
+          const entry = explanations?.find((e) => e.id === segment.id);
+          if (entry && onSaveExplanation && onDismissExplanation) {
+            return (
+              <InlineExplainCard
+                key={segment.id}
+                id={entry.id}
+                selectedText={entry.selectedText}
+                content={entry.content}
+                status={entry.status}
+                type={entry.type}
+                onSave={onSaveExplanation}
+                onDismiss={onDismissExplanation}
+              />
+            );
+          }
+          return null;
+        }
+        return (
+          <ReactMarkdown
+            key={i}
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[
+              [rehypePrism, { ignoreMissing: true }],
+              [rehypeAnnotate, annotationParams],
+            ]}
+            components={sharedComponents}
+          >
+            {segment.content}
+          </ReactMarkdown>
+        );
+      })}
 
       {selection && (
         <AnnotationPopover

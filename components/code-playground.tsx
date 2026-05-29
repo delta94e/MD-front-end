@@ -8,6 +8,7 @@ import { buildSandboxHtml, prepareCode, type SandboxOutput, type OutputLevel } f
 interface CodePlaygroundProps {
   code: string;
   language: string;
+  autoRun?: boolean;
 }
 
 const LEVEL_STYLES: Record<OutputLevel, string> = {
@@ -26,7 +27,7 @@ const LEVEL_PREFIX: Record<OutputLevel, string> = {
   result: "→ ",
 };
 
-export function CodePlayground({ code, language }: CodePlaygroundProps) {
+export function CodePlayground({ code, language, autoRun }: CodePlaygroundProps) {
   const [output, setOutput] = useState<SandboxOutput[]>([]);
   const [status, setStatus] = useState<"idle" | "running" | "done">("idle");
   const [expanded, setExpanded] = useState(true);
@@ -39,6 +40,14 @@ export function CodePlayground({ code, language }: CodePlaygroundProps) {
         iframeRef.current.srcdoc = "";
       }
     };
+  }, []);
+
+  // Auto-execute on mount when autoRun is set
+  useEffect(() => {
+    if (autoRun) {
+      handleRun();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Listen for messages from sandbox iframe

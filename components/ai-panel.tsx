@@ -19,6 +19,7 @@ import {
   Wand2,
   StickyNote,
   Rss,
+  Brain,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -297,6 +298,187 @@ function WriteTab() {
   );
 }
 
+type Exercise =
+  | { type: "predict-output"; code: string; question: string; answer: string; explanation: string }
+  | { type: "fix-bug"; code: string; buggyLine: string; correctCode: string; explanation: string }
+  | { type: "quiz"; question: string; options: string[]; correctIndex: number; explanation: string };
+
+function ExerciseCard({
+  exercise,
+  index,
+  revealed,
+  onReveal,
+}: {
+  exercise: Exercise;
+  index: number;
+  revealed: boolean;
+  onReveal: () => void;
+}) {
+  const typeLabels = {
+    "predict-output": "Predict Output",
+    "fix-bug": "Find the Bug",
+    quiz: "Quiz",
+  };
+
+  return (
+    <div className="border border-border rounded-lg p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <Badge variant="outline" className="text-[10px]">
+          {typeLabels[exercise.type]}
+        </Badge>
+        <span className="text-xs text-muted-foreground">#{index + 1}</span>
+      </div>
+
+      {exercise.type === "predict-output" && (
+        <>
+          <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+            <code>{exercise.code}</code>
+          </pre>
+          <p className="text-sm">{exercise.question}</p>
+          {!revealed ? (
+            <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={onReveal}>
+              Show Answer
+            </Button>
+          ) : (
+            <div className="p-2 bg-muted/50 rounded text-sm space-y-1 fade-in">
+              <p className="font-medium text-green-600 dark:text-green-400">Output: {exercise.answer}</p>
+              <p className="text-muted-foreground text-xs">{exercise.explanation}</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {exercise.type === "fix-bug" && (
+        <>
+          <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+            <code>{exercise.code}</code>
+          </pre>
+          <p className="text-sm">Find and fix the bug!</p>
+          {!revealed ? (
+            <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={onReveal}>
+              Show Fix
+            </Button>
+          ) : (
+            <div className="p-2 bg-muted/50 rounded text-sm space-y-1 fade-in">
+              <p className="text-xs text-muted-foreground">Buggy line: <code>{exercise.buggyLine}</code></p>
+              <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+                <code>{exercise.correctCode}</code>
+              </pre>
+              <p className="text-muted-foreground text-xs">{exercise.explanation}</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {exercise.type === "quiz" && (
+        <>
+          <p className="text-sm font-medium">{exercise.question}</p>
+          <div className="space-y-1">
+            {exercise.options.map((opt, i) => (
+              <button
+                key={i}
+                onClick={onReveal}
+                className={`w-full text-left text-xs p-2 rounded border transition-colors ${
+                  revealed && i === exercise.correctIndex
+                    ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
+                    : revealed
+                    ? "border-border opacity-50"
+                    : "border-border hover:bg-accent"
+                }`}
+                disabled={revealed}
+              >
+                {String.fromCharCode(65 + i)}. {opt}
+              </button>
+            ))}
+          </div>
+          {revealed && (
+            <div className="p-2 bg-muted/50 rounded text-xs text-muted-foreground fade-in">
+              {exercise.explanation}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ExerciseTab() {
+  const { editorContent } = usePKMStore();
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<Set<number>>(new Set());
+
+  const handleGenerate = useCallback(async () => {
+    if (!editorContent) return;
+    setLoading(true);
+    setError(null);
+    setExercises([]);
+    setRevealed(new Set());
+
+    try {
+      const res = await fetch("/api/generate-exercises", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editorContent }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setExercises(data);
+      }
+    } catch {
+      setError("Failed to generate exercises");
+    } finally {
+      setLoading(false);
+    }
+  }, [editorContent]);
+
+  const handleReveal = useCallback((index: number) => {
+    setRevealed((prev) => new Set(prev).add(index));
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Generate interactive exercises from the current document.
+      </p>
+      <Button
+        size="sm"
+        onClick={handleGenerate}
+        disabled={loading || !editorContent}
+        className="w-full"
+      >
+        {loading ? (
+          <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+        ) : (
+          <Brain className="h-3.5 w-3.5 mr-2" />
+        )}
+        {loading ? "Generating..." : "Generate Exercises"}
+      </Button>
+
+      {error && (
+        <p className="text-xs text-red-500">{error}</p>
+      )}
+
+      {exercises.length > 0 && (
+        <div className="space-y-3 fade-in">
+          {exercises.map((ex, i) => (
+            <ExerciseCard
+              key={i}
+              exercise={ex}
+              index={i}
+              revealed={revealed.has(i)}
+              onReveal={() => handleReveal(i)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const primaryTabs = [
   { value: "summarize", icon: Sparkles, label: "Summarize" },
   { value: "explain", icon: Bot, label: "Explain" },
@@ -308,6 +490,7 @@ const secondaryTabs = [
   { value: "path", icon: Map, label: "Path" },
   { value: "guide", icon: BookOpen, label: "Guide" },
   { value: "skill", icon: Wand2, label: "Skill" },
+  { value: "exercise", icon: Brain, label: "Exercise" },
   { value: "daily", icon: Rss, label: "Daily" },
   { value: "notes", icon: StickyNote, label: "Notes" },
 ];
@@ -334,8 +517,8 @@ export function AiPanel() {
               </TabsTrigger>
             ))}
           </TabsList>
-          {/* Secondary row: 4 smaller tabs */}
-          <TabsList className="w-full grid grid-cols-5 h-7">
+          {/* Secondary row: 6 smaller tabs */}
+          <TabsList className="w-full grid grid-cols-6 h-7">
             {secondaryTabs.map(({ value, icon: Icon, label }) => (
               <TabsTrigger key={value} value={value} className="text-[10px] px-1">
                 <Icon className="h-3 w-3 mr-0.5" />
@@ -363,6 +546,9 @@ export function AiPanel() {
           </TabsContent>
           <TabsContent value="skill" className="mt-3">
             <SkillGeneratorTab />
+          </TabsContent>
+          <TabsContent value="exercise" className="mt-3">
+            <ExerciseTab />
           </TabsContent>
           <TabsContent value="daily" className="mt-3">
             <DailyDevTab />

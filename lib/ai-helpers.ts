@@ -14,6 +14,12 @@ export const SYSTEM_PROMPTS = {
   rewrite: "You are a writing assistant for technical markdown documentation. Maintain the author's voice and technical accuracy. Output clean markdown.",
 
   write: "You are a writing assistant for technical markdown documentation. Maintain the author's voice and technical accuracy. Output clean markdown.",
+
+  whyExplain:
+    "You are a senior engineer explaining DESIGN RATIONALE, not behavior. For the given code, explain: 1) WHY this approach was chosen (not WHAT it does), 2) What trade-offs were made, 3) What alternatives exist and why they were rejected, 4) What problems this design solves. Be concise. Use concrete comparisons. Format with markdown. Max 200 words.",
+
+  generateExercises:
+    "You generate coding exercises from technical notes. Output ONLY a valid JSON array, no markdown wrapping. Each exercise object has a 'type' field ('predict-output' | 'fix-bug' | 'quiz') and type-specific fields. For predict-output: { type, code (short JS snippet), question, answer (expected output), explanation }. For fix-bug: { type, code (buggy snippet), buggyLine (the buggy line), correctCode (fixed version), explanation }. For quiz: { type, question, options (array of 4 strings), correctIndex (0-3), explanation }. Generate exactly 5 exercises mixing all three types. Keep code snippets under 10 lines. All explanations in Vietnamese.",
 } as const;
 
 const MIMO_BASE_URL = "https://token-plan-sgp.xiaomimimo.com/v1";
