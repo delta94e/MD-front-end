@@ -15,11 +15,17 @@ import {
   Loader2,
   ArrowRightLeft,
   Map,
+  BookOpen,
+  Wand2,
+  StickyNote,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { usePKMStore } from "@/lib/store";
 import { LearningPathTab } from "@/components/learning-path-tab";
+import { StudyGuideTab } from "@/components/study-guide-tab";
+import { SkillGeneratorTab } from "@/components/skill-generator-tab";
+import { AnnotationPanel } from "@/components/annotation-panel";
 import { saveAiOutput } from "@/lib/ai-output-saver";
 
 function AiResponse({ text, loading }: { text: string; loading: boolean }) {
@@ -30,7 +36,7 @@ function AiResponse({ text, loading }: { text: string; loading: boolean }) {
   return (
     <div className="relative mt-3 p-3 bg-muted/50 rounded-lg border border-border">
       {text ? (
-        <div className="markdown-content prose prose-sm dark:prose-invert max-w-none text-xs">
+        <div className="markdown-content prose prose-sm dark:prose-invert max-w-none text-xs fade-in">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
         </div>
       ) : loading ? (
@@ -277,26 +283,38 @@ export function AiPanel() {
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         <Tabs value={aiPanelTab} onValueChange={setAiPanelTab}>
-          <TabsList className="w-full grid grid-cols-5 h-8">
-            <TabsTrigger value="summarize" className="text-[10px] px-1">
+          <TabsList className="w-full grid grid-cols-8 h-8">
+            <TabsTrigger value="summarize" className="text-[11px] px-1">
               <Sparkles className="h-3 w-3 mr-0.5" />
-              Sum
+              Summarize
             </TabsTrigger>
-            <TabsTrigger value="explain" className="text-[10px] px-1">
+            <TabsTrigger value="explain" className="text-[11px] px-1">
               <Bot className="h-3 w-3 mr-0.5" />
               Explain
             </TabsTrigger>
-            <TabsTrigger value="translate" className="text-[10px] px-1">
+            <TabsTrigger value="translate" className="text-[11px] px-1">
               <Languages className="h-3 w-3 mr-0.5" />
-              Trans
+              Translate
             </TabsTrigger>
-            <TabsTrigger value="write" className="text-[10px] px-1">
+            <TabsTrigger value="write" className="text-[11px] px-1">
               <PenLine className="h-3 w-3 mr-0.5" />
               Write
             </TabsTrigger>
-            <TabsTrigger value="path" className="text-[10px] px-1">
+            <TabsTrigger value="path" className="text-[11px] px-1">
               <Map className="h-3 w-3 mr-0.5" />
               Path
+            </TabsTrigger>
+            <TabsTrigger value="guide" className="text-[11px] px-1">
+              <BookOpen className="h-3 w-3 mr-0.5" />
+              Guide
+            </TabsTrigger>
+            <TabsTrigger value="skill" className="text-[11px] px-1">
+              <Wand2 className="h-3 w-3 mr-0.5" />
+              Skill
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="text-[11px] px-1">
+              <StickyNote className="h-3 w-3 mr-0.5" />
+              Notes
             </TabsTrigger>
           </TabsList>
           <TabsContent value="summarize" className="mt-3">
@@ -313,6 +331,15 @@ export function AiPanel() {
           </TabsContent>
           <TabsContent value="path" className="mt-3">
             <LearningPathTab />
+          </TabsContent>
+          <TabsContent value="guide" className="mt-3">
+            <StudyGuideTab />
+          </TabsContent>
+          <TabsContent value="skill" className="mt-3">
+            <SkillGeneratorTab />
+          </TabsContent>
+          <TabsContent value="notes" className="mt-3">
+            <AnnotationPanel />
           </TabsContent>
         </Tabs>
       </div>
