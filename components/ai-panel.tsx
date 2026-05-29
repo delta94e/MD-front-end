@@ -18,6 +18,7 @@ import {
   BookOpen,
   Wand2,
   StickyNote,
+  Rss,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -25,6 +26,7 @@ import { usePKMStore } from "@/lib/store";
 import { LearningPathTab } from "@/components/learning-path-tab";
 import { StudyGuideTab } from "@/components/study-guide-tab";
 import { SkillGeneratorTab } from "@/components/skill-generator-tab";
+import { DailyDevTab } from "@/components/daily-dev-tab";
 import { AnnotationPanel } from "@/components/annotation-panel";
 import { saveAiOutput } from "@/lib/ai-output-saver";
 
@@ -36,12 +38,12 @@ function AiResponse({ text, loading }: { text: string; loading: boolean }) {
   return (
     <div className="relative mt-3 p-3 bg-muted/50 rounded-lg border border-border">
       {text ? (
-        <div className="markdown-content prose prose-sm dark:prose-invert max-w-none text-xs fade-in">
+        <div className="markdown-content prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed fade-in">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
         </div>
       ) : loading ? (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
           Thinking...
         </div>
       ) : null}
@@ -89,7 +91,7 @@ function SummarizeTab() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Generate a concise summary of the current document.
       </p>
       <Button
@@ -112,6 +114,7 @@ function SummarizeTab() {
 
 function ExplainTab() {
   const { selectedText, editorContent } = usePKMStore();
+  const [mode, setMode] = useState<"technical" | "eli5">("technical");
   const { completion, complete, isLoading } = useCompletion({
     api: "/api/explain",
     streamProtocol: "text",
@@ -123,25 +126,49 @@ function ExplainTab() {
       body: {
         selectedText,
         surroundingContext: editorContent.slice(0, 2000),
+        mode,
       },
     });
-  }, [selectedText, editorContent, complete]);
+  }, [selectedText, editorContent, complete, mode]);
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Select text in the document, then click Explain to get a simpler
         explanation.
       </p>
+      <div className="flex items-center gap-2">
+        <Button
+          variant={mode === "technical" ? "default" : "outline"}
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => setMode("technical")}
+        >
+          Technical
+        </Button>
+        <Button
+          variant={mode === "eli5" ? "default" : "outline"}
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => setMode("eli5")}
+        >
+          Simple
+        </Button>
+        {mode === "eli5" && (
+          <Badge variant="secondary" className="text-[10px]">
+            ELI5
+          </Badge>
+        )}
+      </div>
       {selectedText ? (
-        <div className="p-2 bg-muted/50 rounded text-xs border border-border">
-          <Badge variant="secondary" className="mb-1 text-[10px]">
+        <div className="p-2 bg-muted/50 rounded text-sm border border-border">
+          <Badge variant="secondary" className="mb-1 text-xs">
             Selected
           </Badge>
           <p className="line-clamp-3">{selectedText}</p>
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground italic">
+        <p className="text-sm text-muted-foreground italic">
           No text selected. Highlight text in the viewer first.
         </p>
       )}
@@ -183,7 +210,7 @@ function TranslateTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">Translate direction:</p>
+        <p className="text-sm text-muted-foreground">Translate direction:</p>
         <Button
           variant="outline"
           size="sm"
@@ -270,6 +297,21 @@ function WriteTab() {
   );
 }
 
+const primaryTabs = [
+  { value: "summarize", icon: Sparkles, label: "Summarize" },
+  { value: "explain", icon: Bot, label: "Explain" },
+  { value: "translate", icon: Languages, label: "Translate" },
+  { value: "write", icon: PenLine, label: "Write" },
+];
+
+const secondaryTabs = [
+  { value: "path", icon: Map, label: "Path" },
+  { value: "guide", icon: BookOpen, label: "Guide" },
+  { value: "skill", icon: Wand2, label: "Skill" },
+  { value: "daily", icon: Rss, label: "Daily" },
+  { value: "notes", icon: StickyNote, label: "Notes" },
+];
+
 export function AiPanel() {
   const { aiPanelTab, setAiPanelTab } = usePKMStore();
 
@@ -283,39 +325,23 @@ export function AiPanel() {
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         <Tabs value={aiPanelTab} onValueChange={setAiPanelTab}>
-          <TabsList className="w-full grid grid-cols-8 h-8">
-            <TabsTrigger value="summarize" className="text-[11px] px-1">
-              <Sparkles className="h-3 w-3 mr-0.5" />
-              Summarize
-            </TabsTrigger>
-            <TabsTrigger value="explain" className="text-[11px] px-1">
-              <Bot className="h-3 w-3 mr-0.5" />
-              Explain
-            </TabsTrigger>
-            <TabsTrigger value="translate" className="text-[11px] px-1">
-              <Languages className="h-3 w-3 mr-0.5" />
-              Translate
-            </TabsTrigger>
-            <TabsTrigger value="write" className="text-[11px] px-1">
-              <PenLine className="h-3 w-3 mr-0.5" />
-              Write
-            </TabsTrigger>
-            <TabsTrigger value="path" className="text-[11px] px-1">
-              <Map className="h-3 w-3 mr-0.5" />
-              Path
-            </TabsTrigger>
-            <TabsTrigger value="guide" className="text-[11px] px-1">
-              <BookOpen className="h-3 w-3 mr-0.5" />
-              Guide
-            </TabsTrigger>
-            <TabsTrigger value="skill" className="text-[11px] px-1">
-              <Wand2 className="h-3 w-3 mr-0.5" />
-              Skill
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="text-[11px] px-1">
-              <StickyNote className="h-3 w-3 mr-0.5" />
-              Notes
-            </TabsTrigger>
+          {/* Primary row: 4 main tabs */}
+          <TabsList className="w-full grid grid-cols-4 h-8 mb-1">
+            {primaryTabs.map(({ value, icon: Icon, label }) => (
+              <TabsTrigger key={value} value={value} className="text-[11px] px-1">
+                <Icon className="h-3 w-3 mr-0.5" />
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {/* Secondary row: 4 smaller tabs */}
+          <TabsList className="w-full grid grid-cols-5 h-7">
+            {secondaryTabs.map(({ value, icon: Icon, label }) => (
+              <TabsTrigger key={value} value={value} className="text-[10px] px-1">
+                <Icon className="h-3 w-3 mr-0.5" />
+                {label}
+              </TabsTrigger>
+            ))}
           </TabsList>
           <TabsContent value="summarize" className="mt-3">
             <SummarizeTab />
@@ -337,6 +363,9 @@ export function AiPanel() {
           </TabsContent>
           <TabsContent value="skill" className="mt-3">
             <SkillGeneratorTab />
+          </TabsContent>
+          <TabsContent value="daily" className="mt-3">
+            <DailyDevTab />
           </TabsContent>
           <TabsContent value="notes" className="mt-3">
             <AnnotationPanel />
