@@ -1,7 +1,17 @@
 "use server";
 
+import { readFile } from "fs/promises";
+import { join } from "path";
 import { buildFileTree, getFileContent, saveFileContent, type TreeNode } from "@/lib/fs";
 import { getTopicCategories as fetchTopicCategories, getFilesForCategory as fetchFilesForCategory, type TopicCategory, type TopicFile } from "@/lib/topic-index";
+import {
+  buildNodes,
+  buildCategoryEdges,
+  buildDirectoryEdges,
+  buildFilenameEdges,
+  mergeEdges,
+  type GraphData,
+} from "@/lib/graph-extractor";
 
 const rootDir = process.env.CONTENT_DIR || process.cwd();
 
@@ -61,5 +71,25 @@ export async function getFilesForCategoryAction(
   } catch (err) {
     console.error(`[getFilesForCategory] Error for ${categoryId}:`, err);
     return [];
+  }
+}
+
+export async function getGraphData(): Promise<GraphData> {
+  try {
+    // Try to read pre-built graph.json
+    const graphPath = join(rootDir, "public", "graph.json");
+    const content = await readFile(graphPath, "utf-8");
+    return JSON.parse(content) as GraphData;
+  } catch {
+    // Fallback: compute on the fly (dev mode)
+    console.log("[getGraphData] graph.json not found, computing on the fly...");
+    const categories = await fetchTopicCategories();
+    const tree = await buildFileTree(rootDir);
+    const nodes = buildNodes(tree, categories);
+    const categoryEdges = buildCategoryEdges(nodes);
+    const dirEdges = buildDirectoryEdges(tree, nodes);
+    const filenameEdges = buildFilenameEdges(nodes, 0.6);
+    const edges = mergeEdges(categoryEdges, dirEdges, filenameEdges);
+    return { nodes, edges };
   }
 }

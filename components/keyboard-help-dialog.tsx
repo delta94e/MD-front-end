@@ -14,6 +14,7 @@ const shortcuts = [
   { group: "Navigation", items: [
     { keys: ["Ctrl", "B"], description: "Toggle sidebar" },
     { keys: ["Ctrl", "\\"], description: "Toggle AI panel" },
+    { keys: ["Ctrl", "G"], description: "Toggle knowledge graph" },
     { keys: ["Ctrl", "K"], description: "Focus search" },
     { keys: ["?"], description: "Show keyboard shortcuts" },
     { keys: ["Escape"], description: "Close panels" },

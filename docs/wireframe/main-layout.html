@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Markdown Knowledge Hub — Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            surface: {
+              primary: 'var(--bg-primary)',
+              secondary: 'var(--bg-secondary)',
+              tertiary: 'var(--bg-tertiary)',
+              hover: 'var(--bg-hover)',
+              active: 'var(--bg-active)',
+            },
+            border: {
+              DEFAULT: 'var(--border-default)',
+              subtle: 'var(--border-subtle)',
+            },
+            content: {
+              primary: 'var(--text-primary)',
+              secondary: 'var(--text-secondary)',
+              tertiary: 'var(--text-tertiary)',
+            },
+            accent: {
+              DEFAULT: 'var(--accent-primary)',
+              hover: 'var(--accent-hover)',
+              subtle: 'var(--accent-subtle)',
+            },
+            ai: {
+              DEFAULT: 'var(--ai-glow)',
+              subtle: 'var(--ai-glow-subtle)',
+            },
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    :root {
+      --bg-primary: #0f1117;
+      --bg-secondary: #161822;
+      --bg-tertiary: #1e2030;
+      --bg-hover: #262940;
+      --bg-active: #2d3150;
+      --border-default: #2a2d3e;
+      --border-subtle: #1e2030;
+      --text-primary: #e2e4f0;
+      --text-secondary: #8b8fa8;
+      --text-tertiary: #5c6078;
+      --accent-primary: #6c8aff;
+      --accent-hover: #8ba3ff;
+      --accent-subtle: rgba(108, 138, 255, 0.1);
+      --ai-glow: #a78bfa;
+      --ai-glow-subtle: rgba(167, 139, 250, 0.08);
+      --success: #4ade80;
+      --error: #f87171;
+    }
+
+    html.light {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fb;
+      --bg-tertiary: #f0f1f5;
+      --bg-hover: #e8eaf0;
+      --bg-active: #dde0ea;
+      --border-default: #dde0ea;
+      --border-subtle: #eef0f5;
+      --text-primary: #1a1d2e;
+      --text-secondary: #6b7089;
+      --text-tertiary: #9ca0b5;
+      --accent-primary: #4f6ae6;
+      --accent-hover: #3d56cc;
+      --accent-subtle: rgba(79, 106, 230, 0.08);
+      --ai-glow: #7c3aed;
+      --ai-glow-subtle: rgba(124, 58, 237, 0.06);
+      --success: #22c55e;
+      --error: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; overflow: hidden; height: 100vh; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+    /* Resize handle */
+    .resize-handle {
+      width: 4px;
+      cursor: col-resize;
+      background: transparent;
+      transition: background 150ms;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .resize-handle:hover, .resize-handle.active {
+      background: var(--accent-primary);
+    }
+    .resize-handle::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      left: -4px; right: -4px;
+    }
+
+    /* Tree item transitions */
+    .tree-children {
+      overflow: hidden;
+      transition: max-height 150ms ease-out;
+    }
+    .tree-children.collapsed { max-height: 0 !important; }
+
+    .chevron-icon {
+      transition: transform 150ms ease;
+      display: inline-flex;
+    }
+    .chevron-icon.rotated { transform: rotate(90deg); }
+
+    /* Active tab indicator */
+    .tab-active { border-bottom: 2px solid var(--accent-primary); color: var(--text-primary); }
+    .tab-inactive { border-bottom: 2px solid transparent; color: var(--text-secondary); }
+    .tab-inactive:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+    /* AI streaming animation */
+    @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    .cursor-blink::after {
+      content: '|';
+      animation: blink 1s infinite;
+      color: var(--ai-glow);
+      font-weight: 300;
+    }
+
+    /* Button styles */
+    .btn-primary {
+      background: var(--accent-primary);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: background 100ms;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+      transition: all 100ms;
+    }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    .btn-icon {
+      background: transparent;
+      color: var(--text-secondary);
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 100ms;
+    }
+    .btn-icon:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    /* Code block */
+    .code-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .code-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+    .code-line { display: flex; }
+    .line-number {
+      width: 40px;
+      text-align: right;
+      padding-right: 12px;
+      color: var(--text-tertiary);
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .line-content { flex: 1; }
+    .keyword { color: #c678dd; }
+    .string { color: #98c379; }
+    .function { color: #61afef; }
+    .comment { color: #5c6370; font-style: italic; }
+    .number { color: #d19a66; }
+    .variable { color: #e06c75; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-default);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text-primary);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 200ms ease-out;
+      z-index: 100;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* Mobile overlay */
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 40;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms;
+    }
+    .sidebar-overlay.show { opacity: 1; pointer-events: auto; }
+
+    /* TOC active */
+    .toc-item { transition: all 100ms; }
+    .toc-active {
+      color: var(--accent-primary) !important;
+      border-left-color: var(--accent-primary) !important;
+    }
+
+    /* Markdown content styles */
+    .md-content h2 { font-size: 20px; font-weight: 600; margin: 24px 0 12px; color: var(--text-primary); }
+    .md-content h3 { font-size: 17px; font-weight: 600; margin: 20px 0 8px; color: var(--text-primary); }
+    .md-content p { margin: 0 0 16px; line-height: 1.75; color: var(--text-primary); font-size: 15px; }
+    .md-content ul, .md-content ol { margin: 0 0 16px; padding-left: 24px; line-height: 1.7; color: var(--text-primary); font-size: 15px; }
+    .md-content li { margin-bottom: 4px; }
+    .md-content code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: var(--bg-active);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent-primary);
+    }
+    .md-content blockquote {
+      border-left: 3px solid var(--accent-primary);
+      padding: 4px 16px;
+      margin: 0 0 16px;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+    .md-content a { color: var(--accent-primary); text-decoration: underline; text-underline-offset: 2px; }
+    .md-content strong { font-weight: 600; color: var(--text-primary); }
+    .md-content hr { border: none; border-top: 1px solid var(--border-default); margin: 24px 0; }
+    .md-content table { width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 14px; }
+    .md-content th { background: var(--bg-tertiary); padding: 8px 12px; text-align: left; border: 1px solid var(--border-default); font-weight: 600; }
+    .md-content td { padding: 8px 12px; border: 1px solid var(--border-default); }
+    .md-content tr:nth-child(even) td { background: var(--bg-secondary); }
+  </style>
+</head>
+<body class="bg-surface-primary text-content-primary">
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast">Saved successfully</div>
+
+  <!-- Mobile sidebar overlay -->
+  <div id="sidebarOverlay" class="sidebar-overlay md:hidden" onclick="toggleMobileSidebar()"></div>
+
+  <!-- App container -->
+  <div class="flex flex-col h-screen">
+
+    <!-- ====== HEADER ====== -->
+    <header class="h-12 border-b flex items-center justify-between px-4 shrink-0" style="border-color: var(--border-default); background: var(--bg-secondary);">
+      <div class="flex items-center gap-3">
+        <!-- Mobile menu button -->
+        <button class="btn-icon md:hidden" onclick="toggleMobileSidebar()" aria-label="Toggle sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <!-- Logo -->
+        <div class="flex items-center gap-2">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+          <span class="font-semibold text-sm">Knowledge Hub</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1">
+        <!-- Collapse sidebar (desktop) -->
+        <button class="btn-icon hidden md:inline-flex" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle sidebar" title="Toggle sidebar (Ctrl+B)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        </button>
+        <!-- Toggle AI panel -->
+        <button class="btn-icon" id="aiToggle" onclick="toggleAIPanel()" aria-label="Toggle AI panel" title="Toggle AI panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+        </button>
+        <!-- Theme toggle -->
+        <button class="btn-icon" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme">
+          <svg id="sunIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <svg id="moonIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+        <!-- Keyboard shortcut hint -->
+        <span class="hidden lg:inline text-xs ml-2" style="color: var(--text-tertiary);">Ctrl+K to search</span>
+      </div>
+    </header>
+
+    <!-- ====== MAIN LAYOUT ====== -->
+    <div class="flex flex-1 overflow-hidden">
+
+      <!-- ====== SIDEBAR ====== -->
+      <aside id="sidebar" class="flex flex-col shrink-0 border-r overflow-hidden" style="width: 280px; min-width: 200px; max-width: 400px; border-color: var(--border-default); background: var(--bg-secondary);">
+        <!-- Search -->
+        <div class="p-3 border-b" style="border-color: var(--border-subtle);">
+          <div class="relative">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" placeholder="Search files..." class="w-full h-8 pl-9 pr-3 text-sm rounded-md border outline-none" style="background: var(--bg-tertiary); border-color: var(--border-default); color: var(--text-primary);" oninput="filterTree(this.value)">
+            <kbd class="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-1.5 py-0.5 rounded border" style="color: var(--text-tertiary); border-color: var(--border-default); background: var(--bg-secondary);">Ctrl+K</kbd>
+          </div>
+        </div>
+
+        <!-- File tree -->
+        <div class="flex-1 overflow-y-auto py-2" id="fileTree">
+          <!-- Tree populated by JS -->
+        </div>
+
+        <!-- Sidebar footer -->
+        <div class="p-2 border-t flex items-center justify-between" style="border-color: var(--border-subtle);">
+          <span class="text-xs" style="color: var(--text-tertiary);">485 files</span>
+          <button class="btn-ghost text-xs" onclick="collapseAll()">Collapse all</button>
+        </div>
+      </aside>
+
+      <!-- Sidebar resize handle -->
+      <div class="resize-handle hidden md:block" id="sidebarHandle"></div>
+
+      <!-- ====== CONTENT AREA ====== -->
+      <main class="flex-1 flex flex-col overflow-hidden min-w-0" id="contentArea">
+
+        <!-- Content toolbar -->
+        <div class="h-10 border-b flex items-center justify-between px-4 shrink-0" style="border-color: var(--border-subtle);">
+          <!-- Breadcrumb -->
+          <div class="flex items-center gap-1.5 text-sm">
+            <span style="color: var(--text-tertiary);">javascript</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            <span style="color: var(--text-secondary);">closures-deep-dive.md</span>
+          </div>
+          <!-- Actions -->
+          <div class="flex items-center gap-1">
+            <button class="btn-icon" onclick="switchToViewMode()" id="viewModeBtn" title="View mode" style="background: var(--accent-subtle); color: var(--accent-primary);">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button class="btn-icon" onclick="switchToEditMode()" id="editModeBtn" title="Edit mode">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+            </button>
+            <div class="w-px h-4 mx-1" style="background: var(--border-default);"></div>
+            <button class="btn-icon" title="Summarize">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+            </button>
+            <button class="btn-icon" title="Translate">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- View mode: rendered markdown -->
+        <div id="viewMode" class="flex-1 overflow-y-auto">
+          <div class="max-w-3xl mx-auto px-6 py-8 md-content">
+            <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 8px; color: var(--text-primary);">Closures Deep Dive</h1>
+            <p style="font-size: 14px; color: var(--text-tertiary); margin-bottom: 32px;">Last updated: May 28, 2026 &middot; 12 min read</p>
+
+            <h2 id="what-are-closures">What Are Closures?</h2>
+            <p>A <strong>closure</strong> is the combination of a function bundled together with references to its surrounding state (the <strong>lexical environment</strong>). In other words, a closure gives you access to an outer function's scope from an inner function.</p>
+
+            <blockquote>Closures are one of the most powerful features in JavaScript. Understanding them is essential for writing clean, efficient code.</blockquote>
+
+            <h2 id="how-closures-work">How Closures Work</h2>
+            <p>In JavaScript, every time a function is created, a closure is created. The closure contains the function body and the scope chain at the time of creation.</p>
+
+            <!-- Code block example -->
+            <div class="code-block my-4">
+              <div class="code-block-header">
+                <span>javascript</span>
+                <button class="btn-ghost text-xs flex items-center gap-1" onclick="copyCode(this)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  Copy
+                </button>
+              </div>
+              <pre class="p-4 font-mono text-sm overflow-x-auto" style="line-height: 1.7;"><code><span class="keyword">function</span> <span class="function">createCounter</span>() {
+  <span class="keyword">let</span> <span class="variable">count</span> = <span class="number">0</span>;
+
+  <span class="keyword">return</span> {
+    <span class="function">increment</span>() {
+      <span class="keyword">return</span> ++<span class="variable">count</span>;
+    },
+    <span class="function">getCount</span>() {
+      <span class="keyword">return</span> <span class="variable">count</span>;
+    }
+  };
+}
+
+<span class="keyword">const</span> <span class="variable">counter</span> = <span class="function">createCounter</span>();
+<span class="variable">console</span>.<span class="function">log</span>(<span class="variable">counter</span>.<span class="function">increment</span>()); <span class="comment">// 1</span>
+<span class="variable">console</span>.<span class="function">log</span>(<span class="variable">counter</span>.<span class="function">getCount</span>()); <span class="comment">// 1</span></code></pre>
+            </div>
+
+            <h3 id="lexical-scope">Lexical Scoping</h3>
+            <p>Lexical scoping defines how variable names are resolved in nested functions. Each inner function has access to the variables of its parent function, forming a <strong>scope chain</strong>.</p>
+
+            <h2 id="common-patterns">Common Patterns</h2>
+            <ul>
+              <li><strong>Data privacy</strong> — encapsulate variables that can't be accessed externally</li>
+              <li><strong>Function factories</strong> — create specialized functions from a generic one</li>
+              <li><strong>Event handlers</strong> — retain state between event invocations</li>
+              <li><strong>Partial application</strong> — fix some arguments of a function</li>
+            </ul>
+
+            <h2 id="performance">Performance Considerations</h2>
+            <p>Closures can lead to memory leaks if not handled carefully. The key rule: <strong>only keep references you need</strong>. Unnecessary references prevent garbage collection.</p>
+
+            <table>
+              <thead>
+                <tr><th>Pattern</th><th>Memory Impact</th><th>Recommendation</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Simple closure</td><td>Low</td><td>Safe to use freely</td></tr>
+                <tr><td>Closure in loop</td><td>Medium</td><td>Use <code>let</code> instead of <code>var</code></td></tr>
+                <tr><td>DOM + closure</td><td>High</td><td>Remove event listeners on cleanup</td></tr>
+                <tr><td>Timer + closure</td><td>Medium</td><td>Clear timers when done</td></tr>
+              </tbody>
+            </table>
+
+            <hr>
+            <p><em>Related: <a href="#">Promises Deep Dive</a>, <a href="#">Event Loop Explained</a>, <a href="#">Prototype Chain</a></em></p>
+          </div>
+        </div>
+
+        <!-- Edit mode: split pane (hidden by default) -->
+        <div id="editMode" class="flex-1 overflow-hidden hidden">
+          <div class="flex h-full">
+            <!-- Editor pane -->
+            <div class="flex-1 flex flex-col border-r" style="border-color: var(--border-default);">
+              <div class="h-8 flex items-center justify-between px-3 border-b shrink-0" style="border-color: var(--border-subtle); background: var(--bg-tertiary);">
+                <span class="text-xs font-mono" style="color: var(--text-tertiary);">closures-deep-dive.md</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs" style="color: var(--success);">Saved</span>
+                  <button class="btn-ghost text-xs" onclick="showToast('Saved successfully')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+                    Save
+                  </button>
+                </div>
+              </div>
+              <div class="flex-1 overflow-auto p-4 font-mono text-sm" style="line-height: 1.7; background: var(--bg-primary);" contenteditable="true" spellcheck="false"><span style="color: var(--text-tertiary); user-select: none;">1</span>  <span style="color: var(--text-secondary);"># Closures Deep Dive</span>
+<span style="color: var(--text-tertiary); user-select: none;">2</span>
+<span style="color: var(--text-tertiary); user-select: none;">3</span>  <span style="color: var(--text-primary);">## What Are Closures?</span>
+<span style="color: var(--text-tertiary); user-select: none;">4</span>
+<span style="color: var(--text-tertiary); user-select: none;">5</span>  <span style="color: var(--text-primary);">A **closure** is the combination of a function</span>
+<span style="color: var(--text-tertiary); user-select: none;">6</span>  <span style="color: var(--text-primary);">bundled together with references to its</span>
+<span style="color: var(--text-tertiary); user-select: none;">7</span>  <span style="color: var(--text-primary);">surrounding state.</span>
+<span style="color: var(--text-tertiary); user-select: none;">8</span>
+<span style="color: var(--text-tertiary); user-select: none;">9</span>  <span style="color: var(--text-primary);">## How Closures Work</span>
+<span style="color: var(--text-tertiary); user-select: none;">10</span>
+<span style="color: var(--text-tertiary); user-select: none;">11</span> <span style="color: var(--text-primary);">```javascript</span>
+<span style="color: var(--text-tertiary); user-select: none;">12</span> <span style="color: var(--keyword);">function</span> <span style="color: var(--function);">createCounter</span>() {
+<span style="color: var(--text-tertiary); user-select: none;">13</span>   <span style="color: var(--keyword);">let</span> <span style="color: var(--variable);">count</span> = <span style="color: var(--number);">0</span>;
+<span style="color: var(--text-tertiary); user-select: none;">14</span>
+<span style="color: var(--text-tertiary); user-select: none;">15</span>   <span style="color: var(--keyword);">return</span> {
+<span style="color: var(--text-tertiary); user-select: none;">16</span>     <span style="color: var(--function);">increment</span>() { <span style="color: var(--keyword);">return</span> ++<span style="color: var(--variable);">count</span>; },
+<span style="color: var(--text-tertiary); user-select: none;">17</span>     <span style="color: var(--function);">getCount</span>() { <span style="color: var(--keyword);">return</span> <span style="color: var(--variable);">count</span>; }
+<span style="color: var(--text-tertiary); user-select: none;">18</span>   };
+<span style="color: var(--text-tertiary); user-select: none;">19</span> }
+<span style="color: var(--text-tertiary); user-select: none;">20</span> <span style="color: var(--text-primary);">```</span></div>
+            </div>
+
+            <!-- Resize handle -->
+            <div class="resize-handle" id="editorHandle"></div>
+
+            <!-- Preview pane -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+              <div class="h-8 flex items-center px-3 border-b shrink-0" style="border-color: var(--border-subtle); background: var(--bg-tertiary);">
+                <span class="text-xs" style="color: var(--text-tertiary);">Preview</span>
+              </div>
+              <div class="flex-1 overflow-auto px-6 py-4 md-content">
+                <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 16px; color: var(--text-primary);">Closures Deep Dive</h1>
+                <h2>What Are Closures?</h2>
+                <p>A <strong>closure</strong> is the combination of a function bundled together with references to its surrounding state.</p>
+                <h2>How Closures Work</h2>
+                <div class="code-block my-4">
+                  <div class="code-block-header"><span>javascript</span></div>
+                  <pre class="p-4 font-mono text-sm" style="line-height: 1.7;"><code><span class="keyword">function</span> <span class="function">createCounter</span>() {
+  <span class="keyword">let</span> <span class="variable">count</span> = <span class="number">0</span>;
+  <span class="keyword">return</span> {
+    <span class="function">increment</span>() { <span class="keyword">return</span> ++<span class="variable">count</span>; },
+    <span class="function">getCount</span>() { <span class="keyword">return</span> <span class="variable">count</span>; }
+  };
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOC (floating, right side of content) -->
+        <div id="toc" class="hidden xl:block absolute right-0 top-14 w-48 p-4" style="pointer-events: none;">
+          <div class="text-xs font-medium mb-2" style="color: var(--text-tertiary); pointer-events: auto;">ON THIS PAGE</div>
+          <nav class="space-y-1" style="pointer-events: auto;">
+            <a href="#what-are-closures" class="toc-item toc-active block text-xs py-1 pl-3 border-l-2" style="border-color: var(--accent-primary); color: var(--accent-primary);">What Are Closures?</a>
+            <a href="#how-closures-work" class="toc-item block text-xs py-1 pl-3 border-l-2" style="border-color: var(--border-subtle); color: var(--text-secondary);">How Closures Work</a>
+            <a href="#lexical-scope" class="toc-item block text-xs py-1 pl-3 border-l-2 ml-2" style="border-color: var(--border-subtle); color: var(--text-secondary);">Lexical Scoping</a>
+            <a href="#common-patterns" class="toc-item block text-xs py-1 pl-3 border-l-2" style="border-color: var(--border-subtle); color: var(--text-secondary);">Common Patterns</a>
+            <a href="#performance" class="toc-item block text-xs py-1 pl-3 border-l-2" style="border-color: var(--border-subtle); color: var(--text-secondary);">Performance</a>
+          </nav>
+        </div>
+      </main>
+
+      <!-- AI Panel resize handle -->
+      <div class="resize-handle hidden lg:block" id="aiHandle"></div>
+
+      <!-- ====== AI PANEL ====== -->
+      <aside id="aiPanel" class="flex flex-col shrink-0 border-l overflow-hidden lg:flex" style="width: 320px; min-width: 280px; max-width: 420px; border-color: var(--border-default); background: var(--bg-secondary); display: none;">
+        <!-- AI Header -->
+        <div class="h-10 flex items-center justify-between px-3 border-b shrink-0" style="border-color: var(--border-subtle);">
+          <div class="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ai-glow)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+            <span class="text-sm font-medium">AI Assistant</span>
+          </div>
+          <button class="btn-icon" onclick="toggleAIPanel()" aria-label="Close AI panel">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- AI Tabs -->
+        <div class="flex border-b shrink-0" style="border-color: var(--border-subtle);">
+          <button class="flex-1 py-2 text-xs font-medium tab-active" onclick="switchAITab(this, 'summarize')">Summarize</button>
+          <button class="flex-1 py-2 text-xs font-medium tab-inactive" onclick="switchAITab(this, 'explain')">Explain</button>
+          <button class="flex-1 py-2 text-xs font-medium tab-inactive" onclick="switchAITab(this, 'translate')">Translate</button>
+          <button class="flex-1 py-2 text-xs font-medium tab-inactive" onclick="switchAITab(this, 'write')">Write</button>
+        </div>
+
+        <!-- AI Content -->
+        <div class="flex-1 overflow-y-auto" id="aiContent">
+          <!-- Summarize tab (default) -->
+          <div id="tab-summarize" class="p-4 space-y-4">
+            <button class="btn-primary w-full flex items-center justify-center gap-2" onclick="startSummarize()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              Summarize Document
+            </button>
+            <div id="summarizeResult" class="hidden">
+              <div class="text-sm space-y-3 md-content">
+                <p><strong>Key Points:</strong></p>
+                <ul>
+                  <li>Closures combine a function with its lexical environment</li>
+                  <li>Every function in JS creates a closure upon creation</li>
+                  <li>Common uses: data privacy, factories, event handlers</li>
+                  <li>Watch for memory leaks with DOM references</li>
+                </ul>
+                <p style="color: var(--text-secondary); font-size: 13px;">Generated in 1.2s &middot; ~150 tokens</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Explain tab (hidden) -->
+          <div id="tab-explain" class="p-4 space-y-4 hidden">
+            <div class="text-sm p-3 rounded-lg border" style="background: var(--bg-tertiary); border-color: var(--border-default);">
+              <p class="text-xs mb-1" style="color: var(--text-tertiary);">Selected text:</p>
+              <p class="font-mono text-xs" style="color: var(--accent-primary);">let count = 0;</p>
+            </div>
+            <div class="text-sm space-y-3 md-content">
+              <p>This declares a mutable local variable <code>count</code> initialized to <code>0</code>. Using <code>let</code> (instead of <code>var</code>) scopes it to the block, making it ideal for closure patterns where you need a private counter.</p>
+              <p>The variable persists across calls because the returned methods form closures over this scope.</p>
+            </div>
+          </div>
+
+          <!-- Translate tab (hidden) -->
+          <div id="tab-translate" class="p-4 space-y-3 hidden">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium px-2 py-1 rounded" style="background: var(--accent-subtle); color: var(--accent-primary);">EN</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2"><path d="M7 16V4M7 4L3 8M7 4l4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
+              <span class="text-xs font-medium px-2 py-1 rounded" style="background: var(--bg-tertiary); color: var(--text-secondary);">VI</span>
+            </div>
+            <textarea class="w-full h-20 p-3 text-sm rounded-md border resize-none outline-none" style="background: var(--bg-tertiary); border-color: var(--border-default); color: var(--text-primary);" placeholder="Enter text to translate...">A closure is the combination of a function bundled together with references to its surrounding state.</textarea>
+            <button class="btn-primary w-full">Translate Selection</button>
+            <div class="text-sm space-y-2 md-content">
+              <p><strong>Ket qua:</strong></p>
+              <p>Mot closure la su ket hop cua mot ham duoc dong goi cung voi cac tham chieu den trang thai xung quanh no (moi truong tu vung).</p>
+            </div>
+          </div>
+
+          <!-- Write tab (hidden) -->
+          <div id="tab-write" class="p-4 space-y-3 hidden">
+            <div class="grid grid-cols-2 gap-2">
+              <button class="btn-ghost text-xs border flex items-center justify-center gap-1.5 py-2" style="border-color: var(--border-default);" onclick="showToast('Expanding text...')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 21-6-6m-5 0a7 7 0 1 1 0-14 7 7 0 0 1 0 14ZM10 7v6M7 10h6"/></svg>
+                Expand
+              </button>
+              <button class="btn-ghost text-xs border flex items-center justify-center gap-1.5 py-2" style="border-color: var(--border-default);" onclick="showToast('Fixing grammar...')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/></svg>
+                Fix Grammar
+              </button>
+              <button class="btn-ghost text-xs border flex items-center justify-center gap-1.5 py-2" style="border-color: var(--border-default);" onclick="showToast('Formatting...')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+                Format
+              </button>
+              <button class="btn-ghost text-xs border flex items-center justify-center gap-1.5 py-2" style="border-color: var(--border-default);" onclick="showToast('Simplifying...')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 3-5 5-5-5h10Z"/><path d="m17 21-5-5-5 5h10Z"/></svg>
+                Simplify
+              </button>
+            </div>
+            <textarea class="w-full h-24 p-3 text-sm rounded-md border resize-none outline-none" style="background: var(--bg-tertiary); border-color: var(--border-default); color: var(--text-primary);" placeholder="Select text in editor, then choose an action..."></textarea>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <script>
+    // ===== FILE TREE DATA =====
+    const fileTreeData = [
+      {
+        name: 'javascript',
+        type: 'folder',
+        count: 42,
+        children: [
+          { name: 'closures-deep-dive.md', type: 'file', active: true },
+          { name: 'event-loop-explained.md', type: 'file' },
+          { name: 'promises-guide.md', type: 'file' },
+          { name: 'prototype-chain.md', type: 'file' },
+          { name: 'es6-features.md', type: 'file' },
+          { name: 'async-await.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'react',
+        type: 'folder',
+        count: 38,
+        children: [
+          { name: 'hooks-overview.md', type: 'file' },
+          { name: 'useeffect-guide.md', type: 'file' },
+          { name: 'custom-hooks.md', type: 'file' },
+          { name: 'performance-tips.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'nextjs',
+        type: 'folder',
+        count: 31,
+        children: [
+          { name: 'app-router-guide.md', type: 'file' },
+          { name: 'server-components.md', type: 'file' },
+          { name: 'middleware.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'css-html',
+        type: 'folder',
+        count: 45,
+        children: [
+          { name: 'flexbox-cheatsheet.md', type: 'file' },
+          { name: 'grid-layout.md', type: 'file' },
+          { name: 'css-variables.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'typescript',
+        type: 'folder',
+        count: 28,
+        children: [
+          { name: 'generics-guide.md', type: 'file' },
+          { name: 'utility-types.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'security',
+        type: 'folder',
+        count: 22,
+        children: [
+          { name: 'xss-prevention.md', type: 'file' },
+          { name: 'csrf-guide.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'browser',
+        type: 'folder',
+        count: 19,
+        children: [
+          { name: 'rendering-pipeline.md', type: 'file' },
+          { name: 'web-workers.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'system-design',
+        type: 'folder',
+        count: 35,
+        children: [
+          { name: 'scaling-basics.md', type: 'file' },
+          { name: 'caching-strategies.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'performance',
+        type: 'folder',
+        count: 24,
+        children: [
+          { name: 'core-web-vitals.md', type: 'file' },
+          { name: 'bundle-optimization.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'design-patterns',
+        type: 'folder',
+        count: 18,
+        children: [
+          { name: 'singleton.md', type: 'file' },
+          { name: 'observer-pattern.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'ai',
+        type: 'folder',
+        count: 15,
+        children: [
+          { name: 'prompt-engineering.md', type: 'file' },
+          { name: 'llm-basics.md', type: 'file' },
+        ]
+      },
+      {
+        name: 'networking',
+        type: 'folder',
+        count: 12,
+        children: [
+          { name: 'http-protocols.md', type: 'file' },
+          { name: 'websockets.md', type: 'file' },
+        ]
+      },
+    ];
+
+    // ===== RENDER FILE TREE =====
+    function renderTree(items, container, depth = 0) {
+      items.forEach(item => {
+        if (item.type === 'folder') {
+          const folder = document.createElement('div');
+          folder.className = 'tree-folder';
+
+          const header = document.createElement('button');
+          header.className = 'w-full flex items-center gap-2 py-1 px-3 text-sm hover:bg-surface-hover transition-colors text-left';
+          header.style.paddingLeft = `${12 + depth * 16}px`;
+          header.innerHTML = `
+            <span class="chevron-icon rotated">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+            <span class="flex-1 truncate" style="color: var(--text-primary);">${item.name}</span>
+            <span class="text-xs px-1.5 py-0.5 rounded-full" style="background: var(--bg-tertiary); color: var(--text-tertiary);">${item.count}</span>
+          `;
+
+          const children = document.createElement('div');
+          children.className = 'tree-children';
+          children.style.maxHeight = `${item.children.length * 32}px`;
+          renderTree(item.children, children, depth + 1);
+
+          header.onclick = () => {
+            const chevron = header.querySelector('.chevron-icon');
+            chevron.classList.toggle('rotated');
+            children.classList.toggle('collapsed');
+          };
+
+          folder.appendChild(header);
+          folder.appendChild(children);
+          container.appendChild(folder);
+        } else {
+          const file = document.createElement('button');
+          file.className = `w-full flex items-center gap-2 py-1 px-3 text-sm transition-colors text-left ${item.active ? 'border-l-2' : 'border-l-2 border-transparent'}`;
+          file.style.paddingLeft = `${28 + depth * 16}px`;
+          if (item.active) {
+            file.style.background = 'var(--bg-active)';
+            file.style.borderLeftColor = 'var(--accent-primary)';
+          }
+          file.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${item.active ? 'var(--accent-primary)' : 'var(--text-tertiary)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+            <span class="truncate" style="color: ${item.active ? 'var(--text-primary)' : 'var(--text-secondary)'};">${item.name}</span>
+          `;
+
+          file.onmouseenter = () => {
+            if (!item.active) file.style.background = 'var(--bg-hover)';
+          };
+          file.onmouseleave = () => {
+            if (!item.active) file.style.background = '';
+          };
+
+          container.appendChild(file);
+        }
+      });
+    }
+
+    // Init tree
+    renderTree(fileTreeData, document.getElementById('fileTree'));
+
+    // ===== THEME TOGGLE =====
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.classList.contains('dark');
+      html.classList.toggle('dark');
+      html.classList.toggle('light');
+      document.getElementById('sunIcon').classList.toggle('hidden', !isDark);
+      document.getElementById('moonIcon').classList.toggle('hidden', isDark);
+    }
+
+    // ===== SIDEBAR TOGGLE =====
+    let sidebarCollapsed = false;
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebarCollapsed = !sidebarCollapsed;
+      sidebar.style.width = sidebarCollapsed ? '0' : '280px';
+      sidebar.style.minWidth = sidebarCollapsed ? '0' : '200px';
+      sidebar.style.padding = sidebarCollapsed ? '0' : '';
+      sidebar.style.borderWidth = sidebarCollapsed ? '0' : '';
+    }
+
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      sidebar.classList.toggle('fixed');
+      sidebar.classList.toggle('inset-y-12');
+      sidebar.classList.toggle('left-0');
+      sidebar.classList.toggle('z-50');
+      overlay.classList.toggle('show');
+    }
+
+    // ===== AI PANEL TOGGLE =====
+    let aiVisible = false;
+    function toggleAIPanel() {
+      const panel = document.getElementById('aiPanel');
+      aiVisible = !aiVisible;
+      panel.style.display = aiVisible ? 'flex' : 'none';
+    }
+
+    // ===== AI TABS =====
+    function switchAITab(btn, tab) {
+      document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tab).classList.remove('hidden');
+      document.querySelectorAll('.tab-active, .tab-inactive').forEach(el => {
+        el.className = el.className.replace('tab-active', 'tab-inactive');
+      });
+      btn.className = btn.className.replace('tab-inactive', 'tab-active');
+    }
+
+    // ===== EDITOR MODE =====
+    function switchToViewMode() {
+      document.getElementById('viewMode').classList.remove('hidden');
+      document.getElementById('editMode').classList.add('hidden');
+      document.getElementById('viewModeBtn').style.background = 'var(--accent-subtle)';
+      document.getElementById('viewModeBtn').style.color = 'var(--accent-primary)';
+      document.getElementById('editModeBtn').style.background = '';
+      document.getElementById('editModeBtn').style.color = '';
+    }
+
+    function switchToEditMode() {
+      document.getElementById('viewMode').classList.add('hidden');
+      document.getElementById('editMode').classList.remove('hidden');
+      document.getElementById('editModeBtn').style.background = 'var(--accent-subtle)';
+      document.getElementById('editModeBtn').style.color = 'var(--accent-primary)';
+      document.getElementById('viewModeBtn').style.background = '';
+      document.getElementById('viewModeBtn').style.color = '';
+    }
+
+    // ===== SUMMARIZE =====
+    function startSummarize() {
+      const result = document.getElementById('summarizeResult');
+      result.classList.remove('hidden');
+    }
+
+    // ===== COPY CODE =====
+    function copyCode(btn) {
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Copied';
+      setTimeout(() => {
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Copy';
+      }, 2000);
+    }
+
+    // ===== TOAST =====
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // ===== FILTER TREE =====
+    function filterTree(query) {
+      const q = query.toLowerCase();
+      document.querySelectorAll('.tree-folder').forEach(folder => {
+        const name = folder.querySelector('span.flex-1').textContent.toLowerCase();
+        const files = folder.querySelectorAll('button:not(:first-child)');
+        let hasMatch = name.includes(q);
+        files.forEach(f => {
+          const fname = f.querySelector('span.truncate').textContent.toLowerCase();
+          const show = fname.includes(q) || q === '';
+          f.style.display = show ? '' : 'none';
+          if (show && q) hasMatch = true;
+        });
+        folder.style.display = hasMatch ? '' : 'none';
+        // Auto-expand matching folders
+        if (q && hasMatch) {
+          const children = folder.querySelector('.tree-children');
+          const chevron = folder.querySelector('.chevron-icon');
+          children.classList.remove('collapsed');
+          chevron.classList.add('rotated');
+        }
+      });
+    }
+
+    // ===== COLLAPSE ALL =====
+    function collapseAll() {
+      document.querySelectorAll('.tree-children').forEach(el => el.classList.add('collapsed'));
+      document.querySelectorAll('.chevron-icon').forEach(el => el.classList.remove('rotated'));
+    }
+
+    // ===== RESIZE SIDEBAR =====
+    const sidebarHandle = document.getElementById('sidebarHandle');
+    const sidebar = document.getElementById('sidebar');
+    let isResizingSidebar = false;
+
+    sidebarHandle.addEventListener('mousedown', (e) => {
+      isResizingSidebar = true;
+      sidebarHandle.classList.add('active');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (isResizingSidebar) {
+        const newWidth = Math.min(400, Math.max(200, e.clientX));
+        sidebar.style.width = newWidth + 'px';
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      isResizingSidebar = false;
+      sidebarHandle.classList.remove('active');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+
+    // ===== KEYBOARD SHORTCUTS =====
+    document.addEventListener('keydown', (e) => {
+      // Ctrl+B: toggle sidebar
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+      // Ctrl+K: focus search
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        document.querySelector('#sidebar input').focus();
+      }
+      // Ctrl+S: save (in edit mode)
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        showToast('Saved successfully');
+      }
+    });
+
+    // Show AI panel on large screens
+    if (window.innerWidth >= 1280) {
+      document.getElementById('aiPanel').style.display = 'flex';
+      aiVisible = true;
+    }
+
+    // Initial theme icon state
+    document.getElementById('sunIcon').classList.remove('hidden');
+    document.getElementById('moonIcon').classList.add('hidden');
+  </script>
+
+</body>
+</html>

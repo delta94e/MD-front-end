@@ -42,3 +42,6 @@ next-env.d.ts
 
 # AI generated outputs
 /ai-outputs
+
+# SQLite cache database
+/data

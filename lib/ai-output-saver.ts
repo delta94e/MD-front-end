@@ -22,7 +22,7 @@ function sanitize(name: string): string {
 }
 
 export async function saveAiOutput(
-  type: "summarize" | "learning-path",
+  type: "summarize" | "learning-path" | "study-guide",
   topic: string,
   content: string
 ): Promise<{ success: boolean; path?: string; error?: string }> {
@@ -34,7 +34,8 @@ export async function saveAiOutput(
     const filename = `${type}-${slug}-${date}.md`;
     const filePath = join(OUTPUT_DIR, filename);
 
-    const header = `# ${type === "summarize" ? "Summary" : "Learning Path"}: ${topic}\n\nGenerated: ${new Date().toISOString()}\n\n---\n\n`;
+    const typeLabel = type === "summarize" ? "Summary" : type === "learning-path" ? "Learning Path" : "Study Guide";
+    const header = `# ${typeLabel}: ${topic}\n\nGenerated: ${new Date().toISOString()}\n\n---\n\n`;
 
     await writeFile(filePath, header + content, "utf-8");
 

@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
-import { usePKMStore } from "@/lib/store";
+import { usePKMStore, type ExplanationEntry } from "@/lib/store";
+import { ReadingSettingsSheet, getMaxWidthPx, getFontFamilyCSS } from "@/components/reading-settings-popover";
 import { readFileContent, writeFileContent } from "@/app/actions/files";
 import { MarkdownViewer } from "@/components/markdown-viewer";
 import { TOCPanel } from "@/components/toc-panel";
@@ -19,7 +20,10 @@ import {
   PanelLeftOpen,
   Code2,
   Type,
+  GitBranch,
+  BookOpen,
 } from "lucide-react";
+import { ConceptMap } from "@/components/concept-map";
 import { toast } from "sonner";
 
 const LexicalEditor = dynamic(
@@ -50,7 +54,18 @@ export function ContentViewer() {
     setAiPanelOpen,
     setAiPanelTab,
     setSelectedText,
+    readingPreferences,
+    loadReadingPreferences,
+    explanations,
+    addExplanation,
+    updateExplanation,
+    removeExplanation,
   } = usePKMStore();
+
+  // Load saved reading preferences from localStorage after mount
+  useEffect(() => {
+    loadReadingPreferences();
+  }, [loadReadingPreferences]);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -58,6 +73,7 @@ export function ContentViewer() {
   const [originalContent, setOriginalContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [tocOpen, setTocOpen] = useState(true);
+  const [conceptMapOpen, setConceptMapOpen] = useState(false);
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -119,9 +135,80 @@ export function ContentViewer() {
     return () => window.removeEventListener("keydown", handler);
   }, [handleSave]);
 
+  // Helper: find paragraph index containing the selected text
+  const findParagraphContaining = useCallback((markdown: string, text: string): number => {
+    const paragraphs = markdown.split("\n\n");
+    for (let i = 0; i < paragraphs.length; i++) {
+      if (paragraphs[i].includes(text)) {
+        return i;
+      }
+    }
+    return -1;
+  }, []);
+
+  // Helper: insert content after a paragraph index
+  const insertAfterParagraph = useCallback((markdown: string, index: number, marker: string): string => {
+    const paragraphs = markdown.split("\n\n");
+    if (index < 0 || index >= paragraphs.length) {
+      return markdown + marker;
+    }
+    paragraphs.splice(index + 1, 0, marker.trim());
+    return paragraphs.join("\n\n");
+  }, []);
+
+  // Stream explanation from API
+  const streamExplanation = useCallback(async (id: string, selectedText: string, surroundingContext: string, endpoint = "/api/explain") => {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selectedText, surroundingContext }),
+      });
+      if (!res.ok || !res.body) throw new Error("Failed to fetch explanation");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+        updateExplanation(id, { content: accumulated });
+      }
+      updateExplanation(id, { status: "done" });
+    } catch {
+      updateExplanation(id, { status: "error" });
+      toast.error("Failed to generate explanation");
+    }
+  }, [updateExplanation]);
+
+  // Save explanation as blockquote
+  const handleSaveExplanation = useCallback((id: string) => {
+    const entry = explanations.find((e) => e.id === id);
+    if (!entry) return;
+    const label = entry.type === "why" ? "Why This Works" : "AI Explanation";
+    const marker = `<!--inline-explain:${id}-->`;
+    const blockquote = `\n\n> **${label}** (for: "${entry.selectedText.slice(0, 60)}...")\n>\n> ${entry.content.replace(/\n/g, "\n> ")}\n\n`;
+    const newContent = editorContent.replace(marker, blockquote);
+    setEditorContent(newContent);
+    setDirty(true);
+    removeExplanation(id);
+    toast.success(`${label} saved to document`);
+  }, [explanations, editorContent, setEditorContent, removeExplanation]);
+
+  // Dismiss explanation
+  const handleDismissExplanation = useCallback((id: string) => {
+    const marker = `<!--inline-explain:${id}-->`;
+    const newContent = editorContent.replace(/\n*\s*<!--inline-explain:[^>]+-->\n*/g, "");
+    setEditorContent(newContent);
+    removeExplanation(id);
+  }, [editorContent, setEditorContent, removeExplanation]);
+
   // Selection toolbar action handler
   const handleSelectionAction = useCallback(
     (action: string, text: string) => {
+      console.log("[ContentViewer] handleSelectionAction", action, text.slice(0, 50));
       if (action === "annotate") {
         // Trigger annotation popover in markdown viewer
         const annotateFn = (window as any).__annotateSelection;
@@ -130,12 +217,25 @@ export function ContentViewer() {
         }
         return;
       }
+
+      // Inline explain: insert explanation card below the paragraph
+      if (action === "explain" || action === "why") {
+        const id = crypto.randomUUID();
+        const paragraphIndex = findParagraphContaining(editorContent, text);
+        const marker = `inline-explain:${id}`;
+        const newContent = insertAfterParagraph(editorContent, paragraphIndex, `\n\n<!--${marker}-->\n\n`);
+        setEditorContent(newContent);
+        addExplanation({ id, selectedText: text, content: "", status: "streaming", type: action === "why" ? "why" : "explain" });
+        streamExplanation(id, text, newContent, action === "why" ? "/api/why-explain" : "/api/explain");
+        return;
+      }
+
+      // Other actions open the AI panel
       setSelectedText(text);
-      // Map "rewrite" to "write" tab
       setAiPanelTab(action === "rewrite" ? "write" : action);
       setAiPanelOpen(true);
     },
-    [setSelectedText, setAiPanelTab, setAiPanelOpen]
+    [editorContent, setEditorContent, setSelectedText, setAiPanelTab, setAiPanelOpen, findParagraphContaining, insertAfterParagraph, addExplanation, streamExplanation]
   );
 
   // Scroll spy using IntersectionObserver
@@ -174,9 +274,15 @@ export function ContentViewer() {
   if (!activeFile) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
-        <div className="text-center space-y-2">
-          <p className="text-sm">Select a file from the sidebar to view it</p>
-          <p className="text-xs">Or use Ctrl+K to search</p>
+        <div className="text-center space-y-4">
+          <div className="relative mx-auto w-16 h-16">
+            <BookOpen className="w-16 h-16 text-muted-foreground/20" />
+            <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground/60">Select a file to begin</p>
+            <p className="text-xs text-muted-foreground">Browse the sidebar or press <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">Ctrl+K</kbd> to search</p>
+          </div>
         </div>
       </div>
     );
@@ -231,16 +337,19 @@ export function ContentViewer() {
     <div className="flex flex-col h-full relative">
       <SelectionToolbar onAction={handleSelectionAction} />
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0 bg-background/50 backdrop-blur-sm">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium truncate">
+          <span className="text-sm font-semibold truncate">
             {activeFile.split("/").pop()?.replace(".md", "")}
           </span>
           {dirty && (
-            <span className="h-2 w-2 rounded-full bg-yellow-500" title="Unsaved changes" />
+            <span className="flex items-center gap-1 text-xs text-warning">
+              <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
+              Unsaved
+            </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {editorMode === "edit" && (
             <Button
               variant="ghost"
@@ -257,33 +366,33 @@ export function ContentViewer() {
               Save
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              setEditorMode(editorMode === "view" ? "edit" : "view")
-            }
-            className="h-7 text-xs"
-          >
-            {editorMode === "view" ? (
-              <>
-                <Pencil className="h-3 w-3 mr-1" />
-                Edit
-              </>
-            ) : (
-              <>
-                <Eye className="h-3 w-3 mr-1" />
-                View
-              </>
-            )}
-          </Button>
+          <div className="flex items-center bg-muted/50 rounded-md p-0.5">
+            <Button
+              variant={editorMode === "view" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setEditorMode("view")}
+              className="h-6 text-xs px-2"
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              View
+            </Button>
+            <Button
+              variant={editorMode === "edit" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setEditorMode("edit")}
+              className="h-6 text-xs px-2"
+            >
+              <Pencil className="h-3 w-3 mr-1" />
+              Edit
+            </Button>
+          </div>
           {editorMode === "edit" && (
-            <>
+            <div className="flex items-center bg-muted/50 rounded-md p-0.5 ml-1">
               <Button
                 variant={editorSubMode === "wysiwyg" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setEditorSubMode("wysiwyg")}
-                className="h-7 text-xs"
+                className="h-6 text-xs px-2"
               >
                 <Type className="h-3 w-3 mr-1" />
                 WYSIWYG
@@ -292,13 +401,14 @@ export function ContentViewer() {
                 variant={editorSubMode === "source" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setEditorSubMode("source")}
-                className="h-7 text-xs"
+                className="h-6 text-xs px-2"
               >
                 <Code2 className="h-3 w-3 mr-1" />
                 Source
               </Button>
-            </>
+            </div>
           )}
+          <div className="w-px h-4 bg-border mx-1" />
           <Button
             variant="ghost"
             size="sm"
@@ -306,11 +416,12 @@ export function ContentViewer() {
               setAiPanelTab("summarize");
               setAiPanelOpen(true);
             }}
-            className="h-7 text-xs"
+            className="h-7 text-xs text-ai-glow hover:text-ai-glow hover:bg-ai-glow/10"
           >
             <Sparkles className="h-3 w-3 mr-1" />
             AI
           </Button>
+          {editorMode === "view" && <ReadingSettingsSheet />}
           {editorMode === "view" && tocItems.length > 0 && (
             <Button
               variant="ghost"
@@ -326,6 +437,17 @@ export function ContentViewer() {
               TOC
             </Button>
           )}
+          {editorMode === "view" && (
+            <Button
+              variant={conceptMapOpen ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setConceptMapOpen(!conceptMapOpen)}
+              className="h-7 text-xs"
+            >
+              <GitBranch className="h-3 w-3 mr-1" />
+              Map
+            </Button>
+          )}
         </div>
       </div>
 
@@ -335,15 +457,36 @@ export function ContentViewer() {
           <>
             <div
               ref={scrollContainerRef}
-              className="flex-1 overflow-y-auto"
+              className={`flex-1 overflow-y-auto ${readingPreferences.lineFocus ? "reading-focus" : ""}`}
+              style={{
+                "--reading-font-size": `${readingPreferences.fontSize}px`,
+                "--reading-line-height": readingPreferences.lineHeight,
+                "--reading-font-family": getFontFamilyCSS(readingPreferences.fontFamily),
+                "--reading-max-width": getMaxWidthPx(readingPreferences.maxWidth),
+              } as React.CSSProperties}
             >
-              <div className="p-6 max-w-full lg:max-w-4xl mx-auto">
-                <MarkdownViewer content={editorContent} />
+              <div
+                className="p-6 mx-auto"
+                style={{ maxWidth: getMaxWidthPx(readingPreferences.maxWidth) }}
+              >
+                <MarkdownViewer
+                  content={editorContent}
+                  explanations={explanations}
+                  onSaveExplanation={handleSaveExplanation}
+                  onDismissExplanation={handleDismissExplanation}
+                />
               </div>
             </div>
             {tocOpen && tocItems.length > 0 && (
               <aside className="w-[200px] shrink-0 border-l border-border overflow-hidden hidden lg:block">
                 <TOCPanel items={tocItems} activeId={activeHeadingId} scrollContainerRef={scrollContainerRef} />
+              </aside>
+            )}
+            {conceptMapOpen && (
+              <aside className="w-[320px] shrink-0 border-l border-border overflow-hidden hidden lg:block">
+                <div className="h-full">
+                  <ConceptMap content={editorContent} />
+                </div>
               </aside>
             )}
           </>

@@ -28,7 +28,7 @@ export function AppHeader({ helpOpen, onHelpOpenChange, onMobileMenuToggle }: Ap
     : "";
 
   return (
-    <header className="h-12 border-b border-border flex items-center justify-between px-4 bg-background/80 backdrop-blur-sm shrink-0">
+    <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-background/90 backdrop-blur-md shrink-0">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -39,12 +39,20 @@ export function AppHeader({ helpOpen, onHelpOpenChange, onMobileMenuToggle }: Ap
         >
           <Menu className="h-4 w-4" />
         </Button>
-        <BookOpen className="h-5 w-5 text-primary hidden sm:block" />
-        <span className="font-semibold text-sm">Knowledge Hub</span>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <BookOpen className="h-5 w-5 text-primary" />
+            <div className="absolute inset-0 bg-primary/20 blur-md rounded-full" />
+          </div>
+          <span className="font-bold text-sm tracking-tight hidden sm:inline">Knowledge Hub</span>
+        </div>
         {activeFile && (
-          <span className="text-xs text-muted-foreground">
-            {category} &rsaquo; {fileName}
-          </span>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="text-muted-foreground/50">/</span>
+            <span className="font-mono text-xs opacity-70">{category}</span>
+            <span className="text-muted-foreground/50">/</span>
+            <span className="font-medium text-foreground/80">{fileName}</span>
+          </div>
         )}
       </div>
 
@@ -53,6 +61,7 @@ export function AppHeader({ helpOpen, onHelpOpenChange, onMobileMenuToggle }: Ap
         <Button
           variant={graphOpen ? "default" : "ghost"}
           size="icon"
+          className={`transition-all duration-200 ${graphOpen ? "bg-primary/10 text-primary" : ""}`}
           onClick={() => setGraphOpen(!graphOpen)}
           aria-label={graphOpen ? "Close graph" : "Open knowledge graph"}
         >
@@ -61,6 +70,7 @@ export function AppHeader({ helpOpen, onHelpOpenChange, onMobileMenuToggle }: Ap
         <Button
           variant="ghost"
           size="icon"
+          className="transition-all duration-200"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           aria-label="Toggle theme"
         >
@@ -71,8 +81,9 @@ export function AppHeader({ helpOpen, onHelpOpenChange, onMobileMenuToggle }: Ap
           )}
         </Button>
         <Button
-          variant="ghost"
+          variant={aiPanelOpen ? "secondary" : "ghost"}
           size="icon"
+          className={`transition-all duration-200 ${aiPanelOpen ? "bg-ai-glow/10 text-ai-glow" : ""}`}
           onClick={toggleAiPanel}
           aria-label={aiPanelOpen ? "Close AI panel" : "Open AI panel"}
         >

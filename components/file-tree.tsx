@@ -71,8 +71,10 @@ function TreeItem({
   return (
     <>
       <button
-        className={`w-full flex items-center gap-1.5 px-2 py-1 text-sm hover:bg-accent/50 rounded-sm transition-colors ${
-          isActive ? "bg-accent text-accent-foreground" : "text-foreground"
+        className={`w-full flex items-center gap-1.5 px-2 py-1 text-sm transition-all duration-150 ${
+          isActive
+            ? "bg-primary/10 text-primary border-l-2 border-primary"
+            : "text-foreground hover:bg-accent/50 border-l-2 border-transparent"
         }`}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
         role="treeitem"

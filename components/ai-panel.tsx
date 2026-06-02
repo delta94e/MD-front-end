@@ -29,6 +29,8 @@ import { StudyGuideTab } from "@/components/study-guide-tab";
 import { SkillGeneratorTab } from "@/components/skill-generator-tab";
 import { DailyDevTab } from "@/components/daily-dev-tab";
 import { AnnotationPanel } from "@/components/annotation-panel";
+import { FlashcardsTab } from "@/components/flashcards/flashcards-tab";
+import { DueBadge } from "@/components/flashcards/due-badge";
 import { saveAiOutput } from "@/lib/ai-output-saver";
 
 function AiResponse({ text, loading }: { text: string; loading: boolean }) {
@@ -37,15 +39,15 @@ function AiResponse({ text, loading }: { text: string; loading: boolean }) {
   if (!text && !loading) return null;
 
   return (
-    <div className="relative mt-3 p-3 bg-muted/50 rounded-lg border border-border">
+    <div className="relative mt-3 p-3.5 bg-muted/30 rounded-lg border border-border/50 backdrop-blur-sm">
       {text ? (
         <div className="markdown-content prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed fade-in">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
         </div>
       ) : loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Thinking...
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <span className="animate-pulse">Thinking...</span>
         </div>
       ) : null}
       {text && (
@@ -55,10 +57,10 @@ function AiResponse({ text, loading }: { text: string; loading: boolean }) {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           }}
-          className="absolute top-2 right-2 p-1 rounded hover:bg-accent"
+          className="absolute top-2 right-2 p-1.5 rounded-md hover:bg-accent transition-colors duration-150"
         >
           {copied ? (
-            <Check className="h-3 w-3 text-green-500" />
+            <Check className="h-3 w-3 text-success" />
           ) : (
             <Copy className="h-3 w-3 text-muted-foreground" />
           )}
@@ -321,12 +323,12 @@ function ExerciseCard({
   };
 
   return (
-    <div className="border border-border rounded-lg p-3 space-y-2">
+    <div className="border border-border/50 rounded-lg p-3 space-y-2.5 bg-muted/20 hover:border-border transition-colors duration-200">
       <div className="flex items-center justify-between">
-        <Badge variant="outline" className="text-[10px]">
+        <Badge variant="outline" className="text-[10px] font-medium">
           {typeLabels[exercise.type]}
         </Badge>
-        <span className="text-xs text-muted-foreground">#{index + 1}</span>
+        <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
       </div>
 
       {exercise.type === "predict-output" && (
@@ -336,13 +338,13 @@ function ExerciseCard({
           </pre>
           <p className="text-sm">{exercise.question}</p>
           {!revealed ? (
-            <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={onReveal}>
+            <Button size="sm" variant="outline" className="w-full h-7 text-xs hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all duration-200" onClick={onReveal}>
               Show Answer
             </Button>
           ) : (
-            <div className="p-2 bg-muted/50 rounded text-sm space-y-1 fade-in">
-              <p className="font-medium text-green-600 dark:text-green-400">Output: {exercise.answer}</p>
-              <p className="text-muted-foreground text-xs">{exercise.explanation}</p>
+            <div className="p-2.5 bg-muted/30 rounded-md text-sm space-y-1.5 fade-in border border-success/20">
+              <p className="font-semibold text-success text-xs">Output: {exercise.answer}</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">{exercise.explanation}</p>
             </div>
           )}
         </>
@@ -373,26 +375,27 @@ function ExerciseCard({
       {exercise.type === "quiz" && (
         <>
           <p className="text-sm font-medium">{exercise.question}</p>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {exercise.options.map((opt, i) => (
               <button
                 key={i}
                 onClick={onReveal}
-                className={`w-full text-left text-xs p-2 rounded border transition-colors ${
+                className={`w-full text-left text-xs p-2.5 rounded-md border transition-all duration-200 ${
                   revealed && i === exercise.correctIndex
-                    ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
+                    ? "border-success bg-success/10 text-success font-medium"
                     : revealed
-                    ? "border-border opacity-50"
-                    : "border-border hover:bg-accent"
+                    ? "border-border/50 opacity-40"
+                    : "border-border/50 hover:bg-accent/50 hover:border-border"
                 }`}
                 disabled={revealed}
               >
-                {String.fromCharCode(65 + i)}. {opt}
+                <span className="font-mono text-muted-foreground mr-1.5">{String.fromCharCode(65 + i)}.</span>
+                {opt}
               </button>
             ))}
           </div>
           {revealed && (
-            <div className="p-2 bg-muted/50 rounded text-xs text-muted-foreground fade-in">
+            <div className="p-2.5 bg-muted/30 rounded-md text-xs text-muted-foreground fade-in leading-relaxed">
               {exercise.explanation}
             </div>
           )}
@@ -519,6 +522,7 @@ const secondaryTabs = [
   { value: "guide", icon: BookOpen, label: "Guide" },
   { value: "skill", icon: Wand2, label: "Skill" },
   { value: "exercise", icon: Brain, label: "Exercise" },
+  { value: "flashcards", icon: Brain, label: "Cards" },
   { value: "daily", icon: Rss, label: "Daily" },
   { value: "notes", icon: StickyNote, label: "Notes" },
 ];
@@ -529,28 +533,32 @@ export function AiPanel() {
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 border-b border-border">
-        <h3 className="text-sm font-semibold flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-ai-glow" />
+        <h3 className="text-sm font-bold flex items-center gap-2 tracking-tight">
+          <div className="relative">
+            <Sparkles className="h-4 w-4 text-ai-glow" />
+            <div className="absolute inset-0 bg-ai-glow/20 blur-sm rounded-full" />
+          </div>
           AI Assistant
         </h3>
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         <Tabs value={aiPanelTab} onValueChange={setAiPanelTab}>
           {/* Primary row: 4 main tabs */}
-          <TabsList className="w-full grid grid-cols-4 h-8 mb-1">
+          <TabsList className="w-full grid grid-cols-4 h-8 mb-2 bg-muted/50">
             {primaryTabs.map(({ value, icon: Icon, label }) => (
-              <TabsTrigger key={value} value={value} className="text-[11px] px-1">
+              <TabsTrigger key={value} value={value} className="text-[11px] px-1 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Icon className="h-3 w-3 mr-0.5" />
                 {label}
               </TabsTrigger>
             ))}
           </TabsList>
-          {/* Secondary row: 6 smaller tabs */}
-          <TabsList className="w-full grid grid-cols-6 h-7">
+          {/* Secondary row: 7 smaller tabs */}
+          <TabsList className="w-full grid grid-cols-7 h-7 bg-muted/30">
             {secondaryTabs.map(({ value, icon: Icon, label }) => (
-              <TabsTrigger key={value} value={value} className="text-[10px] px-1">
+              <TabsTrigger key={value} value={value} className="text-[10px] px-1 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Icon className="h-3 w-3 mr-0.5" />
                 {label}
+                {value === "flashcards" && <DueBadge />}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -577,6 +585,9 @@ export function AiPanel() {
           </TabsContent>
           <TabsContent value="exercise" className="mt-3">
             <ExerciseTab />
+          </TabsContent>
+          <TabsContent value="flashcards" className="mt-3">
+            <FlashcardsTab />
           </TabsContent>
           <TabsContent value="daily" className="mt-3">
             <DailyDevTab />

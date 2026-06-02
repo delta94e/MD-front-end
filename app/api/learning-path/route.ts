@@ -5,16 +5,40 @@ import { saveAiOutput } from "@/lib/ai-output-saver";
 const MIMO_BASE_URL = "https://token-plan-sgp.xiaomimimo.com/v1";
 const MIMO_MODEL = "mimo-v2.5-pro";
 
-const SYSTEM_PROMPT = `You are a senior frontend engineer creating study paths.
-Given a topic and list of available learning files, create an ordered study path from foundational to advanced.
+const SYSTEM_PROMPT = `Bạn là senior frontend engineer tạo lộ trình học tập, dành cho người TRÁI NGÀNH CNTT và MỚI BẮT ĐẦU.
 
-Rules:
-- Order files so each builds on knowledge from previous files
-- Start with basics/fundamentals, then move to advanced topics
-- Keep rationale concise (1 sentence per step)
-- Only use files from the provided list — do not invent paths
-- Estimate reading time in minutes per file (15-45 min range)
-- Return valid JSON only`;
+NHIỆM VỤ: Tạo lộ trình học từ danh sách file có sẵn, sắp xếp từ cơ bản đến nâng cao.
+
+PHƯƠNG PHÁP:
+- Mỗi bước phải xây dựng trên kiến thức từ bước trước
+- Bắt đầu từ nền tảng (biến, hàm, cấu trúc dữ liệu) trước khi vào framework
+- Giải thích TẠI SAO học file này trước, không chỉ "học cái này trước"
+- Đánh giá độ khó từng bước (1-5 sao) để người học biết trước
+
+QUY TẮC BẮT BUỘC:
+- Chỉ dùng file từ danh sách được cung cấp — không tự tạo path
+- Ước tính thời gian đọc: 15-45 phút/file
+- Viết rationale bằng Tiếng Việt, ngắn gọn nhưng có ý nghĩa
+- Thêm "prerequisites" cho mỗi bước: kiến thức tối thiểu cần có trước khi học file này
+
+OUTPUT JSON:
+{
+  "topic": "tên chủ đề",
+  "steps": [
+    {
+      "order": 1,
+      "title": "tên file",
+      "path": "file/path.md",
+      "rationale": "tại sao học file này đầu tiên (tiếng Việt)",
+      "estimatedMinutes": 20,
+      "difficulty": 2,
+      "prerequisites": "kiến thức cần có trước khi học (tiếng Việt)",
+      "outcome": "học xong bạn sẽ biết được gì (tiếng Việt)"
+    }
+  ],
+  "totalEstimatedMinutes": 120,
+  "tip": "mẹo học tập chung cho chủ đề này (tiếng Việt)"
+}`;
 
 export async function POST(req: Request) {
   try {
@@ -58,18 +82,28 @@ export async function POST(req: Request) {
       .map((f, i) => `${i + 1}. ${f.title} — ${f.path}`)
       .join("\n");
 
-    const userPrompt = `Topic: ${topic}
+    const userPrompt = `Chủ đề: ${topic}
 
-Available files in this category:
+Danh sách file có sẵn:
 ${fileList}
 
-Create an ordered learning path. Return JSON with this structure:
+Tạo lộ trình học tập có thứ tự. Return JSON:
 {
   "topic": "${topic}",
   "steps": [
-    { "order": 1, "title": "file title", "path": "file/path.md", "rationale": "why study this first", "estimatedMinutes": 20 }
+    {
+      "order": 1,
+      "title": "tên file",
+      "path": "file/path.md",
+      "rationale": "tại sao học file này trước (tiếng Việt)",
+      "estimatedMinutes": 20,
+      "difficulty": 2,
+      "prerequisites": "kiến thức cần có trước (tiếng Việt)",
+      "outcome": "học xong sẽ biết được gì (tiếng Việt)"
+    }
   ],
-  "totalEstimatedMinutes": 120
+  "totalEstimatedMinutes": 120,
+  "tip": "mẹo học tập chung (tiếng Việt)"
 }`;
 
     const response = await fetch(`${MIMO_BASE_URL}/chat/completions`, {

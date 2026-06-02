@@ -66,7 +66,7 @@ export default function HomePage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
         <aside
-          className={`hidden lg:block border-r border-border bg-background shrink-0 transition-all duration-200 overflow-hidden ${
+          className={`hidden lg:block border-r border-border bg-sidebar shrink-0 transition-all duration-200 overflow-hidden ${
             sidebarOpen ? "w-[280px]" : "w-0"
           }`}
         >
@@ -105,7 +105,7 @@ export default function HomePage() {
 
         {/* AI Panel — hidden on mobile */}
         <aside
-          className={`hidden lg:block border-l border-border bg-background shrink-0 transition-all duration-200 overflow-hidden ${
+          className={`hidden lg:block border-l border-border bg-sidebar shrink-0 transition-all duration-200 overflow-hidden ${
             aiPanelOpen ? "w-[320px]" : "w-0"
           }`}
         >
