@@ -49,6 +49,7 @@ import { FacebookEngineeringDemo } from "./FacebookEngineeringDemo";
 import { BuildSystemDemo } from "./BuildSystemDemo";
 import { FileBrowserPerfDemo } from "./FileBrowserPerfDemo";
 import { MetaEngineeringDemo } from "./MetaEngineeringDemo";
+import { CRMPlatformDemo } from "./CRMPlatformDemo";
 
 // ✅ Lazy load remotes — only downloaded when rendered
 const RemoteProductList = React.lazy(() => import("remoteProducts/ProductList"));
@@ -67,7 +68,7 @@ const CartSkeleton = () => (
   <div style={{ width: "100px", height: "36px", background: "#f1f5f9", borderRadius: "8px" }} />
 );
 
-type TabKey = "demo" | "architecture" | "state" | "eventbus" | "warstories" | "events" | "modernization" | "e2e-encryption" | "arch-review" | "offline-sticker" | "a11y-calendar" | "skip-link" | "col-config" | "org-chart" | "storybook" | "cal-talks" | "a11y-training" | "llm-observability" | "case-mgmt" | "core-product" | "eng-practices" | "experimentation" | "graphql-migration" | "ansarada-workflow" | "pathways" | "ansarada-core" | "ads-infra" | "facebook" | "build-system" | "file-browser" | "meta";
+type TabKey = "demo" | "architecture" | "state" | "eventbus" | "warstories" | "events" | "modernization" | "e2e-encryption" | "arch-review" | "offline-sticker" | "a11y-calendar" | "skip-link" | "col-config" | "org-chart" | "storybook" | "cal-talks" | "a11y-training" | "llm-observability" | "case-mgmt" | "core-product" | "eng-practices" | "experimentation" | "graphql-migration" | "ansarada-workflow" | "pathways" | "ansarada-core" | "ads-infra" | "facebook" | "build-system" | "file-browser" | "meta" | "crm";
 
 // ---- Main App ----
 export default function App() {
@@ -193,6 +194,7 @@ export default function App() {
                 { key: "build-system",      label: "⚡ Build System" },
                 { key: "file-browser",      label: "📂 File Browser" },
                 { key: "meta",              label: "🔵 Meta" },
+                { key: "crm",               label: "🗂 CRM Platform" },
               ],
             },
           ] as { group: string; items: { key: string; label: string }[] }[]).map(({ group, items }) => (
@@ -318,6 +320,7 @@ export default function App() {
           {activeTab === "build-system"      && <BuildSystemDemo />}
           {activeTab === "file-browser"      && <FileBrowserPerfDemo />}
           {activeTab === "meta"              && <MetaEngineeringDemo />}
+          {activeTab === "crm"               && <CRMPlatformDemo />}
         </main>
       </div>
     </div>
