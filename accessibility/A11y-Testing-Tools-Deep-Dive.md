@@ -22,7 +22,7 @@
 ## §1. Tổng Quan — Phân Loại Tools!
 
 ```
-  ACCESSIBILITY TESTING TOOLS — PHÂN LOẠI:
+ACCESSIBILITY TESTING TOOLS — PHÂN LOẠI:
   ┌────────────────────────────────────────────────────────┐
   │                                                        │
   │  ┌──────────────────────────────────────────────────┐  │
@@ -76,7 +76,7 @@
 ```
 
 ```
-  QUY TRÌNH TEST A11Y HOÀN CHỈNH:
+QUY TRÌNH TEST A11Y HOÀN CHỈNH:
   ┌────────────────────────────────────────────────────────┐
   │                                                        │
   │  ① Automated scan (Lighthouse/Axe)                    │
@@ -99,7 +99,7 @@
 ## §2. Automated Tools — Lighthouse, Axe, WAVE!
 
 ```
-  ① LIGHTHOUSE (Google):
+① LIGHTHOUSE (Google):
   ┌────────────────────────────────────────────────────────┐
   │                                                        │
   │  TÍCH HỢP SẴN trong Chrome DevTools!                  │
@@ -186,7 +186,7 @@
 ## §3. Screen Readers — NVDA, JAWS, VoiceOver!
 
 ```
-  SCREEN READERS — SO SÁNH:
+SCREEN READERS — SO SÁNH:
   ┌────────────────────────────────────────────────────────┐
   │                                                        │
   │  Tool       │ OS       │ Giá     │ Browser    │ %User │
@@ -248,7 +248,7 @@
 ```
 
 ```
-  TEST CHECKLIST VỚI SCREEN READER:
+TEST CHECKLIST VỚI SCREEN READER:
   ┌────────────────────────────────────────────────────────┐
   │                                                        │
   │  ① Page load: đọc <title> + <h1> đúng?               │
@@ -270,7 +270,7 @@
 ## §4. Browser DevTools — Chrome A11y!
 
 ```
-  CHROME DEVTOOLS — ACCESSIBILITY FEATURES:
+CHROME DEVTOOLS — ACCESSIBILITY FEATURES:
   ┌────────────────────────────────────────────────────────┐
   │                                                        │
   │  ① ACCESSIBILITY TREE (F12 → Elements → A11y tab):   │
@@ -772,7 +772,7 @@ var ColorBlindSim = (function () {
 ## §8. Tổng Kết & Câu Hỏi Phỏng Vấn!
 
 ```
-  A11Y TESTING TOOLS — TỔNG KẾT:
+A11Y TESTING TOOLS — TỔNG KẾT:
   ┌────────────────────────────────────────────────────────┐
   │                                                        │
   │  AUTOMATED (~30-40% lỗi):                             │
@@ -799,7 +799,7 @@ var ColorBlindSim = (function () {
 
 **❓ Q1: Kể tên các a11y testing tools phổ biến?**
 
-> **Automated**: Lighthouse (Google, built-in Chrome, score 0-100), Axe/axe-core (Deque, chuyên nghiệp nhất, tích hợp CI/CD), WAVE (WebAIM, visual trên trang). **Screen readers**: JAWS (Windows, trả phí, ~40% user), NVDA (Windows, free, ~31%), VoiceOver (macOS/iOS, built-in, ~20%), TalkBack (Android). **DevTools**: Chrome A11y Inspector, contrast checker, vision deficiency emulation. **Manual**: keyboard testing, zoom 200%, color contrast.
+> **Automated**: Lighthouse (Google, built-in Chrome, score 0-100), Axe/axe-core (Deque, chuyên nghiệp nhất, tích hợp CI/CD), WAVE (WebAIM, visual trên trang). **Screen readers**: JAWS (Windows, trả phí, \~40% user), NVDA (Windows, free, \~31%), VoiceOver (macOS/iOS, built-in, \~20%), TalkBack (Android). **DevTools**: Chrome A11y Inspector, contrast checker, vision deficiency emulation. **Manual**: keyboard testing, zoom 200%, color contrast.
 
 **❓ Q2: Tại sao automated tools chỉ tìm 30-40% lỗi?**
 
@@ -811,13 +811,13 @@ var ColorBlindSim = (function () {
 
 **❓ Q4: Nên test với screen reader nào?**
 
-> Tối thiểu **2 screen readers**: VoiceOver + Safari (macOS/iOS) và NVDA + Firefox (Windows). Lý do: mỗi SR xử lý ARIA khác nhau, browser expose A11y Tree khác nhau. JAWS chiếm ~40% thị phần nhưng trả phí. NVDA free và chiếm ~31%. VoiceOver free, built-in macOS. Nếu target mobile: thêm VoiceOver (iOS) + TalkBack (Android).
+> Tối thiểu **2 screen readers**: VoiceOver + Safari (macOS/iOS) và NVDA + Firefox (Windows). Lý do: mỗi SR xử lý ARIA khác nhau, browser expose A11y Tree khác nhau. JAWS chiếm \~40% thị phần nhưng trả phí. NVDA free và chiếm \~31%. VoiceOver free, built-in macOS. Nếu target mobile: thêm VoiceOver (iOS) + TalkBack (Android).
 
 **❓ Q5: A11y testing trong CI/CD như thế nào?**
 
-> Dùng **axe-core** tích hợp vào test framework: `jest-axe` cho unit tests, `cypress-axe` cho E2E, `@axe-core/playwright` cho Playwright. Mỗi build: scan page → nếu có violations → **fail build**! Bổ sung: Lighthouse CI (budgets cho a11y score), Pa11y CI (command-line scanner). **Nhớ**: CI/CD chỉ catch ~30-40% → vẫn cần periodic manual audit + SR testing!
+> Dùng **axe-core** tích hợp vào test framework: `jest-axe` cho unit tests, `cypress-axe` cho E2E, `@axe-core/playwright` cho Playwright. Mỗi build: scan page → nếu có violations → **fail build**! Bổ sung: Lighthouse CI (budgets cho a11y score), Pa11y CI (command-line scanner). **Nhớ**: CI/CD chỉ catch \~30-40% → vẫn cần periodic manual audit + SR testing!
 
 ---
 
 > 📝 **Ghi nhớ cuối cùng:**
-> "Automated tools (Lighthouse, Axe, WAVE) chỉ tìm ~30-40% lỗi! PHẢI kết hợp Screen Reader (VoiceOver/NVDA) + Manual (keyboard, zoom, color)! Test tối thiểu 2 SR! CI/CD dùng axe-core! Score 100 Lighthouse ≠ fully accessible!"
+> "Automated tools (Lighthouse, Axe, WAVE) chỉ tìm \~30-40% lỗi! PHẢI kết hợp Screen Reader (VoiceOver/NVDA) + Manual (keyboard, zoom, color)! Test tối thiểu 2 SR! CI/CD dùng axe-core! Score 100 Lighthouse ≠ fully accessible!"
