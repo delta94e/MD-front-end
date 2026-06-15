@@ -1,0 +1,58 @@
+.ds-tabs {
+  width: 100%;
+}
+
+.ds-tabs-list {
+  display: flex;
+  border-bottom: 1px solid var(--color-border-base);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  overflow-x: auto;
+}
+
+.ds-tabs-trigger {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.ds-tabs-trigger:hover:not(.ds-tabs-trigger-disabled) {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-neutral-300);
+}
+
+.ds-tabs-trigger-active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.ds-tabs-trigger-disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ds-tabs-content {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  animation: ds-fade-in var(--transition-fast) ease-out;
+}
+
+@keyframes ds-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}

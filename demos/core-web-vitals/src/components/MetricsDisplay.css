@@ -1,0 +1,147 @@
+.metrics-dashboard {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--spacing-lg);
+  text-align: left;
+}
+
+.dashboard-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border-muted);
+  padding-bottom: var(--spacing-xs);
+}
+
+.dashboard-title h4 {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metric-card {
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border-base);
+  background-color: var(--color-bg-base);
+  transition: all var(--transition-normal);
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.metric-badge {
+  background-color: var(--color-bg-muted);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: var(--font-size-xxl);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin: var(--spacing-xs) 0;
+}
+
+.metric-grade-label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-sm);
+}
+
+.metric-info-bar {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+  margin-top: auto;
+}
+
+/* Color codes based on Web Vitals thresholds */
+.grade-good {
+  border-left: 5px solid var(--color-success);
+}
+.grade-good .metric-grade-label {
+  color: var(--color-success);
+}
+
+.grade-warning {
+  border-left: 5px solid var(--color-warning);
+}
+.grade-warning .metric-grade-label {
+  color: var(--color-warning);
+}
+
+.grade-poor {
+  border-left: 5px solid var(--color-danger);
+  background-color: rgba(239, 68, 68, 0.02);
+}
+.grade-poor .metric-grade-label {
+  color: var(--color-danger);
+}
+
+.grade-na {
+  border-left: 5px solid var(--color-neutral-400);
+}
+.grade-na .metric-grade-label {
+  color: var(--color-text-muted);
+}
+
+/* Main Thread stats details */
+.main-thread-stats {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px dashed var(--color-border-base);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.stat-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+}
+
+.stat-row strong {
+  color: var(--color-text-primary);
+  margin-left: auto;
+}

@@ -1,0 +1,16 @@
+{
+  "name": "micro-frontend-federation-demo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:host\" \"npm run dev:products\" \"npm run dev:cart\"",
+    "dev:host": "cd packages/host && npm start",
+    "dev:products": "cd packages/remote-products && npm start",
+    "dev:cart": "cd packages/remote-cart && npm start",
+    "install:all": "npm install && cd packages/shared-ui && npm install && cd ../host && npm install && cd ../remote-products && npm install && cd ../remote-cart && npm install",
+    "build": "cd packages/remote-products && npm run build && cd ../remote-cart && npm run build && cd ../host && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

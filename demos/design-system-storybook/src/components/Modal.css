@@ -1,0 +1,104 @@
+.ds-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.6); /* Slate 900 with opacity */
+  backdrop-filter: blur(4px);              /* Glassmorphism blur */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: ds-fade-in 200ms ease-out;
+}
+
+.ds-modal-dialog {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  max-width: 90%;
+  max-height: 90vh;
+  outline: none;
+  animation: ds-modal-zoom 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+/* Modal Sizes */
+.ds-modal-sm { width: 400px; }
+.ds-modal-md { width: 560px; }
+.ds-modal-lg { width: 800px; }
+.ds-modal-xl { width: 1140px; }
+
+/* Subcomponents */
+.ds-modal-header {
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+.ds-modal-body {
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  flex: 1 1 auto;
+}
+
+.ds-modal-footer {
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  border-top: 1px solid var(--color-border-muted);
+  background-color: var(--color-bg-muted);
+}
+
+/* Close button */
+.ds-modal-close-btn {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  z-index: 10;
+}
+
+.ds-modal-close-btn:hover {
+  background-color: var(--color-bg-muted);
+  color: var(--color-text-primary);
+}
+
+.ds-modal-close-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Animations */
+@keyframes ds-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ds-modal-zoom {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

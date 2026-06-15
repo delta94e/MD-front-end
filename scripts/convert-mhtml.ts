@@ -476,7 +476,7 @@ async function main() {
 
   await mkdir(outputDir, { recursive: true });
 
-  const files = await readdir(inputDir);
+  const files = await readdir(inputDir, { recursive: true });
   const mhtmlFiles = files.filter((f) => extname(f).toLowerCase() === ".mhtml");
 
   console.log(`Found ${mhtmlFiles.length} MHTML files`);

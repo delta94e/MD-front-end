@@ -1,0 +1,178 @@
+%-------------------------
+% Resume in LaTeX - Cake Senior Frontend Engineer
+% Author: Nguyen Huu Truong
+%-------------------------
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{fontspec}
+\usepackage[margin=0.65in]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tabularx}
+
+% Colors
+\definecolor{primary}{HTML}{1A1A2E}
+\definecolor{accent}{HTML}{0F3460}
+\definecolor{linkcolor}{HTML}{16213E}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkcolor,
+    urlcolor=linkcolor,
+}
+
+% Section formatting
+\titleformat{\section}{
+  \vspace{-6pt}\scshape\raggedright\large\color{primary}\bfseries
+}{}{0em}{}[\titlerule\vspace{-4pt}]
+
+% Remove page numbers
+% Remove page numbers
+\pagestyle{empty}
+
+% Remove paragraph indentation globally
+\setlength{\parindent}{0pt}
+
+% Custom commands
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-1pt}\noindent
+  \begin{tabularx}{\textwidth}{X >{\raggedleft\arraybackslash}p{4.2cm}}
+    \textbf{#1} \textit{\small --- #2} & \textit{\small #3} \\
+    \small #4 & \\
+  \end{tabularx}\vspace{-6pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+  \vspace{-1pt}\noindent
+  \begin{tabularx}{\textwidth}{X >{\raggedleft\arraybackslash}p{4.2cm}}
+    \textbf{#1} & \textit{\small #2} \\
+  \end{tabularx}\vspace{-6pt}
+}
+
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.2in, label=\textbullet, itemsep=1pt, parsep=0pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
+\newcommand{\resumeItem}[1]{\item\small{#1}}
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+  {\Huge\textbf{NGUYEN HUU TRUONG}} \\[8pt]
+  {\large\textbf{Senior Frontend Engineer}} \\[6pt]
+  \small
+  0934 651 033 \quad|\quad
+  \href{mailto:truongnhtdev@gmail.com}{truongnhtdev@gmail.com} \quad|\quad
+  \href{https://github.com/delta94}{github.com/delta94} \quad|\quad
+  \href{https://linkedin.com/in/truongnht}{linkedin.com/in/truongnht} \\[2pt]
+  Ho Chi Minh City, Vietnam
+\end{center}
+
+%----------SUMMARY----------
+\section{Professional Summary}
+Senior Frontend Engineer with \textbf{6+ years} of experience specializing in \textbf{TypeScript, React, and Next.js}. Proven expertise in architecting \textbf{high-traffic web platforms} serving millions of users with a focus on \textbf{SSR/ISR/SSG rendering strategies, Micro-Frontend architecture, and performance optimization}. Deep experience in \textbf{enterprise-grade applications} across fintech, telecommunications, and Web3 domains. Strong advocate for \textbf{clean architecture, modular design systems, and frontend security best practices} (JWT, XSS prevention, CSP). Passionate about building \textbf{scalable, secure, and lightning-fast} web experiences.
+
+%----------SKILLS----------
+\section{Technical Skills}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+  \textbf{Languages:} & TypeScript (primary), JavaScript (ES2024+), HTML5, CSS3/SCSS/SASS \\
+  \textbf{Frameworks:} & Next.js (App Router + Pages Router), React 18/19, Remix \\
+  \textbf{State Mgmt:} & Redux Toolkit, Zustand, React Query/TanStack Query, Context API \\
+  \textbf{Architecture:} & Micro-Frontend (Module Federation), SSR/ISR/SSG, Composable Architecture, Monorepo \\
+  \textbf{UI/Design:} & Tailwind CSS, Ant Design, Material UI, Radix UI, Design System development \\
+  \textbf{Testing:} & Jest, React Testing Library, Playwright, Cypress, Storybook \\
+  \textbf{Security:} & JWT/OAuth 2.0, XSS/CSRF prevention, CSP headers, Content hashing, HTTPS pinning \\
+  \textbf{Performance:} & Core Web Vitals optimization, Lighthouse CI, Bundle analysis, Code splitting, Edge caching \\
+  \textbf{Backend Int.:} & Next.js API Routes, REST, GraphQL, WebSocket, gRPC-Web \\
+  \textbf{Cloud/DevOps:} & GCP (Cloud Run, GKE), Vercel, Docker, GitHub Actions, CI/CD pipelines \\
+  \textbf{Tools:} & Turborepo, pnpm, Webpack 5, Vite, Git, Bitbucket, GitLab, Figma/Zeplin \\
+\end{tabularx}
+
+%----------EXPERIENCE----------
+\section{Work Experience}
+
+\resumeSubheading
+  {Senior Frontend Engineer}{Singtel (via vendor)}{Mar 2023 -- Present}
+  {Enterprise Telecommunications Platform --- Next.js, TypeScript, React, Micro-Frontend}
+
+\resumeItemListStart
+  \resumeItem{Architected and led development of \textbf{Micro-Frontend infrastructure} using \textbf{Module Federation}, enabling independent team deployments across 8+ autonomous squads while maintaining shared design consistency.}
+  \resumeItem{Built and optimized \textbf{Next.js 14 applications} with \textbf{App Router}, implementing hybrid rendering strategies (\textbf{SSR/ISR/SSG}) that reduced \textbf{Time-to-First-Byte by 65\%} and improved SEO rankings across key pages.}
+  \resumeItem{Designed a \textbf{composable design system} (50+ components) with Storybook documentation, adopted by 4 product teams, reducing UI development time by \textbf{40\%} and ensuring brand consistency.}
+  \resumeItem{Implemented \textbf{frontend security layer} including JWT token rotation, XSS sanitization, CSP headers, and secure cookie handling --- achieving \textbf{zero security incidents} over 12+ months in production.}
+  \resumeItem{Led \textbf{Core Web Vitals optimization} initiative: achieved \textbf{LCP < 1.2s}, \textbf{FID < 50ms}, \textbf{CLS < 0.05} across all production pages through image optimization, code splitting, and edge caching strategies.}
+  \resumeItem{Established \textbf{CI/CD pipelines} with GitHub Actions for automated testing (90\%+ coverage), Lighthouse CI performance gates, and preview deployments for every PR.}
+  \resumeItem{Mentored 3 junior engineers through code reviews, pair programming, and weekly tech talks on React patterns, Next.js best practices, and frontend architecture principles.}
+  \resumeItem{Integrated \textbf{real-time features} using WebSocket and Server-Sent Events for live dashboard updates serving \textbf{5M+ subscribers} with sub-second data refresh.}
+\resumeItemListEnd
+
+\resumeSubheading
+  {Frontend Engineer}{YGGSEA (Web3/GameFi)}{Sep 2022 -- Feb 2023}
+  {Asset Management Platform --- Next.js, TypeScript, React, Web3}
+
+\resumeItemListStart
+  \resumeItem{Developed a \textbf{high-performance asset management platform} using \textbf{Next.js with SSR/SSG}, serving as the primary interface for game publishers, scholars, and internal stakeholders in the Web3 gaming ecosystem.}
+  \resumeItem{Built \textbf{NFT management workflows} (minting, transfer, withdrawal) with seamless Web3 wallet integration, handling \textbf{10K+ daily transactions} with real-time status tracking.}
+  \resumeItem{Implemented \textbf{performance analytics dashboards} with interactive charts and real-time data feeds, enabling partners to monitor user activity, asset performance, and revenue metrics.}
+  \resumeItem{Optimized \textbf{bundle size by 45\%} through dynamic imports, tree shaking, and lazy loading strategies, improving initial page load from 4.2s to 1.8s.}
+\resumeItemListEnd
+
+\resumeSubheading
+  {Frontend Developer}{Aperia Solutions (Fiserv Client360 project)}{Aug 2021 -- Aug 2022}
+  {Enterprise SaaS Banking Platform --- React, .NET, Azure, MSSQL}
+
+\resumeItemListStart
+  \resumeItem{Developed and maintained features for \textbf{Fiserv Client360}, a SaaS banking platform (USA market) handling \textbf{customer management, risk/compliance, and payment processing} for financial institutions.}
+  \resumeItem{Built and maintained \textbf{DLS (Design Language System)} component library, ensuring consistency across multiple product modules and reducing frontend development cycles by \textbf{30\%}.}
+  \resumeItem{Collaborated with Fiserv backend team to \textbf{define API prototypes} and integrate .NET APIs, bridging frontend requirements with complex financial data models.}
+  \resumeItem{Partnered with Business Analysts to translate requirements into technical specifications, delivering features on time across \textbf{3 major release cycles}.}
+\resumeItemListEnd
+
+\resumeSubheading
+  {Software Engineer}{Thuocsi (BuyMed)}{Aug 2019 -- Mar 2021}
+  {E-commerce Platform --- React, Next.js, Material UI, SCSS}
+
+\resumeItemListStart
+  \resumeItem{Built and scaled \textbf{thuocsi.vn} e-commerce platform using \textbf{React and Next.js}, Vietnam's leading B2B pharmaceutical marketplace serving \textbf{thousands of pharmacies} nationwide.}
+  \resumeItem{Architected \textbf{reusable component library} based on Material UI with custom theming, reducing project initialization time by \textbf{50\%} and enabling consistent UI across product lines.}
+  \resumeItem{Designed \textbf{scalable CSS architecture} (BEM + SCSS modules) that minimized style conflicts and improved maintainability across a team of 5+ frontend developers.}
+\resumeItemListEnd
+
+%----------PROJECTS----------
+\section{Key Technical Achievements}
+
+\resumeProjectHeading{Micro-Frontend Platform Architecture}{Next.js, Module Federation, Turborepo}
+\resumeItemListStart
+  \resumeItem{Designed and implemented a production \textbf{Micro-Frontend architecture} supporting independent deployments, shared state management, and runtime module loading --- enabling \textbf{8 teams to ship independently} with zero coordination overhead.}
+\resumeItemListEnd
+
+\resumeProjectHeading{Performance Optimization Framework}{Lighthouse CI, Web Vitals, Edge Caching}
+\resumeItemListStart
+  \resumeItem{Built an automated \textbf{performance monitoring pipeline} with Lighthouse CI gates in CI/CD, achieving and maintaining \textbf{95+ Lighthouse scores} across all production pages. Implemented ISR with on-demand revalidation for dynamic content.}
+\resumeItemListEnd
+
+\resumeProjectHeading{Enterprise Design System}{React, Storybook, Tailwind CSS, Radix UI}
+\resumeItemListStart
+  \resumeItem{Created a \textbf{50+ component design system} with full accessibility (WCAG 2.1 AA), dark mode support, and comprehensive Storybook documentation. Adopted across 4 product teams serving \textbf{5M+ end users}.}
+\resumeItemListEnd
+
+%----------EDUCATION----------
+\section{Education}
+
+\resumeSubheading
+  {Ton Duc Thang University}{Ho Chi Minh City}{2013 -- 2018}
+  {Self-taught Frontend Engineer --- Transitioned from Environmental Engineering to Software Development}
+
+%----------CERTIFICATIONS----------
+\section{Continuous Learning \& Expertise}
+\resumeItemListStart
+  \resumeItem{Deep expertise: \textbf{Next.js internals} (rendering strategies, middleware, edge runtime), \textbf{React 19} (Server Components, Suspense, Transitions)}
+  \resumeItem{Frontend security: \textbf{OWASP Top 10} awareness, JWT token management, XSS/CSRF mitigation, Content Security Policy}
+  \resumeItem{Active open-source contributor: \href{https://github.com/delta94}{github.com/delta94} --- React component libraries and frontend tooling}
+  \resumeItem{AI-assisted development: Proficient with \textbf{GitHub Copilot, Cursor, Claude Code} for accelerated engineering workflows}
+  \resumeItem{Continuous learning: Frontend Masters courses, system design study, and internal knowledge-sharing sessions}
+\resumeItemListEnd
+
+\end{document}

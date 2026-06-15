@@ -1,0 +1,50 @@
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px var(--spacing-sm);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.ds-badge-pill {
+  border-radius: var(--radius-full);
+  padding-left: var(--spacing-sm);
+  padding-right: var(--spacing-sm);
+}
+
+/* Badge Variants */
+.ds-badge-primary {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.ds-badge-secondary {
+  background-color: var(--color-secondary-light);
+  color: var(--color-secondary);
+}
+
+.ds-badge-success {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.ds-badge-warning {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.ds-badge-danger {
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+.ds-badge-info {
+  background-color: var(--color-info-light);
+  color: var(--color-info);
+}

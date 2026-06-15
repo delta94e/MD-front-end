@@ -1,0 +1,71 @@
+.ds-card {
+  background-color: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+
+.ds-card-bordered {
+  border: 1px solid var(--color-border-base);
+}
+
+/* Shadows */
+.ds-card-shadow-none {
+  box-shadow: none;
+}
+.ds-card-shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+.ds-card-shadow-md {
+  box-shadow: var(--shadow-md);
+}
+.ds-card-shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Sub-components layout */
+.ds-card-header {
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.ds-card-title {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.25;
+}
+
+.ds-card-description {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.ds-card-body {
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  flex: 1 1 auto;
+}
+
+/* Adjust body padding if there's a header above it */
+.ds-card-header + .ds-card-body {
+  padding-top: 0;
+}
+
+.ds-card-footer {
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  border-top: 1px solid var(--color-border-muted);
+}

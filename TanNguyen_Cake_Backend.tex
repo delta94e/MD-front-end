@@ -1,0 +1,160 @@
+%-------------------------
+% Resume in LaTeX - Cake Backend Engineer
+% Author: Nguyen Tan
+%-------------------------
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{fontspec}
+\usepackage[margin=0.7in]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tabularx}
+
+% Colors
+\definecolor{primary}{HTML}{1A1A2E}
+\definecolor{accent}{HTML}{0F3460}
+\definecolor{linkcolor}{HTML}{16213E}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkcolor,
+    urlcolor=linkcolor,
+}
+
+% Section formatting
+\titleformat{\section}{
+  \vspace{-6pt}\scshape\raggedright\large\color{primary}\bfseries
+}{}{0em}{}[\titlerule\vspace{-4pt}]
+
+% Remove page numbers
+\pagestyle{empty}
+
+% Custom commands
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-1pt}
+  \begin{tabularx}{\textwidth}{X r}
+    \textbf{#1} \textit{\small --- #2} & \textit{\small #3} \\
+    \small #4 & \\
+  \end{tabularx}\vspace{-6pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+  \vspace{-1pt}
+  \begin{tabularx}{\textwidth}{X r}
+    \textbf{#1} & \textit{\small #2} \\
+  \end{tabularx}\vspace{-6pt}
+}
+
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.2in, label=\textbullet, itemsep=1pt, parsep=0pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
+\newcommand{\resumeItem}[1]{\item\small{#1}}
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+  {\Huge\textbf{NGUYEN TAN}} \\[8pt]
+  {\large\textbf{Senior Backend Engineer}} \\[6pt]
+  \small
+  (+84) 326 693 535 \quad|\quad
+  \href{mailto:tan10a7@gmail.com}{tan10a7@gmail.com} \quad|\quad
+  \href{https://github.com/tan10a7}{github.com/tan10a7} \quad|\quad
+  \href{https://linkedin.com/in/tan-nguyen}{linkedin.com/in/tan-nguyen} \\[2pt]
+  Ho Chi Minh City, Vietnam
+\end{center}
+
+%----------SUMMARY----------
+\section{Professional Summary}
+Backend engineer with \textbf{5+ years} of experience building \textbf{high-performance, distributed systems} using \textbf{Golang} and cloud-native technologies. Proven track record in designing \textbf{event-driven microservices architectures} handling millions of concurrent users, with deep expertise in \textbf{GCP, Kubernetes, gRPC, and observability}. Experienced in fintech/banking domain with a strong focus on \textbf{system reliability, latency optimization, and CI/CD automation}. Passionate about open-source and building resilient systems at scale.
+
+%----------SKILLS----------
+\section{Technical Skills}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+  \textbf{Languages:} & Golang (primary), TypeScript/JavaScript, Python, SQL \\
+  \textbf{Backend \& APIs:} & gRPC, REST, WebSocket, GraphQL, Protocol Buffers \\
+  \textbf{Databases:} & PostgreSQL, MongoDB, ScyllaDB/Cassandra, Redis, MySQL \\
+  \textbf{Message Brokers:} & Apache Kafka, RabbitMQ, Google Pub/Sub \\
+  \textbf{Cloud \& Infra:} & GCP (GKE, Cloud Run, Cloud SQL, Pub/Sub, BigQuery), Docker, Kubernetes, Istio \\
+  \textbf{Observability:} & Prometheus, Grafana, OpenTelemetry, Jaeger, structured logging (Zap/Logrus) \\
+  \textbf{CI/CD \& DevOps:} & GitHub Actions, ArgoCD, Terraform, Helm, Jenkins \\
+  \textbf{Architecture:} & Microservices, Event-Driven Architecture (EDA), Domain-Driven Design (DDD), CQRS \\
+  \textbf{Testing:} & Unit testing (Go testing, testify), integration tests, load testing (k6, wrk) \\
+  \textbf{Other:} & System Design, Chaos Engineering, Auto-scaling, Circuit Breaker patterns \\
+\end{tabularx}
+
+%----------EXPERIENCE----------
+\section{Work Experience}
+
+\resumeSubheading
+  {Senior Software Engineer}{Terralogic}{2022 -- Present}
+  {Backend-focused Full Stack Developer --- Golang, GCP, Kubernetes, Kafka}
+
+\resumeItemListStart
+  \resumeItem{Architected and developed a \textbf{real-time chat platform} using \textbf{Golang microservices} with \textbf{gRPC} inter-service communication, supporting \textbf{3M+ concurrent WebSocket connections} with sub-100ms message delivery latency.}
+  \resumeItem{Designed \textbf{event-driven architecture} using \textbf{Apache Kafka} for high-throughput message brokering, processing \textbf{500K+ events/second} across authentication, messaging, and notification services.}
+  \resumeItem{Implemented \textbf{ScyllaDB} as the primary message store for time-series chat data, achieving \textbf{10x read performance} improvement over previous MongoDB-based solution.}
+  \resumeItem{Integrated \textbf{Redis} cluster for session management, token caching, and user presence tracking with \textbf{99.9\% cache hit rate}, reducing database load by \textbf{60\%}.}
+  \resumeItem{Deployed and operated services on \textbf{GKE (Google Kubernetes Engine)} with \textbf{Istio service mesh}, implementing auto-scaling policies, circuit breakers, and retry mechanisms for high availability.}
+  \resumeItem{Built comprehensive \textbf{end-to-end observability} stack with \textbf{Prometheus + Grafana} dashboards, \textbf{OpenTelemetry} distributed tracing, and structured logging, reducing MTTR by \textbf{70\%}.}
+  \resumeItem{Designed and implemented \textbf{CI/CD pipelines} with GitHub Actions and ArgoCD for automated testing, container building, and progressive rollout with canary deployments.}
+  \resumeItem{Developed a \textbf{Jenkins orchestration platform} (Node.js/Go) integrating real-time dashboards for CI/CD job monitoring, device management, and build analytics across \textbf{200+ daily builds}.}
+  \resumeItem{Led \textbf{network device management dashboard} development --- migrated legacy React codebase to modern architecture, integrated REST APIs for real-time device monitoring and control actions.}
+  \resumeItem{Received \textbf{Snap Award 2024} for outstanding cross-functional contributions and technical leadership.}
+\resumeItemListEnd
+
+\resumeSubheading
+  {Full Stack Developer}{Allgrow Labo}{2021 -- 2022}
+  {Web application development for Japanese market --- React, Node.js, REST APIs}
+
+\resumeItemListStart
+  \resumeItem{Built backend services for \textbf{life insurance transaction platform}, implementing calculation engines for policy analytics and statistical reporting with \textbf{PostgreSQL} and optimized query patterns.}
+  \resumeItem{Developed insurance campaign management modules with \textbf{RESTful API design}, handling complex business logic for policy pricing, underwriting rules, and transaction reconciliation.}
+  \resumeItem{Implemented robust \textbf{unit and integration testing} strategy with Jest and React Testing Library, achieving \textbf{85\%+ code coverage} and significantly reducing production incidents.}
+\resumeItemListEnd
+
+\resumeSubheading
+  {Frontend Developer (Intern)}{Xtek}{2021}
+  {Web development --- React, CSS Architecture}
+
+\resumeItemListStart
+  \resumeItem{Built reusable component library with scalable CSS architecture, enabling team-wide code reuse and consistent UI patterns across multiple client projects.}
+\resumeItemListEnd
+
+%----------PROJECTS----------
+\section{Notable Projects \& Open Source}
+
+\resumeProjectHeading{High-Performance API Gateway (Personal Project)}{Golang, gRPC, Redis}
+\resumeItemListStart
+  \resumeItem{Built a lightweight API gateway in Go with \textbf{rate limiting} (token bucket), \textbf{JWT authentication}, request routing, and \textbf{circuit breaker} pattern. Benchmarked at \textbf{50K+ req/s} on a single node.}
+\resumeItemListEnd
+
+\resumeProjectHeading{Distributed Task Queue}{Golang, Kafka, PostgreSQL, Docker}
+\resumeItemListStart
+  \resumeItem{Designed a distributed task scheduling system with \textbf{exactly-once processing} guarantees, dead-letter queues, and retry policies. Deployed on Kubernetes with \textbf{horizontal pod autoscaling}.}
+\resumeItemListEnd
+
+\resumeProjectHeading{Real-time Chat System (Production)}{Golang, WebSocket, Kafka, ScyllaDB, gRPC}
+\resumeItemListStart
+  \resumeItem{End-to-end ownership of a production chat platform: \textbf{system design, implementation, deployment, monitoring}. Handles real-time messaging with presence, typing indicators, and message persistence at scale.}
+\resumeItemListEnd
+
+%----------EDUCATION----------
+\section{Education}
+
+\resumeSubheading
+  {Posts and Telecommunications Institute of Technology}{Ho Chi Minh City}{2016 -- 2020}
+  {Bachelor of Engineering in Computer Engineering}
+
+%----------CERTIFICATIONS----------
+\section{Certifications \& Continuous Learning}
+\resumeItemListStart
+  \resumeItem{\textbf{Google Cloud Professional Cloud Architect} (in progress)}
+  \resumeItem{Deep study: Distributed Systems, Event-Driven Architecture, Domain-Driven Design}
+  \resumeItem{Active contributor to Go open-source ecosystem and internal knowledge-sharing initiatives}
+  \resumeItem{AI-assisted development: Proficient with \textbf{GitHub Copilot, Cursor, Claude Code} for accelerated engineering workflows}
+\resumeItemListEnd
+
+\end{document}

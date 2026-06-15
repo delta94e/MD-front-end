@@ -1,0 +1,100 @@
+.ds-alert {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border-left: 4px solid transparent;
+  gap: var(--spacing-sm);
+  font-family: var(--font-sans);
+  margin-bottom: var(--spacing-md);
+  position: relative;
+  text-align: left;
+}
+
+.ds-alert-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ds-alert-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-primary);
+}
+
+.ds-alert-body {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.ds-alert-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.ds-alert-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ds-alert-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -4px;
+  margin-right: -4px;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.ds-alert-close:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--color-text-primary);
+}
+
+.ds-alert-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Alert Variants styling using tokens */
+.ds-alert-info {
+  background-color: var(--color-info-light);
+  border-left-color: var(--color-info);
+}
+.ds-alert-info .ds-alert-icon {
+  color: var(--color-info);
+}
+
+.ds-alert-success {
+  background-color: var(--color-success-light);
+  border-left-color: var(--color-success);
+}
+.ds-alert-success .ds-alert-icon {
+  color: var(--color-success);
+}
+
+.ds-alert-warning {
+  background-color: var(--color-warning-light);
+  border-left-color: var(--color-warning);
+}
+.ds-alert-warning .ds-alert-icon {
+  color: var(--color-warning);
+}
+
+.ds-alert-danger {
+  background-color: var(--color-danger-light);
+  border-left-color: var(--color-danger);
+}
+.ds-alert-danger .ds-alert-icon {
+  color: var(--color-danger);
+}
