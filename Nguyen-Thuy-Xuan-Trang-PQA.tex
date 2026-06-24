@@ -1,0 +1,151 @@
+%-------------------------
+% Resume in LaTeX - Fresher Process Quality Assurance
+% Author: Nguyen Thuy Xuan Trang
+%-------------------------
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{fontspec}
+\usepackage[margin=0.65in]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tabularx}
+
+% Colors
+\definecolor{primary}{HTML}{1A1A2E}
+\definecolor{accent}{HTML}{0F3460}
+\definecolor{linkcolor}{HTML}{16213E}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkcolor,
+    urlcolor=linkcolor,
+}
+
+% Section formatting
+\titleformat{\section}{
+  \vspace{-6pt}\scshape\raggedright\large\color{primary}\bfseries
+}{}{0em}{}[\titlerule\vspace{-4pt}]
+
+% Remove page numbers
+\pagestyle{empty}
+
+% Remove paragraph indentation globally
+\setlength{\parindent}{0pt}
+
+% Custom commands
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-1pt}\noindent
+  \begin{tabularx}{\textwidth}{X >{\raggedleft\arraybackslash}p{4.2cm}}
+    \textbf{#1} \textit{\small --- #2} & \textit{\small #3} \\
+    \small #4 & \\
+  \end{tabularx}\vspace{-6pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+  \vspace{-1pt}\noindent
+  \begin{tabularx}{\textwidth}{X >{\raggedleft\arraybackslash}p{4.2cm}}
+    \textbf{#1} & \textit{\small #2} \\
+  \end{tabularx}\vspace{-6pt}
+}
+
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.2in, label=\textbullet, itemsep=1pt, parsep=0pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
+\newcommand{\resumeItem}[1]{\item\small{#1}}
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+  {\Huge\textbf{NGUYEN THUY XUAN TRANG}} \\[8pt]
+  {\large\textbf{Fresher Process Quality Assurance}} \\[6pt]
+  \small
+  0964 051 634 \quad|\quad
+  \href{mailto:nt.xuantrang09@gmail.com}{nt.xuantrang09@gmail.com} \quad|\quad
+  Binh Thanh, Ho Chi Minh City \\[2pt]
+\end{center}
+
+%----------SUMMARY----------
+\section{Summary}
+I have 6 years of work experience: 4 years managing a retail store and 2 years as a Software Consultant at a B2B SaaS company serving the beauty and healthcare industry. In both roles, my core responsibility was the same: making sure that processes were followed correctly and that the final output matched the agreed requirements before it reached the end user. At MySpa, I verified that software systems were configured in line with client specifications, coordinated between multiple teams to keep delivery on track, and checked that each step in the onboarding process was completed as planned. These experiences built a strong habit of process awareness, careful verification, and clear communication across teams. I am eager to apply this mindset in a formal Process Quality Assurance role where I can grow within a structured QA environment.
+
+%----------SKILLS----------
+\section{Skills}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+  \textbf{Process QA:}  & Process audit (basic), compliance tracking, requirement review, final inspection support \\
+  \textbf{QA Support:}  & UAT support, issue recording and follow-up, basic knowledge of SDLC and STLC \\
+  \textbf{Reporting:}   & Daily/weekly status reports, compliance tracking sheets, data entry and verification \\
+  \textbf{Tools:}       & Microsoft Excel (proficient), Microsoft Word, Figma (learning) \\
+  \textbf{Soft Skills:} & Attention to detail, cross-team coordination, clear communication, eager to learn \\
+  \textbf{Language:}    & English (reading and listening) \\
+\end{tabularx}
+
+%----------EXPERIENCE----------
+\section{Work Experience}
+
+\resumeSubheading
+  {Software Consultant}{MySpa Joint Stock Company}{05/2024 -- 04/2026}
+  {B2B SaaS --- POS Software for Beauty \& Healthcare Businesses}
+
+\resumeItemListStart
+  \resumeItem{Demonstrated the software to clients and helped them understand how each feature worked in practice.}
+  \resumeItem{Worked with the Product team to test new features before releasing them to clients; found and reported UI and logic errors with clear and specific descriptions.}
+  \resumeItem{Checked whether the software setup matched each client's requirements before formally handing it over.}
+  \resumeItem{Monitored the onboarding progress for each client and flagged issues to the relevant team for resolution.}
+  \resumeItem{Prepared daily reports on client and project status; coordinated between clients, developers, and the support team to keep things moving.}
+  \resumeItem{Maintained a client conversion rate of \textbf{70--80\%} and consistently met KPI targets of \textbf{80--90\%}.}
+\resumeItemListEnd
+
+\resumeSubheading
+  {Store Manager}{Rio Store --- Mom \& Kid}{02/2020 -- 03/2024}
+  {Retail Store Operations}
+
+\resumeItemListStart
+  \resumeItem{Managed daily store operations and made sure staff followed standard operating procedures.}
+  \resumeItem{Tracked inventory and prepared daily sales and stock reports; maintained accurate records to minimize errors.}
+  \resumeItem{Collected customer feedback, identified recurring issues, and suggested improvements to the team.}
+  \resumeItem{Helped increase store revenue by \textbf{15--20\%} through better daily processes and service quality.}
+\resumeItemListEnd
+
+%----------QA PROJECTS----------
+\section{Related Project Experience}
+
+\resumeProjectHeading{Prepaid Card Feature --- Project Olive (MySpa)}{03/2026 -- 04/2026}
+\resumeItemListStart
+  \resumeItem{\textit{Role: Process QA Support \& Requirements Coordination}}
+  \resumeItem{Reviewed and documented client requirements; verified that the feature specification was complete and aligned with what had been agreed at the start of the project.}
+  \resumeItem{Checked that the implementation followed the defined business rules (discount limits, card restrictions, payment settings) — not just whether it worked, but whether it followed the right process.}
+  \resumeItem{Monitored each phase of the delivery process to confirm steps were completed in the correct order and on the agreed schedule; flagged any deviations to the team.}
+  \resumeItem{Supported client UAT by recording issues and tracking them through to resolution; confirmed fixes were completed before final handover.}
+  \resumeItem{\textbf{Result:} Feature delivered on schedule, following the agreed process; client signed off with no outstanding issues.}
+\resumeItemListEnd
+
+\resumeProjectHeading{Digital Treatment Form --- Future Biomed Clinic (MySpa)}{03/2026 -- 04/2026}
+\resumeItemListStart
+  \resumeItem{\textit{Role: Process QA Support \& Requirements Coordination}}
+  \resumeItem{Reviewed the agreed requirements with the client and verified that the implementation plan was consistent with what had been discussed and approved at the start.}
+  \resumeItem{Checked that the delivery process followed the correct steps: requirements confirmed, system configured, data verified, approval rules enforced (dual sign-off by Doctor and Nurse), and final inspection completed before handover.}
+  \resumeItem{Tracked delivery progress against the original plan; reported any delays or deviations and coordinated with the Product team to bring the process back on track.}
+  \resumeItem{Performed a final check before handing over to the client to confirm all requirements were met and all agreed steps had been completed.}
+  \resumeItem{\textbf{Result:} Feature delivered on schedule, following the agreed process; client signed off with no outstanding issues.}
+\resumeItemListEnd
+
+%----------EDUCATION----------
+\section{Education}
+
+\resumeSubheading
+  {Van Lang University}{Ho Chi Minh City}{2015 -- 2019}
+  {Major: Hospitality Management --- Graduated}
+
+%----------ADDITIONAL----------
+\section{Additional}
+\resumeItemListStart
+  \resumeItem{Have basic knowledge of SDLC and STLC from self-study and hands-on experience supporting software delivery at MySpa.}
+  \resumeItem{Currently learning more about software QA and CMMi to prepare for a structured QA career at an IT company.}
+  \resumeItem{Comfortable using \textbf{Microsoft Excel} for tracking data, preparing reports, and organizing task lists.}
+  \resumeItem{Experienced working with multiple teams at the same time --- clients, developers, and support --- and communicating clearly with each group.}
+\resumeItemListEnd
+
+\end{document}
